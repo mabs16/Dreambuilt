@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
     Bot,
@@ -75,7 +75,7 @@ const TONE_OPTIONS = [
     { value: 'formal', label: '🎩 Formal', desc: 'Muy serio y corporativo' },
 ];
 
-export default function AutomationsPage() {
+function AutomationsContent() {
     const searchParams = useSearchParams();
     const tabParam = searchParams.get('tab') as 'lead_qualification' | 'advisor_automation' | null;
     
@@ -168,7 +168,7 @@ export default function AutomationsPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [apiUrl]);
 
     useEffect(() => {
         if (tabParam && tabParam !== activeTab) {
@@ -913,4 +913,16 @@ export default function AutomationsPage() {
             </div>
         </div>
     );
- }
+}
+
+export default function AutomationsPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex h-96 items-center justify-center">
+                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        }>
+            <AutomationsContent />
+        </Suspense>
+    );
+}
