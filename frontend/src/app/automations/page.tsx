@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     Bot,
     Save,
@@ -9,17 +10,22 @@ import {
     Trash2,
     Settings2,
     MessageSquare,
-    MessageCircle,
     CheckCircle2,
     RefreshCw,
     Sparkles,
-    FileText,
-    Bell,
+    ChevronDown,
+    ChevronUp,
+    Layout,
+    Cpu,
+    Shield,
+    Zap,
+    Users,
     Clock,
     Globe,
     Package,
-    ChevronDown,
-    ChevronUp
+    AlertCircle,
+    ArrowRight,
+    Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -107,7 +113,6 @@ function AutomationsContent() {
                 throw new Error(`Error ${res.status}: ${errorText || 'Failed to fetch'}`);
             }
 
-            // Primero obtenemos el texto para verificar si está vacío
             const text = await res.text();
             let data = null;
             
@@ -119,12 +124,9 @@ function AutomationsContent() {
                 }
             }
             
-            console.log(`Config loaded for ${name}:`, data);
-            
             if (data) {
                 setAutomation(data);
             } else {
-                // Si no hay datos, inicializamos con valores por defecto
                 const defaultConfig: Automation = {
                     id: 0,
                     name: name,
@@ -145,25 +147,21 @@ function AutomationsContent() {
             }
         } catch (error) {
             console.error("Error fetching config:", error);
-            // Fallback a configuración por defecto en caso de error de red
-            setAutomation(prev => {
-                if (prev) return prev;
-                return {
-                    id: 0,
-                    name: name,
-                    isActive: false,
-                    config: name === 'lead_qualification' ? {
-                        questions: [],
-                        welcomeMessage: '',
-                        completionMessage: ''
-                    } : {
-                        responseTimeLimitMinutes: 15,
-                        reminderEnabled: true,
-                        reminderIntervalMinutes: 5,
-                        useAiSummary: true,
-                        enableInteractiveButtons: true
-                    }
-                };
+            setAutomation({
+                id: 0,
+                name: name,
+                isActive: false,
+                config: name === 'lead_qualification' ? {
+                    questions: [],
+                    welcomeMessage: '',
+                    completionMessage: ''
+                } : {
+                    responseTimeLimitMinutes: 15,
+                    reminderEnabled: true,
+                    reminderIntervalMinutes: 5,
+                    useAiSummary: true,
+                    enableInteractiveButtons: true
+                }
             });
         } finally {
             setLoading(false);
@@ -196,7 +194,6 @@ function AutomationsContent() {
             setAutomation({ ...automation, isActive: !automation.isActive });
         } catch (error) {
             console.error("Error toggling bot:", error);
-            alert("Error al actualizar el estado");
         } finally {
             setSaving(false);
         }
@@ -216,10 +213,8 @@ function AutomationsContent() {
                 }),
             });
             if (!res.ok) throw new Error("Error al guardar");
-            alert("Configuración guardada correctamente");
         } catch (error) {
             console.error("Error saving config:", error);
-            alert("Error al guardar la configuración");
         } finally {
             setSaving(false);
         }
@@ -233,684 +228,626 @@ function AutomationsContent() {
         });
     };
 
+    // Validation to prevent TypeError: Cannot read properties of undefined (reading 'map')
     const isConfigLoaded = automation?.name === activeTab;
     const leadConfig = isConfigLoaded ? (automation?.config as LeadQualificationConfig) : null;
     const advisorConfig = isConfigLoaded ? (automation?.config as AdvisorAutomationConfig) : null;
 
     const updateQuestion = (index: number, text: string) => {
         if (!automation || activeTab !== 'lead_qualification') return;
-        const questions = [...(automation.config as LeadQualificationConfig).questions];
+        const config = automation.config as LeadQualificationConfig;
+        const questions = [...(config.questions || [])];
         questions[index] = text;
         updateConfig('questions', questions);
     };
 
     const addQuestion = () => {
         if (!automation || activeTab !== 'lead_qualification') return;
-        const questions = [...(automation.config as LeadQualificationConfig).questions];
-        updateConfig('questions', [...questions, "Nueva pregunta..."]);
+        const config = automation.config as LeadQualificationConfig;
+        const questions = [...(config.questions || [])];
+        updateConfig('questions', [...questions, ""]);
     };
 
     const removeQuestion = (index: number) => {
         if (!automation || activeTab !== 'lead_qualification') return;
-        const questions = (automation.config as LeadQualificationConfig).questions.filter((_, i) => i !== index);
+        const config = automation.config as LeadQualificationConfig;
+        const questions = (config.questions || []).filter((_, i) => i !== index);
         updateConfig('questions', questions);
     };
 
     const addProduct = () => {
         if (!automation || activeTab !== 'lead_qualification') return;
-        const currentProducts = (automation.config as LeadQualificationConfig).products || [];
+        const config = automation.config as LeadQualificationConfig;
+        const currentProducts = config.products || [];
         updateConfig('products', [...currentProducts, { name: '', description: '', price: '' }]);
     };
 
     const updateProduct = (index: number, field: keyof Product, value: string) => {
         if (!automation || activeTab !== 'lead_qualification') return;
-        const products = [...((automation.config as LeadQualificationConfig).products || [])];
+        const config = automation.config as LeadQualificationConfig;
+        const products = [...(config.products || [])];
         products[index] = { ...products[index], [field]: value };
         updateConfig('products', products);
     };
 
     const removeProduct = (index: number) => {
         if (!automation || activeTab !== 'lead_qualification') return;
-        updateConfig('products', ((automation.config as LeadQualificationConfig).products || []).filter((_, i) => i !== index));
+        const config = automation.config as LeadQualificationConfig;
+        updateConfig('products', (config.products || []).filter((_, i) => i !== index));
     };
 
     if (loading) return (
-        <div className="flex h-96 items-center justify-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex h-[80vh] items-center justify-center">
+            <div className="flex flex-col items-center gap-6">
+                <div className="relative">
+                    <div className="h-16 w-16 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <Zap className="h-6 w-6 text-primary animate-pulse" />
+                    </div>
+                </div>
+                <div className="text-center">
+                    <p className="text-xl font-bold font-outfit tracking-tight text-white">Sincronizando Cerebro</p>
+                    <p className="text-sm text-muted-foreground mt-1 font-medium">Cargando modelos de IA y configuraciones...</p>
+                </div>
+            </div>
         </div>
     );
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto pb-12">
-            {/* Tabs */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-                <button
-                    onClick={() => setActiveTab('lead_qualification')}
-                    className={cn(
-                        "px-4 py-2 text-sm font-medium rounded-full transition-all whitespace-nowrap",
-                        activeTab === 'lead_qualification'
-                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                            : "bg-card hover:bg-accent/10 text-muted-foreground"
-                    )}
-                >
-                    Calificación de Leads
-                </button>
-                <button
-                    onClick={() => setActiveTab('advisor_automation')}
-                    className={cn(
-                        "px-4 py-2 text-sm font-medium rounded-full transition-all whitespace-nowrap",
-                        activeTab === 'advisor_automation'
-                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                            : "bg-card hover:bg-accent/10 text-muted-foreground"
-                    )}
-                >
-                    Automatización Asesores
-                </button>
-            </div>
-
-            {/* Header section with Toggle */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl border border-border bg-card/30 backdrop-blur-xl">
-                <div className="flex items-center gap-4">
-                    <div className={cn(
-                        "p-4 rounded-xl transition-colors duration-500",
-                        automation?.isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                    )}>
-                        {activeTab === 'lead_qualification' ? <Bot className="h-8 w-8" /> : <Settings2 className="h-8 w-8" />}
+        <div className="space-y-10 h-[calc(100vh-6rem)] flex flex-col overflow-hidden pb-4">
+            {/* Header Section */}
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 px-1">
+                <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                        <span className="text-xs font-black uppercase tracking-[0.2em] text-primary/80">Neural Automation Center</span>
                     </div>
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight">
-                            {activeTab === 'lead_qualification' ? 'Lead Qualification Bot' : 'Advisor Automation'}
-                        </h1>
-                        <p className="text-muted-foreground text-sm">
-                            {activeTab === 'lead_qualification' 
-                                ? 'Configura el asistente de IA para precalificar prospectos' 
-                                : 'Optimiza la comunicación y seguimiento de tus asesores'}
-                        </p>
-                    </div>
+                    <h1 className="text-3xl md:text-4xl font-black tracking-tight font-outfit text-white">Centro de Automatización</h1>
+                    <p className="text-sm md:text-base text-muted-foreground font-medium max-w-2xl">
+                        Gestiona el comportamiento inteligente de tus asistentes y procesos corporativos.
+                    </p>
                 </div>
 
-                <div className="flex items-center gap-4 bg-background/50 p-2 rounded-xl border border-border">
-                    <span className={cn(
-                        "text-sm font-medium px-4",
-                        automation?.isActive ? "text-primary" : "text-muted-foreground"
-                    )}>
-                        {automation?.isActive ? "Activado" : "Desactivado"}
-                    </span>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                    <div className="flex p-1.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl">
+                        <button
+                            onClick={() => setActiveTab('lead_qualification')}
+                            className={cn(
+                                "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300",
+                                activeTab === 'lead_qualification' 
+                                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105" 
+                                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                            )}
+                        >
+                            <Bot className="h-4 w-4" />
+                            IA Cualificación
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('advisor_automation')}
+                            className={cn(
+                                "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300",
+                                activeTab === 'advisor_automation' 
+                                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105" 
+                                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                            )}
+                        >
+                            <Settings2 className="h-4 w-4" />
+                            IA Gestión
+                        </button>
+                    </div>
+                    
                     <button
-                        onClick={handleToggleBot}
+                        onClick={handleSaveConfig}
                         disabled={saving}
-                        className={cn(
-                            "relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none",
-                            automation?.isActive ? "bg-primary" : "bg-muted"
-                        )}
+                        className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl bg-white text-black font-black hover:scale-105 transition-all shadow-xl shadow-white/5 active:scale-95 disabled:opacity-50"
                     >
-                        <span className={cn(
-                            "inline-block h-6 w-6 transform rounded-full bg-background transition-transform",
-                            automation?.isActive ? "translate-x-7" : "translate-x-1"
-                        )} />
+                        {saving ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+                        <span className="text-xs uppercase tracking-widest">Guardar Cambios</span>
                     </button>
                 </div>
             </div>
 
-            {/* Content for Lead Qualification */}
-            {activeTab === 'lead_qualification' && (
-                <div className="space-y-4">
-                    {/* Section 1: Flow Configuration */}
-                    <div className="rounded-xl border border-border bg-card/20 overflow-hidden">
-                        <button
-                            onClick={() => toggleSection('flow')}
-                            className="w-full flex items-center justify-between p-4 hover:bg-accent/10 transition-colors"
-                        >
-                            <div className="flex items-center gap-3">
-                                <MessageSquare className="h-5 w-5 text-primary" />
-                                <span className="font-semibold">Flujo de Conversación</span>
+            {/* Main Content Area */}
+            <div className="flex-1 overflow-y-auto pr-2 -mr-2 space-y-8 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                {/* Status Card */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-8 rounded-[2.5rem] bg-gradient-to-br from-white/5 via-white/2 to-transparent border border-white/5 relative overflow-hidden group"
+                >
+                    <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity duration-700">
+                        {activeTab === 'lead_qualification' ? <Bot className="h-48 w-48" /> : <Cpu className="h-48 w-48" />}
+                    </div>
+                    
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
+                        <div className="flex items-center gap-6">
+                            <div className={cn(
+                                "h-20 w-20 rounded-[2.2rem] flex items-center justify-center border-2 transition-all duration-500 shadow-2xl",
+                                automation?.isActive 
+                                    ? "bg-primary/10 border-primary/20 text-primary shadow-primary/20" 
+                                    : "bg-white/2 border-white/10 text-muted-foreground shadow-black"
+                            )}>
+                                {activeTab === 'lead_qualification' ? <Bot className="h-10 w-10" /> : <Cpu className="h-10 w-10" />}
                             </div>
-                            {expandedSections.flow ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                        </button>
+                            <div className="space-y-1">
+                                <h2 className="text-2xl font-black text-white tracking-tight">
+                                    {activeTab === 'lead_qualification' ? 'Neural Qualification Engine' : 'Advisor Performance AI'}
+                                </h2>
+                                <p className="text-sm text-muted-foreground font-medium">
+                                    {activeTab === 'lead_qualification' 
+                                        ? 'Cualificación inteligente de leads vía procesamiento de lenguaje natural.' 
+                                        : 'Monitoreo de SLAs y soporte inteligente para el equipo de ventas.'}
+                                </p>
+                            </div>
+                        </div>
 
-                        {expandedSections.flow && (
-                            <div className="p-6 pt-0 space-y-6 border-t border-border">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-muted-foreground">Mensaje de Bienvenida</label>
-                                    <textarea
-                                        value={leadConfig?.welcomeMessage || ''}
-                                        onChange={(e) => updateConfig('welcomeMessage', e.target.value)}
-                                        className="w-full bg-background/50 border border-input rounded-lg p-3 text-sm focus:ring-1 focus:ring-primary min-h-[80px] resize-none"
-                                    />
-                                </div>
+                        <div className="flex items-center gap-4 bg-black/40 p-3 rounded-3xl border border-white/5 backdrop-blur-xl">
+                            <span className={cn(
+                                "text-[10px] font-black uppercase tracking-[0.2em] px-4",
+                                automation?.isActive ? "text-primary" : "text-muted-foreground/40"
+                            )}>
+                                {automation?.isActive ? "Motor Activado" : "Motor en Pausa"}
+                            </span>
+                            <button
+                                onClick={handleToggleBot}
+                                disabled={saving}
+                                className={cn(
+                                    "relative inline-flex h-10 w-20 items-center rounded-2xl transition-all duration-500 focus:outline-none shadow-inner",
+                                    automation?.isActive ? "bg-primary shadow-primary/20" : "bg-white/5"
+                                )}
+                            >
+                                <span className={cn(
+                                    "inline-block h-7 w-7 transform rounded-xl bg-white transition-all duration-500 shadow-xl",
+                                    automation?.isActive ? "translate-x-11" : "translate-x-1.5"
+                                )} />
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
 
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-muted-foreground">Texto del Botón de Inicio</label>
-                                    <input
-                                        type="text"
-                                        value={leadConfig?.welcomeButtonText || ''}
-                                        onChange={(e) => updateConfig('welcomeButtonText', e.target.value)}
-                                        className="w-full bg-background/50 border border-input rounded-lg p-3 text-sm focus:ring-1 focus:ring-primary"
-                                        placeholder="Comenzar"
-                                    />
-                                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Configuration Panels */}
+                    <div className="lg:col-span-8 space-y-6">
+                        {activeTab === 'lead_qualification' ? (
+                            <AnimatePresence mode="wait">
+                                <motion.div 
+                                    key="lead_qualification"
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 20 }}
+                                    className="space-y-6"
+                                >
+                                    <ConfigSection 
+                                        icon={Layout} 
+                                        title="Arquitectura del Flujo" 
+                                        isOpen={expandedSections.flow}
+                                        onToggle={() => toggleSection('flow')}
+                                    >
+                                        <div className="grid gap-8 p-4">
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <label className="text-[11px] font-black text-muted-foreground/60 uppercase tracking-widest">Protocolo de Bienvenida</label>
+                                                    <Sparkles className="h-4 w-4 text-primary/40" />
+                                                </div>
+                                                <textarea
+                                                    value={leadConfig?.welcomeMessage || ''}
+                                                    onChange={(e) => updateConfig('welcomeMessage', e.target.value)}
+                                                    className="w-full bg-white/2 border border-white/5 rounded-[1.5rem] p-5 text-sm font-medium text-white/80 focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all min-h-[120px] resize-none scrollbar-hide"
+                                                    placeholder="Escribe el mensaje inicial que enviará la IA..."
+                                                />
+                                            </div>
 
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-sm font-medium text-muted-foreground">Preguntas de Calificación</label>
-                                        <button
-                                            onClick={addQuestion}
-                                            className="text-xs flex items-center gap-1 text-primary hover:underline"
-                                        >
-                                            <Plus className="h-3 w-3" /> Añadir Pregunta
-                                        </button>
-                                    </div>
-                                    <div className="space-y-3">
-                                        {(leadConfig?.questions || []).map((q, i) => (
-                                            <div key={i} className="flex gap-2">
-                                                <div className="flex-1 relative">
-                                                    <span className="absolute left-3 top-3 text-xs font-bold text-muted-foreground/50">{i + 1}</span>
+                                            <div className="grid md:grid-cols-2 gap-6">
+                                                <div className="space-y-4">
+                                                    <label className="text-[11px] font-black text-muted-foreground/60 uppercase tracking-widest">Botón de Activación</label>
                                                     <input
                                                         type="text"
-                                                        value={q}
-                                                        onChange={(e) => updateQuestion(i, e.target.value)}
-                                                        className="w-full bg-background/50 border border-input rounded-lg p-3 pl-8 text-sm focus:ring-1 focus:ring-primary"
+                                                        value={leadConfig?.welcomeButtonText || ''}
+                                                        onChange={(e) => updateConfig('welcomeButtonText', e.target.value)}
+                                                        className="w-full bg-white/2 border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-primary/20 transition-all"
+                                                        placeholder="Ej: Comenzar"
                                                     />
                                                 </div>
+                                                <div className="space-y-4">
+                                                    <label className="text-[11px] font-black text-muted-foreground/60 uppercase tracking-widest">Identificación</label>
+                                                    <div className="flex items-center justify-between p-4 bg-white/2 border border-white/5 rounded-2xl">
+                                                        <span className="text-sm font-bold text-white/60">Solicitar nombre</span>
+                                                        <button 
+                                                            onClick={() => updateConfig('askForName', !leadConfig?.askForName)}
+                                                            className={cn(
+                                                                "h-6 w-11 rounded-full transition-colors",
+                                                                leadConfig?.askForName ? "bg-primary" : "bg-white/10"
+                                                            )}
+                                                        >
+                                                            <div className={cn(
+                                                                "h-4 w-4 rounded-full bg-white transition-transform mx-1",
+                                                                leadConfig?.askForName ? "translate-x-5" : "translate-x-0"
+                                                            )} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-6">
+                                                <div className="flex items-center justify-between">
+                                                    <label className="text-[11px] font-black text-muted-foreground/60 uppercase tracking-widest">Cuestionario de Cualificación</label>
+                                                    <button
+                                                        onClick={addQuestion}
+                                                        className="px-4 py-2 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all flex items-center gap-2"
+                                                    >
+                                                        <Plus className="h-3 w-3" />
+                                                        Nueva Pregunta
+                                                    </button>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {(leadConfig?.questions || []).map((q, i) => (
+                                                        <motion.div 
+                                                            layout
+                                                            initial={{ opacity: 0, x: -10 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            key={i} 
+                                                            className="flex gap-3 group"
+                                                        >
+                                                            <div className="flex-1 relative">
+                                                                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary/40">{i + 1}</span>
+                                                                <input
+                                                                    type="text"
+                                                                    value={q}
+                                                                    onChange={(e) => updateQuestion(i, e.target.value)}
+                                                                    className="w-full bg-white/2 border border-white/5 rounded-2xl py-4 pl-12 pr-5 text-sm font-medium text-white/90 focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all"
+                                                                />
+                                                            </div>
+                                                            <button
+                                                                onClick={() => removeQuestion(i)}
+                                                                className="p-4 rounded-2xl bg-white/2 border border-white/5 text-rose-500/40 hover:text-rose-500 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </button>
+                                                        </motion.div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </ConfigSection>
+
+                                    <ConfigSection 
+                                        icon={Cpu} 
+                                        title="Personalidad y Contexto" 
+                                        isOpen={expandedSections.personality}
+                                        onToggle={() => toggleSection('personality')}
+                                    >
+                                        <div className="grid gap-8 p-4">
+                                            <div className="grid md:grid-cols-2 gap-8">
+                                                <div className="space-y-4">
+                                                    <label className="text-[11px] font-black text-muted-foreground/60 uppercase tracking-widest">Tono de Voz</label>
+                                                    <div className="grid grid-cols-1 gap-2">
+                                                        {TONE_OPTIONS.map((opt) => (
+                                                            <button
+                                                                key={opt.value}
+                                                                onClick={() => updateConfig('tone', opt.value)}
+                                                                className={cn(
+                                                                    "flex items-center justify-between p-4 rounded-2xl border transition-all text-left",
+                                                                    leadConfig?.tone === opt.value 
+                                                                        ? "bg-primary/10 border-primary/40 text-primary" 
+                                                                        : "bg-white/2 border-white/5 text-muted-foreground hover:bg-white/5"
+                                                                )}
+                                                            >
+                                                                <div>
+                                                                    <p className="text-xs font-black uppercase tracking-widest">{opt.label}</p>
+                                                                    <p className="text-[10px] opacity-60 font-medium mt-0.5">{opt.desc}</p>
+                                                                </div>
+                                                                {leadConfig?.tone === opt.value && <CheckCircle2 className="h-4 w-4" />}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-4">
+                                                    <label className="text-[11px] font-black text-muted-foreground/60 uppercase tracking-widest">Contexto de Negocio</label>
+                                                    <textarea
+                                                        value={leadConfig?.businessContext || ''}
+                                                        onChange={(e) => updateConfig('businessContext', e.target.value)}
+                                                        className="w-full bg-white/2 border border-white/5 rounded-[1.5rem] p-5 text-sm font-medium text-white/80 focus:ring-2 focus:ring-primary/20 min-h-[220px] resize-none scrollbar-hide"
+                                                        placeholder="Define quién eres, qué vendes y cuál es tu propuesta de valor única..."
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </ConfigSection>
+
+                                    <ConfigSection 
+                                        icon={Package} 
+                                        title="Catálogo de Productos" 
+                                        isOpen={expandedSections.products}
+                                        onToggle={() => toggleSection('products')}
+                                    >
+                                        <div className="p-4 space-y-6">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <p className="text-xs text-muted-foreground font-medium">Define los productos que la IA puede ofrecer durante la charla.</p>
                                                 <button
-                                                    onClick={() => removeQuestion(i)}
-                                                    className="p-3 text-muted-foreground hover:text-destructive transition-colors"
+                                                    onClick={addProduct}
+                                                    className="px-4 py-2 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all flex items-center gap-2"
                                                 >
-                                                    <Trash2 className="h-4 w-4" />
+                                                    <Plus className="h-3 w-3" />
+                                                    Añadir Producto
                                                 </button>
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-muted-foreground">Mensaje de Finalización</label>
-                                    <textarea
-                                        value={leadConfig?.completionMessage || ''}
-                                        onChange={(e) => updateConfig('completionMessage', e.target.value)}
-                                        className="w-full bg-background/50 border border-input rounded-lg p-3 text-sm focus:ring-1 focus:ring-primary min-h-[80px] resize-none"
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Section 2: Personality & Context */}
-                    <div className="rounded-xl border border-border bg-card/20 overflow-hidden">
-                        <button
-                            onClick={() => toggleSection('personality')}
-                            className="w-full flex items-center justify-between p-4 hover:bg-accent/10 transition-colors"
-                        >
-                            <div className="flex items-center gap-3">
-                                <Sparkles className="h-5 w-5 text-primary" />
-                                <span className="font-semibold">Personalidad y Contexto AI</span>
-                            </div>
-                            {expandedSections.personality ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                        </button>
-
-                        {expandedSections.personality && (
-                            <div className="p-6 pt-0 space-y-6 border-t border-border">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-muted-foreground">Tono de Voz</label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {TONE_OPTIONS.map((opt) => (
-                                                <button
-                                                    key={opt.value}
-                                                    onClick={() => updateConfig('tone', opt.value)}
-                                                    className={cn(
-                                                        "flex flex-col items-start p-3 rounded-lg border text-left transition-all",
-                                                        leadConfig?.tone === opt.value
-                                                            ? "border-primary bg-primary/10"
-                                                            : "border-border bg-background/50 hover:bg-accent/10"
-                                                    )}
-                                                >
-                                                    <span className="text-sm font-bold">{opt.label}</span>
-                                                    <span className="text-[10px] text-muted-foreground">{opt.desc}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-background/30">
-                                            <div className="flex items-center gap-2">
-                                                <CheckCircle2 className="h-4 w-4 text-primary" />
-                                                <span className="text-sm font-medium">¿Preguntar nombre?</span>
+                                            <div className="grid gap-4">
+                                                {(leadConfig?.products || []).map((p, i) => (
+                                                    <motion.div 
+                                                        layout
+                                                        key={i} 
+                                                        className="p-6 bg-white/2 border border-white/5 rounded-[2rem] space-y-4 relative group"
+                                                    >
+                                                        <button
+                                                            onClick={() => removeProduct(i)}
+                                                            className="absolute top-6 right-6 p-2 text-rose-500/20 hover:text-rose-500 transition-colors"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                        <div className="grid md:grid-cols-2 gap-4">
+                                                            <div className="space-y-2">
+                                                                <label className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">Nombre</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={p.name}
+                                                                    onChange={(e) => updateProduct(i, 'name', e.target.value)}
+                                                                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm font-bold text-white"
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <label className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">Precio (Opcional)</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={p.price}
+                                                                    onChange={(e) => updateProduct(i, 'price', e.target.value)}
+                                                                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm font-bold text-primary"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">Descripción para la IA</label>
+                                                            <textarea
+                                                                value={p.description}
+                                                                onChange={(e) => updateProduct(i, 'description', e.target.value)}
+                                                                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm font-medium text-white/70 min-h-[80px] resize-none"
+                                                            />
+                                                        </div>
+                                                    </motion.div>
+                                                ))}
                                             </div>
-                                            <button
-                                                onClick={() => updateConfig('askForName', !leadConfig?.askForName)}
-                                                className={cn(
-                                                    "relative inline-flex h-5 w-10 items-center rounded-full transition-colors",
-                                                    leadConfig?.askForName ? "bg-primary" : "bg-muted"
-                                                )}
-                                            >
-                                                <span className={cn(
-                                                    "inline-block h-3 w-3 transform rounded-full bg-background transition-transform",
-                                                    leadConfig?.askForName ? "translate-x-6" : "translate-x-1"
-                                                )} />
-                                            </button>
                                         </div>
-
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-muted-foreground">System Prompt (Avanzado)</label>
-                                            <textarea
-                                                value={leadConfig?.systemPrompt || ''}
-                                                onChange={(e) => updateConfig('systemPrompt', e.target.value)}
-                                                placeholder="Instrucciones directas para la IA..."
-                                                className="w-full bg-background/50 border border-input rounded-lg p-3 text-xs font-mono focus:ring-1 focus:ring-primary min-h-[100px]"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-muted-foreground">Contexto de la Empresa</label>
-                                    <textarea
-                                        value={leadConfig?.businessContext || ''}
-                                        onChange={(e) => updateConfig('businessContext', e.target.value)}
-                                        placeholder="Describe tu empresa, misión, valores, etc. para que la IA tenga contexto."
-                                        className="w-full bg-background/50 border border-input rounded-lg p-3 text-sm focus:ring-1 focus:ring-primary min-h-[100px]"
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Section 3: Products & Resources */}
-                    <div className="rounded-xl border border-border bg-card/20 overflow-hidden">
-                        <button
-                            onClick={() => toggleSection('products')}
-                            className="w-full flex items-center justify-between p-4 hover:bg-accent/10 transition-colors"
-                        >
-                            <div className="flex items-center gap-3">
-                                <Package className="h-5 w-5 text-primary" />
-                                <span className="font-semibold">Productos y Recursos</span>
-                            </div>
-                            {expandedSections.products ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                        </button>
-
-                        {expandedSections.products && (
-                            <div className="p-6 pt-0 space-y-6 border-t border-border">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                            <FileText className="h-4 w-4" /> URL del Brochure
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={leadConfig?.brochureUrl || ''}
-                                            onChange={(e) => updateConfig('brochureUrl', e.target.value)}
-                                            placeholder="https://..."
-                                            className="w-full bg-background/50 border border-input rounded-lg p-3 text-sm focus:ring-1 focus:ring-primary"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                            <Globe className="h-4 w-4" /> Sitio Web
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={leadConfig?.websiteUrl || ''}
-                                            onChange={(e) => updateConfig('websiteUrl', e.target.value)}
-                                            placeholder="https://..."
-                                            className="w-full bg-background/50 border border-input rounded-lg p-3 text-sm focus:ring-1 focus:ring-primary"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-sm font-medium text-muted-foreground">Catálogo de Productos/Servicios</label>
-                                        <button
-                                            onClick={addProduct}
-                                            className="text-xs flex items-center gap-1 text-primary hover:underline"
-                                        >
-                                            <Plus className="h-3 w-3" /> Añadir Producto
-                                        </button>
-                                    </div>
-                                    <div className="grid grid-cols-1 gap-3">
-                                        {(leadConfig?.products || []).map((p, i) => (
-                                            <div key={i} className="group relative flex flex-col md:flex-row gap-3 p-4 rounded-xl border border-border bg-background/30">
-                                                <div className="flex-1 space-y-3">
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    </ConfigSection>
+                                </motion.div>
+                            </AnimatePresence>
+                        ) : (
+                            <AnimatePresence mode="wait">
+                                <motion.div 
+                                    key="advisor_automation"
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 20 }}
+                                    className="space-y-6"
+                                >
+                                    <ConfigSection 
+                                        icon={Clock} 
+                                        title="Protocolos de Tiempo (SLA)" 
+                                        isOpen={expandedSections.advisor}
+                                        onToggle={() => toggleSection('advisor')}
+                                    >
+                                        <div className="grid gap-8 p-4">
+                                            <div className="grid md:grid-cols-2 gap-8">
+                                                <div className="space-y-4">
+                                                    <label className="text-[11px] font-black text-muted-foreground/60 uppercase tracking-widest">Límite de Respuesta (Min)</label>
+                                                    <div className="relative">
+                                                        <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
                                                         <input
-                                                            type="text"
-                                                            value={p.name}
-                                                            onChange={(e) => updateProduct(i, 'name', e.target.value)}
-                                                            placeholder="Nombre del producto"
-                                                            className="bg-transparent border-b border-border p-1 text-sm font-bold focus:border-primary outline-none"
-                                                        />
-                                                        <input
-                                                            type="text"
-                                                            value={p.price || ''}
-                                                            onChange={(e) => updateProduct(i, 'price', e.target.value)}
-                                                            placeholder="Precio (opcional)"
-                                                            className="bg-transparent border-b border-border p-1 text-sm focus:border-primary outline-none"
+                                                            type="number"
+                                                            value={advisorConfig?.responseTimeLimitMinutes || 15}
+                                                            onChange={(e) => updateConfig('responseTimeLimitMinutes', parseInt(e.target.value))}
+                                                            className="w-full bg-white/2 border border-white/5 rounded-2xl p-4 pl-12 text-sm font-bold text-white focus:ring-2 focus:ring-primary/20 transition-all"
                                                         />
                                                     </div>
-                                                    <textarea
-                                                        value={p.description}
-                                                        onChange={(e) => updateProduct(i, 'description', e.target.value)}
-                                                        placeholder="Breve descripción para la IA"
-                                                        className="w-full bg-transparent border border-dashed border-border rounded-lg p-2 text-xs focus:border-primary outline-none resize-none"
-                                                    />
                                                 </div>
-                                                <button
-                                                    onClick={() => removeProduct(i)}
-                                                    className="absolute -top-2 -right-2 md:static p-2 text-muted-foreground hover:text-destructive bg-background md:bg-transparent rounded-full border border-border md:border-0 shadow-sm md:shadow-none transition-colors"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Section 4: Schedule & Out of Hours */}
-                    <div className="rounded-xl border border-border bg-card/20 overflow-hidden">
-                        <button
-                            onClick={() => toggleSection('schedule')}
-                            className="w-full flex items-center justify-between p-4 hover:bg-accent/10 transition-colors"
-                        >
-                            <div className="flex items-center gap-3">
-                                <Clock className="h-5 w-5 text-primary" />
-                                <span className="font-semibold">Horarios y Fuera de Servicio</span>
-                            </div>
-                            {expandedSections.schedule ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                        </button>
-
-                        {expandedSections.schedule && (
-                            <div className="p-6 pt-0 space-y-6 border-t border-border">
-                                <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-background/30">
-                                    <div className="space-y-1">
-                                        <span className="text-sm font-medium">Activar horario fuera de servicio</span>
-                                        <p className="text-xs text-muted-foreground">El bot responderá un mensaje especial cuando estés cerrado.</p>
-                                    </div>
-                                    <button
-                                        onClick={() => updateConfig('offHoursEnabled', !leadConfig?.offHoursEnabled)}
-                                        className={cn(
-                                            "relative inline-flex h-6 w-12 items-center rounded-full transition-colors",
-                                            leadConfig?.offHoursEnabled ? "bg-primary" : "bg-muted"
-                                        )}
-                                    >
-                                        <span className={cn(
-                                            "inline-block h-4 w-4 transform rounded-full bg-background transition-transform",
-                                            leadConfig?.offHoursEnabled ? "translate-x-7" : "translate-x-1"
-                                        )} />
-                                    </button>
-                                </div>
-
-                                {leadConfig?.offHoursEnabled && (
-                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-medium text-muted-foreground">Hora de Apertura</label>
-                                                <input
-                                                    type="time"
-                                                    value={leadConfig?.workingHours?.start || '09:00'}
-                                                    onChange={(e) => updateConfig('workingHours', { ...leadConfig?.workingHours, start: e.target.value })}
-                                                    className="w-full bg-background/50 border border-input rounded-lg p-2 text-sm focus:ring-1 focus:ring-primary"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-medium text-muted-foreground">Hora de Cierre</label>
-                                                <input
-                                                    type="time"
-                                                    value={leadConfig?.workingHours?.end || '18:00'}
-                                                    onChange={(e) => updateConfig('workingHours', { ...leadConfig?.workingHours, end: e.target.value })}
-                                                    className="w-full bg-background/50 border border-input rounded-lg p-2 text-sm focus:ring-1 focus:ring-primary"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-muted-foreground">Mensaje Fuera de Horario</label>
-                                            <textarea
-                                                value={leadConfig?.offHoursMessage || ''}
-                                                onChange={(e) => updateConfig('offHoursMessage', e.target.value)}
-                                                placeholder="Hola, en este momento estamos cerrados..."
-                                                className="w-full bg-background/50 border border-input rounded-lg p-3 text-sm focus:ring-1 focus:ring-primary min-h-[80px] resize-none"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Content for Advisor Automation */}
-            {activeTab === 'advisor_automation' && (
-                <div className="space-y-4">
-                    <div className="rounded-xl border border-border bg-card/20 overflow-hidden">
-                        <button
-                            onClick={() => toggleSection('advisor')}
-                            className="w-full flex items-center justify-between p-4 hover:bg-accent/10 transition-colors"
-                        >
-                            <div className="flex items-center gap-3">
-                                <Sparkles className="h-5 w-5 text-primary" />
-                                <span className="font-semibold">Configuración de Seguimiento</span>
-                            </div>
-                            {expandedSections.advisor ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                        </button>
-
-                        {expandedSections.advisor && (
-                            <div className="p-6 pt-0 space-y-8 border-t border-border">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    {/* Columna Izquierda: Configuración Técnica */}
-                                    <div className="space-y-6">
-                                        <div className="space-y-4">
-                                            <h3 className="text-sm font-semibold flex items-center gap-2 text-primary">
-                                                <Settings2 className="h-4 w-4" /> Parámetros de Operación
-                                            </h3>
-                                            
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium text-muted-foreground">Tiempo Límite de Respuesta (minutos)</label>
-                                                <div className="flex items-center gap-4">
-                                                    <input
-                                                        type="range"
-                                                        min="1"
-                                                        max="60"
-                                                        step="1"
-                                                        value={advisorConfig?.responseTimeLimitMinutes || 15}
-                                                        onChange={(e) => updateConfig('responseTimeLimitMinutes', parseInt(e.target.value))}
-                                                        className="flex-1 accent-primary"
-                                                    />
-                                                    <span className="text-lg font-bold w-12 text-center">{advisorConfig?.responseTimeLimitMinutes || 15} </span>
+                                                <div className="space-y-4">
+                                                    <label className="text-[11px] font-black text-muted-foreground/60 uppercase tracking-widest">Frecuencia de Recordatorios</label>
+                                                    <div className="relative">
+                                                        <Bell className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-500" />
+                                                        <input
+                                                            type="number"
+                                                            value={advisorConfig?.reminderIntervalMinutes || 5}
+                                                            onChange={(e) => updateConfig('reminderIntervalMinutes', parseInt(e.target.value))}
+                                                            className="w-full bg-white/2 border border-white/5 rounded-2xl p-4 pl-12 text-sm font-bold text-white focus:ring-2 focus:ring-primary/20 transition-all"
+                                                        />
+                                                    </div>
                                                 </div>
-                                                <p className="text-[10px] text-muted-foreground italic">El asesor debe marcar como &quot;CONTACTADO&quot; antes de este tiempo para evitar penalizaciones.</p>
                                             </div>
 
-                                            <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-background/30">
-                                                <div className="space-y-1">
-                                                    <span className="text-sm font-medium">Activar Recordatorios</span>
-                                                    <p className="text-xs text-muted-foreground">Enviar un mensaje al asesor si no ha respondido.</p>
-                                                </div>
-                                                <button
-                                                    onClick={() => updateConfig('reminderEnabled', !advisorConfig?.reminderEnabled)}
-                                                    className={cn(
-                                                        "relative inline-flex h-6 w-12 items-center rounded-full transition-colors",
-                                                        advisorConfig?.reminderEnabled ? "bg-primary" : "bg-muted"
-                                                    )}
-                                                >
-                                                    <span className={cn(
-                                                        "inline-block h-4 w-4 transform rounded-full bg-background transition-transform",
-                                                        advisorConfig?.reminderEnabled ? "translate-x-7" : "translate-x-1"
-                                                    )} />
-                                                </button>
-                                            </div>
-
-                                            <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-background/30">
-                                                <div className="space-y-1">
-                                                    <span className="text-sm font-medium">Botones Interactivos</span>
-                                                    <p className="text-xs text-muted-foreground">Usar botones de WhatsApp para acciones rápidas.</p>
-                                                </div>
-                                                <button
-                                                    onClick={() => updateConfig('enableInteractiveButtons', !advisorConfig?.enableInteractiveButtons)}
-                                                    className={cn(
-                                                        "relative inline-flex h-6 w-12 items-center rounded-full transition-colors",
-                                                        advisorConfig?.enableInteractiveButtons ? "bg-primary" : "bg-muted"
-                                                    )}
-                                                >
-                                                    <span className={cn(
-                                                        "inline-block h-4 w-4 transform rounded-full bg-background transition-transform",
-                                                        advisorConfig?.enableInteractiveButtons ? "translate-x-7" : "translate-x-1"
-                                                    )} />
-                                                </button>
-                                            </div>
-
-                                            <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-background/30">
-                                                <div className="space-y-1">
-                                                    <span className="text-sm font-medium">Resumen IA Automático</span>
-                                                    <p className="text-xs text-muted-foreground">Enviar un resumen de la intención del lead al asesor.</p>
-                                                </div>
-                                                <button
-                                                    onClick={() => updateConfig('useAiSummary', !advisorConfig?.useAiSummary)}
-                                                    className={cn(
-                                                        "relative inline-flex h-6 w-12 items-center rounded-full transition-colors",
-                                                        advisorConfig?.useAiSummary ? "bg-primary" : "bg-muted"
-                                                    )}
-                                                >
-                                                    <span className={cn(
-                                                        "inline-block h-4 w-4 transform rounded-full bg-background transition-transform",
-                                                        advisorConfig?.useAiSummary ? "translate-x-7" : "translate-x-1"
-                                                    )} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {advisorConfig?.useAiSummary && (
-                                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                                                <label className="text-sm font-medium text-muted-foreground">Instrucciones para el Resumen (IA)</label>
-                                                <textarea
-                                                    value={advisorConfig?.aiSummaryPrompt || ''}
-                                                    onChange={(e) => updateConfig('aiSummaryPrompt', e.target.value)}
-                                                    placeholder="Ej: Resume los puntos clave y destaca el interés principal..."
-                                                    className="w-full bg-background/50 border border-input rounded-lg p-3 text-sm focus:ring-1 focus:ring-primary min-h-[100px] resize-none"
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Columna Derecha: Mensajes Personalizables */}
-                                    <div className="space-y-6">
-                                        <h3 className="text-sm font-semibold flex items-center gap-2 text-primary">
-                                            <MessageCircle className="h-4 w-4" /> Mensajes de Automatización
-                                        </h3>
-
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                                                    <Bot className="h-3 w-3" /> Mensaje de Asignación
-                                                </label>
-                                                <textarea
-                                                    value={advisorConfig?.assignmentMessage || ''}
-                                                    onChange={(e) => updateConfig('assignmentMessage', e.target.value)}
-                                                    placeholder="Hola {{name}}, tienes un nuevo lead asignado..."
-                                                    className="w-full bg-background/50 border border-input rounded-lg p-3 text-sm focus:ring-1 focus:ring-primary min-h-[80px] resize-none"
-                                                />
-                                                <p className="text-[10px] text-muted-foreground">Variables: {'{{lead_id}}'}, {'{{lead_name}}'}, {'{{phone}}'}, {'{{summary}}'}, {'{{response_limit}}'}</p>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                                                    <Bell className="h-3 w-3" /> Alerta de SLA (15 min)
-                                                </label>
+                                            <div className="space-y-4">
+                                                <label className="text-[11px] font-black text-muted-foreground/60 uppercase tracking-widest">Mensaje de Alerta SLA</label>
                                                 <textarea
                                                     value={advisorConfig?.slaWarningMessage || ''}
                                                     onChange={(e) => updateConfig('slaWarningMessage', e.target.value)}
-                                                    placeholder="⚠️ ALERTA: Han pasado 15 minutos sin contacto..."
-                                                    className="w-full bg-background/50 border border-input rounded-lg p-3 text-sm focus:ring-1 focus:ring-primary min-h-[80px] resize-none"
+                                                    className="w-full bg-white/2 border border-white/5 rounded-[1.5rem] p-5 text-sm font-medium text-white/80 focus:ring-2 focus:ring-primary/20 min-h-[100px] resize-none scrollbar-hide"
+                                                    placeholder="Mensaje que recibe el asesor cuando se vence el tiempo..."
                                                 />
-                                                <p className="text-[10px] text-muted-foreground">Variables: {'{{lead_id}}'}, {'{{lead_name}}'}</p>
+                                            </div>
+                                        </div>
+                                    </ConfigSection>
+
+                                    <ConfigSection 
+                                        icon={Zap} 
+                                        title="Inteligencia de Asignación" 
+                                        isOpen={true}
+                                        onToggle={() => {}}
+                                    >
+                                        <div className="grid gap-8 p-4">
+                                            <div className="grid md:grid-cols-2 gap-6">
+                                                <div className="flex items-center justify-between p-6 bg-white/2 border border-white/5 rounded-[2rem] group hover:border-primary/20 transition-all">
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs font-black uppercase tracking-widest text-white">Resúmenes IA</p>
+                                                        <p className="text-[10px] text-muted-foreground font-medium">Generar resumen del lead automáticamente</p>
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => updateConfig('useAiSummary', !advisorConfig?.useAiSummary)}
+                                                        className={cn(
+                                                            "h-7 w-12 rounded-full transition-all duration-500",
+                                                            advisorConfig?.useAiSummary ? "bg-primary shadow-lg shadow-primary/20" : "bg-white/10"
+                                                        )}
+                                                    >
+                                                        <div className={cn(
+                                                            "h-5 w-5 rounded-full bg-white transition-transform mx-1",
+                                                            advisorConfig?.useAiSummary ? "translate-x-5" : "translate-x-0"
+                                                        )} />
+                                                    </button>
+                                                </div>
+                                                <div className="flex items-center justify-between p-6 bg-white/2 border border-white/5 rounded-[2rem] group hover:border-primary/20 transition-all">
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs font-black uppercase tracking-widest text-white">Botones Interactivos</p>
+                                                        <p className="text-[10px] text-muted-foreground font-medium">Habilitar botones de acción rápida</p>
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => updateConfig('enableInteractiveButtons', !advisorConfig?.enableInteractiveButtons)}
+                                                        className={cn(
+                                                            "h-7 w-12 rounded-full transition-all duration-500",
+                                                            advisorConfig?.enableInteractiveButtons ? "bg-primary shadow-lg shadow-primary/20" : "bg-white/10"
+                                                        )}
+                                                    >
+                                                        <div className={cn(
+                                                            "h-5 w-5 rounded-full bg-white transition-transform mx-1",
+                                                            advisorConfig?.enableInteractiveButtons ? "translate-x-5" : "translate-x-0"
+                                                        )} />
+                                                    </button>
+                                                </div>
                                             </div>
 
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                                                    <FileText className="h-3 w-3" /> Solicitud de Notas
-                                                </label>
+                                            <div className="space-y-4">
+                                                <label className="text-[11px] font-black text-muted-foreground/60 uppercase tracking-widest">Prompt Personalizado de Resumen</label>
                                                 <textarea
-                                                    value={advisorConfig?.notesPromptMessage || ''}
-                                                    onChange={(e) => updateConfig('notesPromptMessage', e.target.value)}
-                                                    placeholder="Por favor, escribe las notas del contacto realizado..."
-                                                    className="w-full bg-background/50 border border-input rounded-lg p-3 text-sm focus:ring-1 focus:ring-primary min-h-[80px] resize-none"
+                                                    value={advisorConfig?.aiSummaryPrompt || ''}
+                                                    onChange={(e) => updateConfig('aiSummaryPrompt', e.target.value)}
+                                                    className="w-full bg-white/2 border border-white/5 rounded-[1.5rem] p-5 text-sm font-medium text-white/80 focus:ring-2 focus:ring-primary/20 min-h-[120px] resize-none scrollbar-hide"
+                                                    placeholder="Instrucciones para que la IA genere el resumen perfecto..."
                                                 />
-                                                <p className="text-[10px] text-muted-foreground">Variables: {'{{lead_id}}'}</p>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                                                    <CheckCircle2 className="h-3 w-3" /> Confirmación de Notas
-                                                </label>
-                                                <textarea
-                                                    value={advisorConfig?.successNoteMessage || ''}
-                                                    onChange={(e) => updateConfig('successNoteMessage', e.target.value)}
-                                                    placeholder="✅ Nota guardada exitosamente."
-                                                    className="w-full bg-background/50 border border-input rounded-lg p-3 text-sm focus:ring-1 focus:ring-primary min-h-[80px] resize-none"
-                                                />
-                                                <p className="text-[10px] text-muted-foreground">Variables: {'{{lead_id}}'}</p>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-border/50">
-                                    <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 space-y-4">
-                                        <h3 className="text-sm font-bold flex items-center gap-2">
-                                            <FileText className="h-4 w-4 text-primary" />
-                                            Flujo de Trabajo del Asesor (WhatsApp CRM)
-                                        </h3>
-                                        <div className="space-y-3">
-                                            <div className="flex gap-3">
-                                                <div className="h-6 w-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">1</div>
-                                                <p className="text-xs text-muted-foreground">El asesor recibe el lead con resumen de IA y botones de acción.</p>
-                                            </div>
-                                            <div className="flex gap-3">
-                                                <div className="h-6 w-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">2</div>
-                                                <p className="text-xs text-muted-foreground">Al presionar <span className="text-primary font-bold">CONTACTADO</span>, el lead cambia de estado automáticamente.</p>
-                                            </div>
-                                            <div className="flex gap-3">
-                                                <div className="h-6 w-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">3</div>
-                                                <p className="text-xs text-muted-foreground">El sistema solicita notas al asesor para el histórico del lead.</p>
-                                            </div>
-                                            <div className="flex gap-3">
-                                                <div className="h-6 w-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">4</div>
-                                                <p className="text-xs text-muted-foreground">Comandos rápidos: <code className="bg-background px-1 rounded">#lead SEGUIMIENTO</code>, <code className="bg-background px-1 rounded">#lead CITA</code>, <code className="bg-background px-1 rounded">#lead CERRADO</code>.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 space-y-2">
-                                        <div className="flex items-center gap-2 text-amber-500">
-                                            <Clock className="h-4 w-4" />
-                                            <span className="text-xs font-bold">Recordatorios Activos</span>
-                                        </div>
-                                        <p className="text-[10px] text-muted-foreground">
-                                            Si el recordatorio está activo, se enviará un mensaje cada <strong>{advisorConfig?.reminderIntervalMinutes || 5} minutos</strong> hasta que el asesor responda o se alcance el tiempo límite.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
+                                    </ConfigSection>
+                                </motion.div>
+                            </AnimatePresence>
                         )}
                     </div>
-                </div>
-            )}
 
-            {/* Save Button */}
-            <div className="flex justify-end pt-6 border-t border-border">
-                <button
-                    onClick={handleSaveConfig}
-                    disabled={saving}
-                    className="flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-primary/20"
-                >
-                    {saving ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
-                    Guardar Configuración
-                </button>
+                    {/* Right Sidebar - Preview & Help */}
+                    <div className="lg:col-span-4 space-y-6">
+                        <div className="sticky top-0 space-y-6">
+                            {/* Preview Card */}
+                            <div className="p-8 rounded-[2.5rem] bg-black border border-white/10 shadow-2xl relative overflow-hidden">
+                                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50" />
+                                <h3 className="text-[11px] font-black text-muted-foreground/50 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+                                    <Globe className="h-3 w-3" />
+                                    Live Preview
+                                </h3>
+                                
+                                <div className="space-y-4">
+                                    <div className="flex gap-3">
+                                        <div className="h-8 w-8 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/20">
+                                            <Bot className="h-4 w-4 text-primary" />
+                                        </div>
+                                        <div className="flex-1 p-4 rounded-2xl rounded-tl-none bg-white/5 border border-white/10 text-xs font-medium text-white/80 leading-relaxed">
+                                            {leadConfig?.welcomeMessage || "Hola, soy tu asistente virtual. ¿En qué puedo ayudarte?"}
+                                        </div>
+                                    </div>
+                                    
+                                    {leadConfig?.welcomeButtonText && (
+                                        <div className="flex justify-end pr-11">
+                                            <div className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+                                                {leadConfig.welcomeButtonText}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {leadConfig?.questions && leadConfig.questions.length > 0 && (
+                                        <div className="flex gap-3 pt-4">
+                                            <div className="h-8 w-8 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/20">
+                                                <Bot className="h-4 w-4 text-primary" />
+                                            </div>
+                                            <div className="flex-1 p-4 rounded-2xl rounded-tl-none bg-white/5 border border-white/10 text-xs font-medium text-white/80 leading-relaxed italic opacity-60">
+                                                {leadConfig.questions[0]}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Help Card */}
+                            <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-primary/10 to-transparent border border-primary/20">
+                                <h3 className="text-[11px] font-black text-primary uppercase tracking-[0.3em] mb-4">Mabo Intelligence</h3>
+                                <p className="text-xs font-medium text-white/60 leading-relaxed mb-6">
+                                    Nuestra IA utiliza modelos de lenguaje avanzados para entender la intención del usuario y extraer información clave de forma natural.
+                                </p>
+                                <div className="space-y-3">
+                                    {[
+                                        { icon: Shield, text: "Privacidad Corporativa" },
+                                        { icon: Zap, text: "Respuesta Sub-segundo" },
+                                        { icon: Users, text: "Multi-agente nativo" }
+                                    ].map((item, i) => (
+                                        <div key={i} className="flex items-center gap-3 text-white/40">
+                                            <item.icon className="h-4 w-4" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">{item.text}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
+        </div>
+    );
+}
+
+function ConfigSection({ icon: Icon, title, children, isOpen, onToggle }: { 
+    icon: any, 
+    title: string, 
+    children: React.ReactNode, 
+    isOpen: boolean, 
+    onToggle: () => void 
+}) {
+    return (
+        <div className="rounded-[2.5rem] border border-white/5 bg-white/2 overflow-hidden transition-all duration-500 hover:border-white/10">
+            <button
+                onClick={onToggle}
+                className="w-full flex items-center justify-between p-8 hover:bg-white/2 transition-colors group"
+            >
+                <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-primary/30 group-hover:bg-primary/5 transition-all">
+                        <Icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                    <span className="text-sm font-black text-white uppercase tracking-widest">{title}</span>
+                </div>
+                <div className={cn(
+                    "h-10 w-10 rounded-xl bg-white/2 border border-white/5 flex items-center justify-center transition-transform duration-500",
+                    isOpen ? "rotate-180 bg-primary/5 border-primary/20 text-primary" : "text-muted-foreground"
+                )}>
+                    <ChevronDown className="h-5 w-5" />
+                </div>
+            </button>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                    >
+                        <div className="px-8 pb-8 border-t border-white/5 bg-white/[0.01]">
+                            <div className="pt-8">
+                                {children}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
@@ -918,8 +855,8 @@ function AutomationsContent() {
 export default function AutomationsPage() {
     return (
         <Suspense fallback={
-            <div className="flex h-96 items-center justify-center">
-                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+            <div className="flex h-[80vh] items-center justify-center">
+                <div className="h-16 w-16 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
             </div>
         }>
             <AutomationsContent />

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     Search,
     Send,
@@ -9,9 +10,18 @@ import {
     MessageCircle,
     RefreshCw,
     Phone,
-    Clock
+    Clock,
+    ChevronLeft,
+    MoreVertical,
+    Check,
+    CheckCheck,
+    ArrowLeft,
+    Image as ImageIcon,
+    Paperclip,
+    Smile
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
+import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 interface ChatContact {
@@ -43,10 +53,12 @@ function InboxContent() {
     const chatParam = searchParams.get('chat');
     const [newMessage, setNewMessage] = useState("");
     const [sending, setSending] = useState(false);
+    const [showMobileHistory, setShowMobileHistory] = useState(false);
 
     useEffect(() => {
         if (chatParam) {
             setSelectedContact(chatParam);
+            setShowMobileHistory(true);
         }
     }, [chatParam]);
 
@@ -77,7 +89,7 @@ function InboxContent() {
 
     useEffect(() => {
         fetchChats();
-        const interval = setInterval(fetchChats, 5000); // Poll every 5s
+        const interval = setInterval(fetchChats, 5000);
         return () => clearInterval(interval);
     }, [fetchChats]);
 
@@ -98,11 +110,13 @@ function InboxContent() {
         chat.lastMessage.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const handleRefresh = () => {
-        setRefreshing(true);
-        // fetchChats(); // Optimistic refresh handled by interval mostly
-        if (selectedContact) fetchHistory(selectedContact);
-        setTimeout(() => setRefreshing(false), 1000);
+    const handleSelectContact = (contact: string) => {
+        setSelectedContact(contact);
+        setShowMobileHistory(true);
+    };
+
+    const handleBack = () => {
+        setShowMobileHistory(false);
     };
 
     const handleSendMessage = async () => {
@@ -116,189 +130,382 @@ function InboxContent() {
             });
             if (res.ok) {
                 setNewMessage("");
-                // Immediate refresh to show new message
                 fetchHistory(selectedContact);
             }
         } catch (e) {
             console.error("Error sending message:", e);
-            alert("Error al enviar mensaje");
         } finally {
             setSending(false);
         }
     };
 
+    const formatMessageTime = (dateStr: string) => {
+        const date = new Date(dateStr);
+        if (isToday(date)) return format(date, "HH:mm");
+        if (isYesterday(date)) return "Ayer " + format(date, "HH:mm");
+        return format(date, "dd MMM HH:mm", { locale: es });
+    };
+
     return (
-        <div className="flex h-[calc(100vh-8rem)] flex-col gap-6 overflow-hidden">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Message Center</h1>
-                    <p className="mt-1 text-muted-foreground italic">Supervisión táctica de conversaciones en tiempo real.</p>
-                </div>
-                <button
-                    onClick={handleRefresh}
-                    className={cn(
-                        "p-2 rounded-full hover:bg-accent transition-colors text-muted-foreground",
-                        refreshing && "animate-spin text-primary"
-                    )}
+        <div className="flex h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)] flex-col gap-4 overflow-hidden px-4 md:px-0">
+            {/* Header Desktop - Ultra Modern */}
+            <div className="hidden md:flex items-center justify-between px-1">
+                <motion.div 
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.6 }}
                 >
-                    <RefreshCw className="h-5 w-5" />
-                </button>
+                    <div className="flex items-center gap-2 mb-1">
+                        <div className="h-2 w-2 rounded-full bg-primary animate-pulse shadow-[0_0_12px_rgba(var(--primary),0.5)]" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/80">Neural Communications</span>
+                    </div>
+                    <h1 className="text-4xl font-black tracking-tighter text-white font-outfit uppercase">
+                        Inbox <span className="text-primary">AI</span>
+                    </h1>
+                </motion.div>
+                <motion.div 
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.6 }}
+                    className="flex items-center gap-4"
+                >
+                    <div className="flex -space-x-3 mr-4">
+                        {[1, 2, 3, 4].map((i) => (
+                            <motion.div 
+                                key={i} 
+                                whileHover={{ y: -5, scale: 1.1 }}
+                                className="h-10 w-10 rounded-2xl border-2 border-[#080808] bg-white/5 flex items-center justify-center backdrop-blur-xl group cursor-pointer overflow-hidden relative"
+                            >
+                                <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <User className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                            </motion.div>
+                        ))}
+                        <div className="h-10 w-10 rounded-2xl border-2 border-[#080808] bg-primary/20 flex items-center justify-center backdrop-blur-xl text-[10px] font-black text-primary shadow-lg shadow-primary/20">
+                            +12
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => { setRefreshing(true); fetchChats(); }}
+                        className={cn(
+                            "h-12 w-12 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 transition-all text-muted-foreground hover:text-primary shadow-2xl flex items-center justify-center group",
+                            refreshing && "animate-spin text-primary"
+                        )}
+                    >
+                        <RefreshCw className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                    </button>
+                </motion.div>
             </div>
 
-            <div className="flex flex-1 gap-6 overflow-hidden">
-                {/* Sidebar - Contact List */}
-                <div className="flex w-80 flex-col gap-4 rounded-xl border border-border bg-card/50 backdrop-blur-md overflow-hidden">
-                    <div className="p-4 border-b border-border">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <input
-                                type="text"
-                                placeholder="Buscar contacto..."
-                                className="w-full rounded-md border border-input bg-background/50 py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+            <div className="flex flex-1 gap-6 overflow-hidden relative">
+                {/* Contact List - Glassmorphism Design */}
+                <motion.div 
+                    initial={false}
+                    animate={{ 
+                        width: showMobileHistory ? "0%" : "100%",
+                        opacity: showMobileHistory ? 0 : 1,
+                        x: showMobileHistory ? -50 : 0
+                    }}
+                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                    className={cn(
+                        "flex flex-col w-full md:w-[400px] lg:w-[440px] rounded-[3rem] border border-white/5 bg-white/[0.02] backdrop-blur-3xl overflow-hidden transition-all duration-700 md:!w-[400px] md:!opacity-100 md:!translate-x-0 relative",
+                        showMobileHistory ? "hidden md:flex" : "flex shadow-2xl shadow-black/50"
+                    )}
+                >
+                    <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none opacity-20" />
+                    
+                    <div className="p-8 border-b border-white/5 space-y-6 relative z-10">
+                        <div className="relative group">
+                            <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-transparent rounded-[1.7rem] blur opacity-0 group-focus-within:opacity-100 transition duration-500" />
+                            <div className="relative">
+                                <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar en el ecosistema..."
+                                    className="w-full rounded-[1.5rem] border border-white/10 bg-black/40 py-4 pl-14 pr-6 text-sm font-bold focus:outline-none focus:border-primary/50 transition-all backdrop-blur-2xl placeholder:text-muted-foreground/30"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide no-scrollbar">
+                            {['Todos', 'No leídos', 'Prioridad', 'IA'].map((tab) => (
+                                <button key={tab} className="px-5 py-2.5 rounded-2xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-primary hover:text-white hover:border-primary transition-all whitespace-nowrap active:scale-95 shadow-lg">
+                                    {tab}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 relative z-10">
                         {loading ? (
-                            <div className="flex items-center justify-center h-full text-muted-foreground">
-                                <RefreshCw className="h-6 w-6 animate-spin" />
+                            <div className="flex flex-col items-center justify-center h-full gap-6 text-muted-foreground">
+                                <div className="relative">
+                                    <div className="h-16 w-16 animate-spin rounded-[2rem] border-2 border-primary/20 border-t-primary" />
+                                    <div className="absolute inset-0 animate-pulse bg-primary/10 rounded-[2rem] blur-xl" />
+                                </div>
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] animate-pulse text-primary/60">Neural Sync...</p>
                             </div>
                         ) : filteredChats.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full p-4 text-center">
-                                <MessageCircle className="h-12 w-12 text-muted/20 mb-2" />
-                                <p className="text-sm text-muted-foreground">No hay conversaciones registradas.</p>
+                            <div className="flex flex-col items-center justify-center h-full p-12 text-center gap-6">
+                                <div className="h-24 w-24 rounded-[2.5rem] bg-white/2 border border-white/5 flex items-center justify-center group">
+                                    <MessageCircle className="h-12 w-12 text-white/5 group-hover:text-primary/20 transition-colors duration-700" />
+                                </div>
+                                <div>
+                                    <p className="font-black text-white text-base uppercase tracking-widest">Silencio absoluto</p>
+                                    <p className="text-xs text-muted-foreground mt-3 font-medium leading-relaxed">Tu flujo de mensajes está listo para recibir nuevas conexiones neuronales.</p>
+                                </div>
                             </div>
                         ) : (
-                            <div className="divide-y divide-border">
-                                {filteredChats.map((chat) => (
-                                    <button
-                                        key={chat.contact}
-                                        onClick={() => setSelectedContact(chat.contact)}
-                                        className={cn(
-                                            "flex w-full flex-col gap-1 p-4 text-left transition-colors hover:bg-accent/50",
-                                            selectedContact === chat.contact && "bg-accent"
-                                        )}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <span className="font-semibold text-sm">{chat.name || `+${chat.contact}`}</span>
-                                            <span className="text-[10px] text-muted-foreground font-mono">
-                                                {format(new Date(chat.timestamp), "HH:mm")}
-                                            </span>
-                                        </div>
-                                        <p className="line-clamp-1 text-xs text-muted-foreground">
-                                            {chat.lastMessage}
-                                        </p>
-                                    </button>
-                                ))}
+                            <div className="space-y-3">
+                                <AnimatePresence mode="popLayout">
+                                    {filteredChats.map((chat) => (
+                                        <motion.button
+                                            layout
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.9 }}
+                                            whileHover={{ scale: 1.02, x: 4 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            key={chat.contact}
+                                            onClick={() => handleSelectContact(chat.contact)}
+                                            className={cn(
+                                                "flex w-full items-center gap-5 p-5 rounded-[2.2rem] text-left transition-all relative group overflow-hidden border",
+                                                selectedContact === chat.contact 
+                                                    ? "bg-primary border-primary/20 shadow-[0_20px_40px_-15px_rgba(var(--primary),0.3)]" 
+                                                    : "bg-white/[0.03] border-white/5 hover:border-white/10"
+                                            )}
+                                        >
+                                            <div className="relative flex-shrink-0">
+                                                <div className={cn(
+                                                    "h-16 w-16 rounded-[1.8rem] flex items-center justify-center border-2 transition-all duration-700",
+                                                    selectedContact === chat.contact
+                                                        ? "bg-white/20 border-white/40 rotate-12 shadow-inner"
+                                                        : "bg-black/40 border-white/5 group-hover:rotate-12 group-hover:border-primary/30"
+                                                )}>
+                                                    <User className={cn(
+                                                        "h-8 w-8 transition-all duration-500",
+                                                        selectedContact === chat.contact ? "text-white scale-110" : "text-primary group-hover:scale-110"
+                                                    )} />
+                                                </div>
+                                                <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-2xl border-4 border-[#080808] bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <span className={cn(
+                                                        "font-black text-[15px] truncate pr-2 tracking-tight uppercase",
+                                                        selectedContact === chat.contact ? "text-white" : "text-white/90"
+                                                    )}>
+                                                        {chat.name || `+${chat.contact}`}
+                                                    </span>
+                                                    <span className={cn(
+                                                        "text-[10px] font-black whitespace-nowrap opacity-60",
+                                                        selectedContact === chat.contact ? "text-white" : "text-muted-foreground"
+                                                    )}>
+                                                        {formatMessageTime(chat.timestamp)}
+                                                    </span>
+                                                </div>
+                                                <p className={cn(
+                                                    "line-clamp-1 text-xs leading-relaxed font-bold tracking-tight opacity-70",
+                                                    selectedContact === chat.contact ? "text-white" : "text-muted-foreground"
+                                                )}>
+                                                    {chat.lastMessage}
+                                                </p>
+                                            </div>
+                                            {selectedContact === chat.contact && (
+                                                <motion.div 
+                                                    layoutId="active-pill"
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 h-2 w-2 bg-white rounded-full shadow-[0_0_10px_white]" 
+                                                />
+                                            )}
+                                        </motion.button>
+                                    ))}
+                                </AnimatePresence>
                             </div>
                         )}
                     </div>
-                </div>
+                </motion.div>
 
-                {/* Main Chat View */}
-                <div className="flex flex-1 flex-col rounded-xl border border-border bg-card/10 backdrop-blur-md overflow-hidden">
-                    {!selectedContact ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center">
-                            <div className="rounded-full bg-accent/30 p-4 mb-4">
-                                <MessageCircle className="h-10 w-10 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-medium text-foreground">Selecciona un chat</h3>
-                            <p className="text-sm text-muted-foreground max-w-xs">
-                                Elige un contacto de la izquierda para ver el historial completo de la conversación.
-                            </p>
-                        </div>
-                    ) : (
+                {/* Message History - Dynamic Chat Interface */}
+                <motion.div 
+                    initial={false}
+                    animate={{ 
+                        x: showMobileHistory ? 0 : "100%",
+                        opacity: showMobileHistory ? 1 : 0
+                    }}
+                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                    className={cn(
+                        "flex flex-1 flex-col rounded-[3rem] border border-white/5 bg-black/40 backdrop-blur-3xl overflow-hidden transition-all duration-700 md:!translate-x-0 md:!opacity-100 shadow-2xl relative",
+                        !showMobileHistory ? "hidden md:flex" : "flex"
+                    )}
+                >
+                    <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-transparent pointer-events-none opacity-20" />
+                    
+                    {selectedContact ? (
                         <>
-                            {/* Chat Header */}
-                            <div className="flex items-center justify-between p-4 border-b border-border bg-card/20">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                        <User className="h-5 w-5" />
+                            {/* Chat Header - Ultra Glossy */}
+                            <div className="flex items-center justify-between p-8 border-b border-white/5 bg-white/[0.02] backdrop-blur-3xl relative z-20">
+                                <div className="flex items-center gap-6">
+                                    <motion.button
+                                        whileHover={{ x: -5 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        onClick={handleBack}
+                                        className="md:hidden p-4 rounded-[1.5rem] bg-white/5 border border-white/10 text-white transition-all active:scale-90"
+                                    >
+                                        <ArrowLeft className="h-6 w-6" />
+                                    </motion.button>
+                                    <div className="relative">
+                                        <div className="h-16 w-16 rounded-[1.8rem] bg-primary/10 flex items-center justify-center border-2 border-primary/20 shadow-2xl shadow-primary/20 relative z-10">
+                                            <User className="h-8 w-8 text-primary" />
+                                        </div>
+                                        <div className="absolute -inset-2 bg-primary/20 rounded-[2rem] blur-xl opacity-50" />
                                     </div>
                                     <div>
-                                        <h3 className="font-semibold text-sm">
+                                        <h2 className="font-black text-xl text-white tracking-tighter leading-none mb-2 uppercase">
                                             {chats.find(c => c.contact === selectedContact)?.name || `+${selectedContact}`}
-                                        </h3>
-                                        <div className="flex items-center gap-1 text-[10px] text-status-assigned">
-                                            <div className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
-                                            CONEXIÓN EN VIVO
+                                        </h2>
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                                                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                                                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em]">En línea</span>
+                                            </div>
+                                            <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.1em]">Canal WhatsApp</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button className="p-2 rounded-md hover:bg-accent text-muted-foreground transition-colors border border-border">
-                                        <Phone className="h-4 w-4" />
+                                <div className="flex items-center gap-4">
+                                    <button className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 text-muted-foreground hover:text-primary transition-all flex items-center justify-center group hidden sm:flex">
+                                        <Phone className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                    </button>
+                                    <button className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 text-muted-foreground hover:text-primary transition-all flex items-center justify-center group">
+                                        <MoreVertical className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Messages List */}
-                            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                                {messages.map((msg) => {
-                                    const isSystem = msg.direction === 'outbound';
-                                    return (
-                                        <div
-                                            key={msg.id}
-                                            className={cn(
-                                                "flex flex-col max-w-[80%] gap-1",
-                                                isSystem ? "ml-auto items-end" : "mr-auto items-start"
-                                            )}
-                                        >
-                                            <div
-                                                className={cn(
-                                                    "rounded-2xl px-4 py-2 text-sm shadow-sm",
-                                                    isSystem
-                                                        ? "bg-primary text-primary-foreground rounded-tr-none"
-                                                        : "bg-muted text-foreground rounded-tl-none border border-border"
-                                                )}
+                            {/* Messages List - Modern Bubble Design */}
+                            <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-transparent custom-scrollbar relative z-10 no-scrollbar">
+                                <AnimatePresence initial={false}>
+                                    {messages.map((msg, i) => {
+                                        const isOutbound = msg.direction === 'outbound';
+                                        const showTime = i === 0 || 
+                                            new Date(msg.createdAt).getTime() - new Date(messages[i-1].createdAt).getTime() > 300000;
+
+                                        return (
+                                            <motion.div 
+                                                initial={{ opacity: 0, y: 30, scale: 0.9, x: isOutbound ? 20 : -20 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
+                                                transition={{ type: "spring", damping: 20, stiffness: 100 }}
+                                                key={msg.id} 
+                                                className="flex flex-col gap-3"
                                             >
-                                                {msg.body}
-                                            </div>
-                                            <div className="flex items-center gap-1 px-1">
-                                                <Clock className="h-3 w-3 text-muted-foreground/50" />
-                                                <span className="text-[10px] text-muted-foreground/50 font-mono">
-                                                    {format(new Date(msg.createdAt), "HH:mm:ss")}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                                <div ref={messagesEndRef} />
+                                                {showTime && (
+                                                    <div className="flex justify-center my-8">
+                                                        <span className="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/30 bg-white/[0.02] px-6 py-2 rounded-full border border-white/5 backdrop-blur-xl">
+                                                            {formatMessageTime(msg.createdAt)}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <div className={cn(
+                                                    "flex w-full group/msg",
+                                                    isOutbound ? "justify-end" : "justify-start"
+                                                )}>
+                                                    <div className={cn(
+                                                        "max-w-[85%] md:max-w-[70%] relative",
+                                                        isOutbound ? "items-end" : "items-start"
+                                                    )}>
+                                                        <div className={cn(
+                                                            "px-6 py-4 rounded-[2rem] text-[14px] leading-relaxed font-bold tracking-tight shadow-2xl transition-all duration-500",
+                                                            isOutbound 
+                                                                ? "bg-gradient-to-br from-primary to-primary/80 text-white rounded-tr-none border border-white/10" 
+                                                                : "bg-white/[0.03] text-white/90 rounded-tl-none border border-white/5 backdrop-blur-2xl hover:bg-white/5"
+                                                        )}>
+                                                            {msg.body}
+                                                            <div className={cn(
+                                                                "flex items-center gap-2 mt-2 opacity-50 text-[10px] font-black uppercase tracking-tighter",
+                                                                isOutbound ? "justify-end" : "justify-start"
+                                                            )}>
+                                                                {format(new Date(msg.createdAt), "HH:mm")}
+                                                                {isOutbound && <CheckCheck className="h-3 w-3" />}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })}
+                                    <div ref={messagesEndRef} className="h-4" />
+                                </AnimatePresence>
                             </div>
 
-                            {/* Functional Input Bar */}
-                            <div className="p-4 border-t border-border bg-card/20">
-                                <div className="flex items-center gap-2">
+                            {/* Message Input - Neural Field */}
+                            <div className="p-8 border-t border-white/5 bg-white/[0.01] backdrop-blur-3xl relative z-20">
+                                <div className="flex items-center gap-4 bg-black/40 p-3 rounded-[2.2rem] border border-white/10 focus-within:border-primary/50 transition-all shadow-inner relative group">
+                                    <div className="absolute -inset-1 bg-primary/5 rounded-[2.3rem] blur opacity-0 group-focus-within:opacity-100 transition duration-500" />
+                                    <div className="flex items-center gap-1 pl-2">
+                                        <button className="p-3 rounded-2xl hover:bg-white/5 text-muted-foreground hover:text-primary transition-all">
+                                            <Paperclip className="h-5 w-5" />
+                                        </button>
+                                        <button className="p-3 rounded-2xl hover:bg-white/5 text-muted-foreground hover:text-primary transition-all hidden sm:flex">
+                                            <Smile className="h-5 w-5" />
+                                        </button>
+                                    </div>
                                     <input
                                         type="text"
-                                        placeholder="Escribe un mensaje..."
-                                        className="flex-1 bg-background/50 border border-input rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                                        placeholder="Escribe tu mensaje..."
+                                        className="flex-1 bg-transparent py-4 text-sm font-bold focus:outline-none placeholder:text-muted-foreground/30 px-2"
                                         value={newMessage}
                                         onChange={(e) => setNewMessage(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                                         disabled={sending}
                                     />
-                                    <button
+                                    <motion.button
+                                        whileHover={{ scale: 1.05, rotate: 5 }}
+                                        whileTap={{ scale: 0.95 }}
                                         onClick={handleSendMessage}
                                         disabled={sending || !newMessage.trim()}
                                         className={cn(
-                                            "bg-primary text-primary-foreground p-2 rounded-md transition-all hover:bg-primary/90",
-                                            (sending || !newMessage.trim()) && "opacity-50 cursor-not-allowed"
+                                            "h-14 w-14 rounded-[1.5rem] flex items-center justify-center transition-all shadow-2xl relative overflow-hidden group/send",
+                                            newMessage.trim() 
+                                                ? "bg-primary text-white shadow-primary/30" 
+                                                : "bg-white/5 text-muted-foreground grayscale cursor-not-allowed"
                                         )}
                                     >
-                                        <Send className="h-4 w-4" />
-                                    </button>
+                                        <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover/send:opacity-100 transition-opacity" />
+                                        {sending ? (
+                                            <RefreshCw className="h-6 w-6 animate-spin" />
+                                        ) : (
+                                            <Send className="h-6 w-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                                        )}
+                                    </motion.button>
                                 </div>
-                                <p className="mt-2 text-[10px] text-center text-muted-foreground italic">
-                                    Al enviar un mensaje, el lead pasará automáticamente a estado CONTACTADO.
-                                </p>
                             </div>
                         </>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center p-12 text-center relative z-10">
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.5 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ type: "spring", duration: 1.5 }}
+                                className="relative"
+                            >
+                                <div className="h-40 w-40 rounded-[4rem] bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 flex items-center justify-center mb-8 relative z-10">
+                                    <MessageCircle className="h-20 w-20 text-primary/40" />
+                                </div>
+                                <div className="absolute -inset-10 bg-primary/5 rounded-full blur-[80px] opacity-30" />
+                            </motion.div>
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.5 }}
+                            >
+                                <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">Neural Inbox Ready</h3>
+                                <p className="text-muted-foreground max-w-sm font-bold text-sm leading-relaxed opacity-60">
+                                    Selecciona una neurona del ecosistema para iniciar la transmisión de datos en tiempo real.
+                                </p>
+                            </motion.div>
+                        </div>
                     )}
-                </div>
+                </motion.div>
             </div>
         </div>
     );

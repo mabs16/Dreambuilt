@@ -18,11 +18,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className="dark" suppressHydrationWarning>
-      <body className="font-sans antialiased" suppressHydrationWarning>
+      <body className="font-sans antialiased bg-background" suppressHydrationWarning>
         <div className={`${inter.variable} ${outfit.variable} flex h-screen overflow-hidden`}>
           <Sidebar />
-          <main className="flex-1 overflow-y-auto bg-background">
-            <div className="mx-auto h-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <main className="flex-1 relative overflow-y-auto bg-background focus:outline-none">
+            <div className="mx-auto min-h-screen max-w-7xl px-4 py-4 sm:px-6 md:py-8 lg:px-8">
               {children}
             </div>
           </main>
