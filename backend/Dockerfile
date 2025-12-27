@@ -1,32 +1,36 @@
-# Etapa de construcción
+# Use official Node.js image as builder
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copiar archivos de dependencias
+# Copy package files
 COPY package*.json ./
 
-# Instalar dependencias
+# Install dependencies
 RUN npm install
 
-# Copiar el resto del código
+# Copy source code
 COPY . .
 
-# Construir la aplicación
+# Build the application
 RUN npm run build
 
-# Etapa de producción
+# Use official Node.js image for production
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copiar dependencias de producción y archivos construidos
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
+# Copy package files
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm install --only=production
+
+# Copy built files from builder
 COPY --from=builder /app/dist ./dist
 
-# Exponer el puerto (Google Cloud usa PORT env var)
+# Expose port (Cloud Run uses PORT env var, defaults to 8080)
 EXPOSE 8080
 
-# Comando para arrancar
-CMD ["npm", "run", "start:prod"]
+# Command to run the application
+CMD ["node", "dist/main"]
