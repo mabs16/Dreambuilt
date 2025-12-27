@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
     Search,
@@ -30,7 +30,7 @@ interface Message {
     createdAt: string;
 }
 
-export default function InboxPage() {
+function InboxContent() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     const [chats, setChats] = useState<ChatContact[]>([]);
     const [selectedContact, setSelectedContact] = useState<string | null>(null);
@@ -301,5 +301,17 @@ export default function InboxPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function InboxPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex h-full items-center justify-center">
+                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        }>
+            <InboxContent />
+        </Suspense>
     );
 }
