@@ -21,6 +21,7 @@ interface Advisor {
 }
 
 export default function AdvisorsPage() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     const [advisors, setAdvisors] = useState<Advisor[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -80,7 +81,7 @@ export default function AdvisorsPage() {
         const fullPhone = newAdvisor.countryCode + cleanPhonePart;
 
         try {
-            const response = await fetch("http://localhost:3001/advisors/request-otp", {
+            const response = await fetch(`${apiUrl}/advisors/request-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: newAdvisor.name, phone: fullPhone }),
@@ -104,7 +105,7 @@ export default function AdvisorsPage() {
         const fullPhone = newAdvisor.countryCode + cleanPhonePart;
 
         try {
-            const response = await fetch("http://localhost:3001/advisors/verify-otp", {
+            const response = await fetch(`${apiUrl}/advisors/verify-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ phone: fullPhone, otp: otpPin }),

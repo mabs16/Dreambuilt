@@ -31,6 +31,7 @@ interface Message {
 }
 
 export default function InboxPage() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     const [chats, setChats] = useState<ChatContact[]>([]);
     const [selectedContact, setSelectedContact] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -51,7 +52,7 @@ export default function InboxPage() {
 
     const fetchChats = async () => {
         try {
-            const res = await fetch("http://localhost:3001/whatsapp/messages");
+            const res = await fetch(`${apiUrl}/whatsapp/messages`);
             if (!res.ok) throw new Error("Failed to fetch chats");
             const data = await res.json();
             setChats(data || []);
@@ -65,7 +66,7 @@ export default function InboxPage() {
 
     const fetchHistory = async (phone: string) => {
         try {
-            const res = await fetch(`http://localhost:3001/whatsapp/messages/${phone}`);
+            const res = await fetch(`${apiUrl}/whatsapp/messages/${phone}`);
             if (!res.ok) throw new Error("Failed to fetch history");
             const data = await res.json();
             setMessages(data);
@@ -108,7 +109,7 @@ export default function InboxPage() {
         if (!newMessage.trim() || !selectedContact) return;
         setSending(true);
         try {
-            const res = await fetch("http://localhost:3001/whatsapp/messages", {
+            const res = await fetch(`${apiUrl}/whatsapp/messages`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ to: selectedContact, message: newMessage })

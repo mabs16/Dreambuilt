@@ -95,10 +95,12 @@ export default function AutomationsPage() {
         setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
     };
 
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
     const fetchConfig = useCallback(async (name: string) => {
         setLoading(true);
         try {
-            const res = await fetch(`http://127.0.0.1:3001/automations?name=${name}`);
+            const res = await fetch(`${apiUrl}/automations?name=${name}`);
             
             if (!res.ok) {
                 const errorText = await res.text();
@@ -182,7 +184,7 @@ export default function AutomationsPage() {
         if (!automation) return;
         setSaving(true);
         try {
-            const res = await fetch("http://127.0.0.1:3001/automations", {
+            const res = await fetch(`${apiUrl}/automations`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
@@ -204,7 +206,7 @@ export default function AutomationsPage() {
         if (!automation) return;
         setSaving(true);
         try {
-            const res = await fetch("http://127.0.0.1:3001/automations", {
+            const res = await fetch(`${apiUrl}/automations`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
