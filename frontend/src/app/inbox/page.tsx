@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import {
     Search,
@@ -50,7 +50,7 @@ function InboxContent() {
         }
     }, [chatParam]);
 
-    const fetchChats = async () => {
+    const fetchChats = useCallback(async () => {
         try {
             const res = await fetch(`${apiUrl}/whatsapp/messages`);
             if (!res.ok) throw new Error("Failed to fetch chats");
@@ -62,9 +62,9 @@ function InboxContent() {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, [apiUrl]);
 
-    const fetchHistory = async (phone: string) => {
+    const fetchHistory = useCallback(async (phone: string) => {
         try {
             const res = await fetch(`${apiUrl}/whatsapp/messages/${phone}`);
             if (!res.ok) throw new Error("Failed to fetch history");
@@ -73,13 +73,13 @@ function InboxContent() {
         } catch (error) {
             console.error("Error fetching history:", error);
         }
-    };
+    }, [apiUrl]);
 
     useEffect(() => {
         fetchChats();
         const interval = setInterval(fetchChats, 5000); // Poll every 5s
         return () => clearInterval(interval);
-    }, []);
+    }, [fetchChats]);
 
     useEffect(() => {
         if (selectedContact) {
@@ -87,7 +87,7 @@ function InboxContent() {
             const interval = setInterval(() => fetchHistory(selectedContact), 3000);
             return () => clearInterval(interval);
         }
-    }, [selectedContact]);
+    }, [selectedContact, fetchHistory]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
