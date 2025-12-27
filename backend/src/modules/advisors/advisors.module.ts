@@ -5,11 +5,9 @@ import { AdvisorsService } from './advisors.service';
 import { AdvisorsController } from './advisors.controller';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Advisor]),
-    ],
-    controllers: [AdvisorsController],
-    providers: [AdvisorsService],
-    exports: [AdvisorsService],
+  imports: [TypeOrmModule.forFeature([Advisor])],
+  controllers: [AdvisorsController],
+  providers: [AdvisorsService],
+  exports: [AdvisorsService],
 })
-export class AdvisorsModule { }
+export class AdvisorsModule {}

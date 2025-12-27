@@ -109,8 +109,8 @@ export class SlaProcessor extends WorkerHost {
 
         // Notify events
         this.eventEmitter.emit('event.created', {
-          leadId,
-          advisorId,
+          lead_id: leadId,
+          advisor_id: advisorId,
           type: 'SLA_FAILED',
           payload: {
             reason: 'NO_ATENDIDO',

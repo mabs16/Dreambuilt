@@ -7,12 +7,12 @@ import { AdvisorsModule } from '../advisors/advisors.module';
 import { LeadsModule } from '../leads/leads.module';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Score, Advisor]),
-        AdvisorsModule,
-        forwardRef(() => LeadsModule),
-    ],
-    providers: [ScoresService],
-    exports: [ScoresService],
+  imports: [
+    TypeOrmModule.forFeature([Score, Advisor]),
+    AdvisorsModule,
+    forwardRef(() => LeadsModule),
+  ],
+  providers: [ScoresService],
+  exports: [ScoresService],
 })
-export class ScoresModule { }
+export class ScoresModule {}

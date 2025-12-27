@@ -206,8 +206,8 @@ export class WhatsappService {
       Number(activeAssignment.advisor_id) !== Number(advisor.id)
     ) {
       this.eventEmitter.emit('event.created', {
-        leadId: parsed.leadId,
-        advisorId: advisor.id,
+        lead_id: parsed.leadId,
+        advisor_id: advisor.id,
         type: 'INVALID_OWNERSHIP_ATTEMPT',
         payload: { command: parsed.type, from },
       });

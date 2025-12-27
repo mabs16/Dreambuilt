@@ -9,12 +9,12 @@ import { ScoresModule } from '../scores/scores.module';
 import { SlaModule } from '../sla/sla.module';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Lead, LeadNote]),
-        forwardRef(() => ScoresModule),
-        forwardRef(() => SlaModule),
-    ],
-    providers: [LeadsService, LeadStateMachine, PipelineService],
-    exports: [LeadsService, LeadStateMachine, PipelineService],
+  imports: [
+    TypeOrmModule.forFeature([Lead, LeadNote]),
+    forwardRef(() => ScoresModule),
+    forwardRef(() => SlaModule),
+  ],
+  providers: [LeadsService, LeadStateMachine, PipelineService],
+  exports: [LeadsService, LeadStateMachine, PipelineService],
 })
-export class LeadsModule { }
+export class LeadsModule {}

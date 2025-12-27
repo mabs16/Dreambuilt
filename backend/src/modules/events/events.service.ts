@@ -6,14 +6,19 @@ import { Event } from './entities/event.entity';
 
 @Injectable()
 export class EventsService {
-    constructor(
-        @InjectRepository(Event)
-        private readonly eventsRepository: Repository<Event>,
-    ) { }
+  constructor(
+    @InjectRepository(Event)
+    private readonly eventsRepository: Repository<Event>,
+  ) {}
 
-    @OnEvent('event.created')
-    async create(data: { leadId: number; advisorId?: number; type: string; payload?: any }) {
-        const event = this.eventsRepository.create(data);
-        return this.eventsRepository.save(event);
-    }
+  @OnEvent('event.created')
+  async create(data: {
+    lead_id: number;
+    advisor_id?: number;
+    type: string;
+    payload?: Record<string, unknown>;
+  }) {
+    const event = this.eventsRepository.create(data);
+    return this.eventsRepository.save(event);
+  }
 }

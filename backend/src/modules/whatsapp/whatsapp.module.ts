@@ -13,14 +13,19 @@ import { Automation } from './entities/automation.entity';
 import { AutomationsController } from './controllers/automations.controller';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Message, Automation]),
-        AdvisorsModule,
-        AssignmentsModule,
-        forwardRef(() => LeadsModule)
-    ],
-    controllers: [WhatsappController, AutomationsController],
-    providers: [WhatsappService, CommandParser, AutomationsService, GeminiService],
-    exports: [WhatsappService, AutomationsService],
+  imports: [
+    TypeOrmModule.forFeature([Message, Automation]),
+    AdvisorsModule,
+    AssignmentsModule,
+    forwardRef(() => LeadsModule),
+  ],
+  controllers: [WhatsappController, AutomationsController],
+  providers: [
+    WhatsappService,
+    CommandParser,
+    AutomationsService,
+    GeminiService,
+  ],
+  exports: [WhatsappService, AutomationsService],
 })
-export class WhatsappModule { }
+export class WhatsappModule {}

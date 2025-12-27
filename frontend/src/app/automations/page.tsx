@@ -231,8 +231,9 @@ export default function AutomationsPage() {
         });
     };
 
-    const leadConfig = automation?.config as LeadQualificationConfig;
-    const advisorConfig = automation?.config as AdvisorAutomationConfig;
+    const isConfigLoaded = automation?.name === activeTab;
+    const leadConfig = isConfigLoaded ? (automation?.config as LeadQualificationConfig) : null;
+    const advisorConfig = isConfigLoaded ? (automation?.config as AdvisorAutomationConfig) : null;
 
     const updateQuestion = (index: number, text: string) => {
         if (!automation || activeTab !== 'lead_qualification') return;
@@ -398,7 +399,7 @@ export default function AutomationsPage() {
                                         </button>
                                     </div>
                                     <div className="space-y-3">
-                                        {leadConfig?.questions.map((q, i) => (
+                                        {(leadConfig?.questions || []).map((q, i) => (
                                             <div key={i} className="flex gap-2">
                                                 <div className="flex-1 relative">
                                                     <span className="absolute left-3 top-3 text-xs font-bold text-muted-foreground/50">{i + 1}</span>
