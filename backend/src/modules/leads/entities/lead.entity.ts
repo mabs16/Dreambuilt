@@ -38,6 +38,9 @@ export class Lead {
   })
   status: LeadStatus;
 
+  @Column({ nullable: true })
+  avatar_url: string;
+
   @CreateDateColumn()
   created_at: Date;
 

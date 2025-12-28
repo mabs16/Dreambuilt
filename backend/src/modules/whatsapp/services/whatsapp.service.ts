@@ -888,6 +888,7 @@ Link: https://wa.me/${lead.phone}
       .addSelect('COALESCE(leads.name, message.from)', 'name') // Use lead name if available, else phone
       .addSelect('message.body', 'lastMessage')
       .addSelect('message.created_at', 'timestamp')
+      .addSelect('leads.avatar_url', 'avatar')
       .innerJoin(
         (qb) => {
           return qb
