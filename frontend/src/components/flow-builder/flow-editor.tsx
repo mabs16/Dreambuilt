@@ -108,7 +108,15 @@ export default function FlowEditor() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+        // En producción NEXT_PUBLIC_API_URL debe estar configurado. 
+        // Si no existe, usamos la URL actual del navegador para deducir la del backend
+        let apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        
+        if (!apiUrl && typeof window !== 'undefined') {
+            const host = window.location.hostname;
+            apiUrl = `http://${host}:8080`; // Asumimos puerto 8080 por defecto si no hay env
+        }
+
         const flowData = {
             name: flowName,
             nodes,
@@ -117,15 +125,21 @@ export default function FlowEditor() {
             is_active: true
         };
 
+        console.log('Intentando guardar en:', `${apiUrl}/flows`);
+
         const res = await fetch(`${apiUrl}/flows`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
             body: JSON.stringify(flowData)
         });
 
         if (!res.ok) {
             const errorData = await res.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Error saving flow');
+            console.error('Error del servidor:', errorData);
+            throw new Error(errorData.message || `Error del servidor: ${res.status}`);
         }
         alert('Flujo guardado correctamente');
     } catch (error) {
