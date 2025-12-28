@@ -444,11 +444,12 @@ export class WhatsappService {
 
     if (!lead) {
       // Try to get avatar if we have waId
-      let avatarUrl = null;
+      let avatarUrl: string | null = null;
       if (waId) {
         try {
           avatarUrl = await this.getWhatsAppProfilePicture(from);
-        } catch (e) {
+        } catch (error) {
+          const e = error as Error;
           this.logger.warn(`Could not fetch avatar for ${from}: ${e.message}`);
         }
       }
@@ -457,7 +458,7 @@ export class WhatsappService {
         name: leadName,
         phone: from,
         source: 'WHATSAPP_BOT',
-        avatar_url: avatarUrl,
+        avatar_url: avatarUrl || undefined,
       });
       this.logger.log(
         `New lead created for bot: ${from} (Name: ${leadName}, Avatar: ${avatarUrl ? 'Yes' : 'No'})`,
@@ -478,7 +479,7 @@ export class WhatsappService {
             lead.avatar_url = avatarUrl;
             this.logger.log(`Lead ${from} avatar updated.`);
           }
-        } catch (e) {
+        } catch {
           // Ignore error on avatar update
         }
       }
@@ -942,7 +943,9 @@ Link: https://wa.me/${lead.phone}
     });
   }
 
-  private async getWhatsAppProfilePicture(phone: string): Promise<string | null> {
+  private async getWhatsAppProfilePicture(
+    phone: string,
+  ): Promise<string | null> {
     const accessToken = this.configService.get<string>('whatsapp.accessToken');
     const phoneNumberId = this.configService.get<string>(
       'whatsapp.phoneNumberId',
@@ -973,7 +976,7 @@ Link: https://wa.me/${lead.phone}
       );
 
       return null; // Fallback until we confirm exact response path from Meta
-    } catch (error) {
+    } catch {
       return null;
     }
   }
