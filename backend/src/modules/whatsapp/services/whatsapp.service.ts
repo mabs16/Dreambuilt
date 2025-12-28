@@ -558,10 +558,9 @@ export class WhatsappService {
     if (!isCompleted) {
       const lowerResp = aiResponse.toLowerCase();
       const closurePhrases = [
-        'se pondrá en contacto',
-        'he recibido tus datos',
-        'gracias por la información',
-        'gracias por tus respuestas',
+        'un asesor se pondrá en contacto',
+        'hemos recibido tus datos',
+        'proceso de precalificación ha terminado',
       ];
 
       // Only trigger fallback if history has some depth (to avoid welcome message false positives)
@@ -824,16 +823,25 @@ Link: https://wa.me/${lead.phone}
     // Clean phone number: remove any + or spaces (just in case)
     let cleanTo = to.replace(/\D/g, '');
 
-    // Mexico Special Case: If it's a Mexican number (starts with 52)
-    // and has 10 digits after 52, it needs a '1' between 52 and the number
-    // for WhatsApp Cloud API to deliver it correctly to mobile numbers.
+    // Mexico Special Case: WhatsApp Cloud API requires '52' followed by the 10 digits
+    // for messages to be delivered correctly to Mexican numbers.
+    // The '1' prefix (521...) is often deprecated or causes issues in the Cloud API.
     if (
+      cleanTo.startsWith('52') &&
+      cleanTo.length === 13 &&
+      cleanTo[2] === '1'
+    ) {
+      cleanTo = '52' + cleanTo.substring(3);
+      this.logger.debug(
+        `Normalized Mexico number (removed 1): ${to} -> ${cleanTo}`,
+      );
+    } else if (
       cleanTo.startsWith('52') &&
       cleanTo.length === 12 &&
       cleanTo[2] !== '1'
     ) {
-      cleanTo = '521' + cleanTo.substring(2);
-      this.logger.debug(`Normalized Mexico number: ${to} -> ${cleanTo}`);
+      // Already correct 52 + 10 digits
+      this.logger.debug(`Mexico number already correct: ${cleanTo}`);
     }
 
     const payload: Record<string, any> = {
