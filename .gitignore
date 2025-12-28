@@ -28,5 +28,6 @@ yarn-error.log*
 Thumbs.db
 
 # Other
+.trae/
 build_output.txt
 gemini_debug.log

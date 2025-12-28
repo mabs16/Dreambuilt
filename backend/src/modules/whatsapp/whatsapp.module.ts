@@ -8,6 +8,7 @@ import { GeminiService } from './services/gemini.service';
 import { AdvisorsModule } from '../advisors/advisors.module';
 import { AssignmentsModule } from '../assignments/assignments.module';
 import { LeadsModule } from '../leads/leads.module';
+import { FlowsModule } from '../flows/flows.module';
 import { Message } from './entities/message.entity';
 import { Automation } from './entities/automation.entity';
 import { AutomationsController } from './controllers/automations.controller';
@@ -18,6 +19,7 @@ import { AutomationsController } from './controllers/automations.controller';
     AdvisorsModule,
     AssignmentsModule,
     forwardRef(() => LeadsModule),
+    FlowsModule,
   ],
   controllers: [WhatsappController, AutomationsController],
   providers: [

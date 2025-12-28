@@ -19,10 +19,31 @@ import { Message, MessageDirection } from '../entities/message.entity';
 import { AutomationsService } from './automations.service';
 import { GeminiService } from './gemini.service';
 import { LeadStatus } from '../../leads/entities/lead.entity';
+import { FlowsService } from '../../flows/flows.service';
+import { FlowSession } from '../../flows/entities/flow-session.entity';
 import {
   LeadQualificationConfig,
   AdvisorAutomationConfig,
 } from '../entities/automation.entity';
+
+// Interfaces for Flow Engine
+interface FlowNode {
+  id: string;
+  type: string;
+  data: {
+    label?: string;
+    variable?: string;
+    [key: string]: any;
+  };
+  position?: { x: number; y: number };
+}
+
+interface FlowEdge {
+  id: string;
+  source: string;
+  target: string;
+  [key: string]: any;
+}
 
 interface WhatsAppInteractive {
   type: string;
@@ -58,6 +79,7 @@ export class WhatsappService {
     private readonly messageRepository: Repository<Message>,
     private readonly automationsService: AutomationsService,
     private readonly geminiService: GeminiService,
+    private readonly flowsService: FlowsService,
   ) {
     const redisConfig = this.configService.get('redis') as {
       host: string;
@@ -115,6 +137,54 @@ export class WhatsappService {
       // Not an advisor, check if bot is active and handle as lead
       const isBotActive = await this.automationsService.isBotActive();
       if (isBotActive) {
+        // --- FLOW ENGINE LOGIC ---
+        let lead = await this.leadsService.findByPhone(from);
+        if (!lead) {
+          // Create lead if not exists (needed for session)
+          lead = await this.leadsService.createLead({
+            name: profileName || 'Prospecto WhatsApp',
+            phone: from,
+            source: 'WHATSAPP_BOT',
+          });
+        }
+
+        // 1. Check if user is in an active Flow Session
+        const activeSession = await this.flowsService.getActiveSession(lead.id);
+
+        if (activeSession) {
+          this.logger.log(
+            `Active flow session found for ${from}. SessionID: ${activeSession.id}`,
+          );
+          // Execute next step in flow
+          await this.executeFlowStep(activeSession, body, from);
+          return;
+        }
+
+        // 2. Check if message triggers a new Flow (Keywords)
+        const flow = await this.flowsService.findByKeyword(body.toLowerCase());
+        if (flow) {
+          this.logger.log(`Flow triggered: ${flow.name} for ${from}`);
+
+          // Cast jsonb to array
+          const nodes = flow.nodes as unknown as FlowNode[];
+          const startNode =
+            nodes.find((n) => n.type === 'input' || n.type === 'trigger') ||
+            nodes[0];
+
+          if (startNode) {
+            const session = await this.flowsService.createSession(
+              lead.id,
+              flow.id,
+              startNode.id,
+            );
+            // Ensure session has the flow object attached for execution
+            session.flow = flow;
+            await this.executeFlowStep(session, body, from);
+            return;
+          }
+        }
+
+        // 3. Fallback to Legacy Bot Logic
         await this.handleLeadMessage(from, body, profileName);
       }
     } catch (error: unknown) {
@@ -123,6 +193,122 @@ export class WhatsappService {
         `Error processing message from ${from}: ${err.message}`,
       );
       await this.sendErrorMessage(from, err.message);
+    }
+  }
+
+  // --- FLOW ENGINE EXECUTOR ---
+  private async executeFlowStep(
+    session: FlowSession,
+    userMessage: string,
+    from: string,
+  ) {
+    const flow = session.flow;
+    const currentNodeId = session.current_node_id;
+    const nodes = (flow.nodes || []) as unknown as FlowNode[];
+    const edges = (flow.edges || []) as unknown as FlowEdge[];
+
+    const currentNode = nodes.find((n) => n.id === currentNodeId);
+
+    if (!currentNode) {
+      this.logger.error(`Node ${currentNodeId} not found in flow ${flow.id}`);
+      await this.flowsService.completeSession(session.id);
+      return;
+    }
+
+    // 1. Process User Input (if we are waiting for an answer)
+    // If we are revisiting a node that is a QUESTION, and we have userMessage, it means the user just answered it.
+    // However, the logic here assumes 'executeFlowStep' is called AFTER moving to the new node or when a new message arrives.
+    // We need to know if we were WAITING at this node.
+
+    // Check if the current node is a QUESTION and if we already sent the question (status check ideally, but let's infer)
+    // For now, simpler logic:
+    // If currentNode is 'Question' and we just arrived (first execution), we send the question and stop.
+    // If we are called again (next message), we save the answer and move on.
+
+    // We'll use a session variable 'waiting_for_input' to track this.
+    const isWaiting = session.variables?._waiting_for_input === true;
+
+    if (isWaiting) {
+      // User just answered the question of 'currentNode'
+      if (currentNode.data && currentNode.data.variable) {
+        const varName = currentNode.data.variable;
+        await this.flowsService.updateSessionVariables(session.id, {
+          [varName]: userMessage,
+          _waiting_for_input: false,
+        });
+        this.logger.log(`Saved variable ${varName} = ${userMessage}`);
+      } else {
+        // Just clear waiting flag if no variable defined
+        await this.flowsService.updateSessionVariables(session.id, {
+          _waiting_for_input: false,
+        });
+      }
+
+      // Proceed to find next node
+      // We don't send the question again.
+    } else {
+      // We just arrived at this node. Execute its action.
+
+      // ACTION: Send Message / Question
+      if (currentNode.data && currentNode.data.label) {
+        let messageToSend = currentNode.data.label;
+
+        // Clean prefixes
+        if (messageToSend.startsWith('Mensaje: '))
+          messageToSend = messageToSend.replace('Mensaje: ', '');
+        if (messageToSend.startsWith('Pregunta: '))
+          messageToSend = messageToSend.replace('Pregunta: ', '');
+        if (messageToSend.startsWith('Inicio: '))
+          messageToSend = `¡Hola! Bienvenido al flujo ${flow.name}`;
+
+        await this.sendWhatsappMessage(from, messageToSend);
+      }
+
+      // If it's a QUESTION node, stop here and wait for input
+      if (
+        currentNode.data &&
+        currentNode.data.label &&
+        currentNode.data.label.startsWith('Pregunta')
+      ) {
+        // Or check type
+        await this.flowsService.updateSessionVariables(session.id, {
+          _waiting_for_input: true,
+        });
+        return; // STOP execution, wait for next message
+      }
+    }
+
+    // 3. Find Next Node
+    // Logic for branching based on edges
+    // If CONDITION node, we need to evaluate logic.
+
+    // Simple edge finding for now (taking the first one)
+    // TODO: Support handles (sourceHandle) for True/False branches
+    const edge = edges.find((e) => e.source === currentNodeId);
+
+    if (edge) {
+      const nextNodeId = edge.target;
+      await this.flowsService.updateSessionNode(session.id, nextNodeId);
+
+      // Recursively execute next node immediately?
+      // Yes, usually we want to chain messages unless it's a question.
+      // But for safety to avoid loops, let's call it via a small delay or just return and let the user interact?
+      // Better: Execute immediately to chain "Message 1" -> "Message 2" -> "Question".
+
+      // Fetch fresh session to get updated currentNodeId
+      const updatedSession = await this.flowsService.findOneSession(session.id);
+      if (updatedSession) {
+        // Recursive call with empty message (system transition)
+        updatedSession.flow = flow; // Re-attach flow
+        await this.executeFlowStep(updatedSession, '', from);
+      }
+    } else {
+      // End of Flow
+      await this.flowsService.completeSession(session.id);
+      // Only send "Fin" if it wasn't a question we just asked
+      if (!isWaiting) {
+        // Optional: await this.sendWhatsappMessage(from, "[Fin del Flujo]");
+      }
     }
   }
 

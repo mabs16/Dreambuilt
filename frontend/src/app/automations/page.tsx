@@ -21,9 +21,11 @@ import {
   Package,
   Clock,
   Globe,
-  Shield
+  Shield,
+  Workflow
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import FlowEditor from "@/components/flow-builder/flow-editor";
 
 interface Product {
     name: string;
@@ -79,9 +81,9 @@ const TONE_OPTIONS = [
 
 function AutomationsContent() {
     const searchParams = useSearchParams();
-    const tabParam = searchParams.get('tab') as 'lead_qualification' | 'advisor_automation' | null;
+    const tabParam = searchParams.get('tab') as 'lead_qualification' | 'advisor_automation' | 'flow_builder' | null;
     
-    const [activeTab, setActiveTab] = useState<'lead_qualification' | 'advisor_automation'>(tabParam || 'lead_qualification');
+    const [activeTab, setActiveTab] = useState<'lead_qualification' | 'advisor_automation' | 'flow_builder'>(tabParam || 'lead_qualification');
     const [automation, setAutomation] = useState<Automation | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -330,16 +332,30 @@ function AutomationsContent() {
                             <Settings2 className="h-4 w-4" />
                             IA Gestión
                         </button>
+                        <button
+                            onClick={() => setActiveTab('flow_builder')}
+                            className={cn(
+                                "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300",
+                                activeTab === 'flow_builder' 
+                                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105" 
+                                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                            )}
+                        >
+                            <Workflow className="h-4 w-4" />
+                            Flow Builder
+                        </button>
                     </div>
                     
-                    <button
-                        onClick={handleSaveConfig}
-                        disabled={saving}
-                        className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl bg-white text-black font-black hover:scale-105 transition-all shadow-xl shadow-white/5 active:scale-95 disabled:opacity-50"
-                    >
-                        {saving ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
-                        <span className="text-xs uppercase tracking-widest">Guardar Cambios</span>
-                    </button>
+                    {activeTab !== 'flow_builder' && (
+                        <button
+                            onClick={handleSaveConfig}
+                            disabled={saving}
+                            className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl bg-white text-black font-black hover:scale-105 transition-all shadow-xl shadow-white/5 active:scale-95 disabled:opacity-50"
+                        >
+                            {saving ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+                            <span className="text-xs uppercase tracking-widest">Guardar Cambios</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -613,6 +629,18 @@ function AutomationsContent() {
                                             </div>
                                         </div>
                                     </ConfigSection>
+                                </motion.div>
+                            </AnimatePresence>
+                        ) : activeTab === 'flow_builder' ? (
+                            <AnimatePresence mode="wait">
+                                <motion.div 
+                                    key="flow_builder"
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 20 }}
+                                    className="h-[80vh]"
+                                >
+                                    <FlowEditor />
                                 </motion.div>
                             </AnimatePresence>
                         ) : (

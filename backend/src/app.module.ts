@@ -12,6 +12,7 @@ import { AssignmentsModule } from './modules/assignments/assignments.module';
 import { EventsModule } from './modules/events/events.module';
 import { SlaModule } from './modules/sla/sla.module';
 import { ScoresModule } from './modules/scores/scores.module';
+import { FlowsModule } from './modules/flows/flows.module';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { ScoresModule } from './modules/scores/scores.module';
         password: configService.get<string>('database.password'),
         database: configService.get<string>('database.database'),
         autoLoadEntities: true,
-        synchronize: false, // Use migrations for production
+        synchronize: true, // Use migrations for production
         ssl: { rejectUnauthorized: false },
       }),
       inject: [ConfigService],
@@ -63,6 +64,7 @@ import { ScoresModule } from './modules/scores/scores.module';
     EventsModule,
     SlaModule,
     ScoresModule,
+    FlowsModule,
   ],
 })
 export class AppModule {}
