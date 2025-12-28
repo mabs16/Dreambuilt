@@ -1,4 +1,10 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  BadRequestException,
+} from '@nestjs/common';
 import { AdvisorsService } from './advisors.service';
 
 @Controller('advisors')
@@ -11,8 +17,14 @@ export class AdvisorsController {
   }
 
   @Post('verify-otp')
-  async verifyOtp(@Body() body: { name: string; phone: string; pin: string }) {
-    return this.advisorsService.verifyOtp(body.name, body.phone, body.pin);
+  async verifyOtp(
+    @Body() body: { name: string; phone: string; pin?: string; otp?: string },
+  ) {
+    const pinToVerify = body.pin || body.otp;
+    if (!pinToVerify) {
+      throw new BadRequestException('El código PIN es requerido');
+    }
+    return this.advisorsService.verifyOtp(body.name, body.phone, pinToVerify);
   }
 
   @Get()

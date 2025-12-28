@@ -227,10 +227,10 @@ export class WhatsappService {
         break;
 
       case CommandType.CONTACTADO: {
-        await this.leadsService.updateStatus(
-          parsed.leadId,
-          LeadStatus.CONTACTADO,
-        );
+        this.eventEmitter.emit('command.contactado', {
+          leadId: parsed.leadId,
+          advisorId: advisor.id,
+        });
 
         const contactadoMsg = advConfig?.notesPromptMessage
           ? advConfig.notesPromptMessage.replace(
@@ -255,10 +255,10 @@ export class WhatsappService {
       }
 
       case CommandType.SEGUIMIENTO: {
-        await this.leadsService.updateStatus(
-          parsed.leadId,
-          LeadStatus.SEGUIMIENTO,
-        );
+        this.eventEmitter.emit('command.seguimiento', {
+          leadId: parsed.leadId,
+          advisorId: advisor.id,
+        });
 
         const seguimientoMsg = advConfig?.notesPromptMessage
           ? advConfig.notesPromptMessage.replace(
@@ -282,7 +282,10 @@ export class WhatsappService {
       }
 
       case CommandType.CITA: {
-        await this.leadsService.updateStatus(parsed.leadId, LeadStatus.CITA);
+        this.eventEmitter.emit('command.cita', {
+          leadId: parsed.leadId,
+          advisorId: advisor.id,
+        });
 
         const citaMsg = advConfig?.notesPromptMessage
           ? advConfig.notesPromptMessage.replace(
@@ -306,7 +309,10 @@ export class WhatsappService {
       }
 
       case CommandType.PERDIDO: {
-        await this.leadsService.updateStatus(parsed.leadId, LeadStatus.PERDIDO);
+        this.eventEmitter.emit('command.perdido', {
+          leadId: parsed.leadId,
+          advisorId: advisor.id,
+        });
 
         const perdidoMsg = advConfig?.notesPromptMessage
           ? advConfig.notesPromptMessage.replace(
@@ -330,7 +336,10 @@ export class WhatsappService {
       }
 
       case CommandType.CIERRE: {
-        await this.leadsService.updateStatus(parsed.leadId, LeadStatus.CIERRE);
+        this.eventEmitter.emit('command.cierre', {
+          leadId: parsed.leadId,
+          advisorId: advisor.id,
+        });
 
         const cierreMsg = advConfig?.notesPromptMessage
           ? advConfig.notesPromptMessage.replace(
@@ -580,10 +589,15 @@ export class WhatsappService {
         const advisor = await this.advisorsService.findFirstAvailable();
         if (advisor) {
           await this.assignmentsService.createAssignment(lead.id, advisor.id);
-          await this.leadsService.updateStatus(lead.id, LeadStatus.ASIGNADO);
           this.logger.log(
             `Lead ${from} assigned to advisor ${advisor.name} (${advisor.phone})`,
           );
+
+          // Emit event to start SLA and other pipeline logic
+          this.eventEmitter.emit('pipeline.assign', {
+            leadId: lead.id,
+            advisorId: advisor.id,
+          });
 
           // Get Advisor Automation Config
           const advAuto =

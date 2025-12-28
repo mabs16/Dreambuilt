@@ -108,7 +108,11 @@ export default function AdvisorsPage() {
             const response = await fetch(`${apiUrl}/advisors/verify-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ phone: fullPhone, otp: otpPin }),
+                body: JSON.stringify({ 
+                    name: newAdvisor.name,
+                    phone: fullPhone, 
+                    pin: otpPin 
+                }),
             });
 
             if (!response.ok) throw new Error("Código OTP inválido");
