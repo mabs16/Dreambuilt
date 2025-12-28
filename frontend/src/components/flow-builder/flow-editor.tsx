@@ -114,7 +114,13 @@ export default function FlowEditor() {
         
         if (!apiUrl && typeof window !== 'undefined') {
             const host = window.location.hostname;
-            apiUrl = `http://${host}:8080`; // Asumimos puerto 8080 por defecto si no hay env
+            // Si estamos en producción (no localhost), usamos el mismo host sin puerto
+            // ya que Cloud Run maneja el puerto 443/80 automáticamente
+            if (host !== 'localhost' && !host.includes('127.0.0.1')) {
+                apiUrl = `https://${host}`;
+            } else {
+                apiUrl = `http://${host}:8080`;
+            }
         }
 
         const flowData = {
