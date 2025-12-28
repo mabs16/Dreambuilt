@@ -115,7 +115,7 @@ export class WhatsappService {
       // Not an advisor, check if bot is active and handle as lead
       const isBotActive = await this.automationsService.isBotActive();
       if (isBotActive) {
-        await this.handleLeadMessage(from, body, profileName);
+        await this.handleLeadMessage(from, body, profileName, waId);
       }
     } catch (error: unknown) {
       const err = error as Error;
@@ -426,6 +426,7 @@ export class WhatsappService {
     from: string,
     body: string,
     profileName?: string,
+    waId?: string,
   ) {
     // Double check if this is an advisor (just in case)
     const isAdvisor = await this.advisorsService.findByPhone(from);
@@ -442,17 +443,45 @@ export class WhatsappService {
     const leadName = profileName || 'Prospecto WhatsApp';
 
     if (!lead) {
+      // Try to get avatar if we have waId
+      let avatarUrl = null;
+      if (waId) {
+        try {
+          avatarUrl = await this.getWhatsAppProfilePicture(from);
+        } catch (e) {
+          this.logger.warn(`Could not fetch avatar for ${from}: ${e.message}`);
+        }
+      }
+
       lead = await this.leadsService.createLead({
         name: leadName,
         phone: from,
         source: 'WHATSAPP_BOT',
+        avatar_url: avatarUrl,
       });
-      this.logger.log(`New lead created for bot: ${from} (Name: ${leadName})`);
-    } else if (profileName && lead.name === 'Prospecto WhatsApp') {
-      // Update the name if we now have the profile name
-      await this.leadsService.updateName(lead.id, profileName);
-      lead.name = profileName;
-      this.logger.log(`Lead ${from} name updated to: ${profileName}`);
+      this.logger.log(
+        `New lead created for bot: ${from} (Name: ${leadName}, Avatar: ${avatarUrl ? 'Yes' : 'No'})`,
+      );
+    } else {
+      // Update name if needed
+      if (profileName && lead.name === 'Prospecto WhatsApp') {
+        await this.leadsService.updateName(lead.id, profileName);
+        lead.name = profileName;
+        this.logger.log(`Lead ${from} name updated to: ${profileName}`);
+      }
+      // Update avatar if missing
+      if (!lead.avatar_url && waId) {
+        try {
+          const avatarUrl = await this.getWhatsAppProfilePicture(from);
+          if (avatarUrl) {
+            await this.leadsService.updateAvatar(lead.id, avatarUrl);
+            lead.avatar_url = avatarUrl;
+            this.logger.log(`Lead ${from} avatar updated.`);
+          }
+        } catch (e) {
+          // Ignore error on avatar update
+        }
+      }
     }
 
     if (lead.status !== LeadStatus.NUEVO) {
@@ -911,6 +940,42 @@ Link: https://wa.me/${lead.phone}
       order: { createdAt: 'ASC' },
       take: 100,
     });
+  }
+
+  private async getWhatsAppProfilePicture(phone: string): Promise<string | null> {
+    const accessToken = this.configService.get<string>('whatsapp.accessToken');
+    const phoneNumberId = this.configService.get<string>(
+      'whatsapp.phoneNumberId',
+    );
+
+    if (!accessToken || !phoneNumberId) return null;
+
+    try {
+      // Using the Graph API to get business contact profile (might require specific permissions)
+      // Note: Meta Graph API usually requires the wa_id
+      const url = `https://graph.facebook.com/v21.0/${phoneNumberId}/contacts`;
+      const response = await axios.post(
+        url,
+        {
+          blocking: 'wait',
+          contacts: [phone],
+          force_check: false,
+        },
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        },
+      );
+
+      // This is one way, another is via the /profile endpoint if available for the user
+      // For now, let's log and see what Meta returns in production logs
+      this.logger.debug(
+        `Profile lookup for ${phone}: ${JSON.stringify(response.data)}`,
+      );
+
+      return null; // Fallback until we confirm exact response path from Meta
+    } catch (error) {
+      return null;
+    }
   }
 
   private buildSystemPrompt(

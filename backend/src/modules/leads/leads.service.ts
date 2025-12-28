@@ -23,11 +23,23 @@ export class LeadsService {
     return this.leadsRepository.findOne({ where: { phone } });
   }
 
-  async createLead(data: { name: string; phone: string; source: string }) {
+  async createLead(data: {
+    name: string;
+    phone: string;
+    source: string;
+    avatar_url?: string;
+  }) {
     const lead = this.leadsRepository.create({
       ...data,
       status: LeadStatus.NUEVO,
     });
+    return this.leadsRepository.save(lead);
+  }
+
+  async updateAvatar(id: number, avatarUrl: string): Promise<Lead> {
+    const lead = await this.findById(id);
+    lead.avatar_url = avatarUrl;
+    lead.updated_at = new Date();
     return this.leadsRepository.save(lead);
   }
 
