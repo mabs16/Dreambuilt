@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import {
@@ -56,7 +56,12 @@ export default function Home() {
     lastUpdate: new Date()
   });
 
-  const [greeting, setGreeting] = useState("");
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Buenos días";
+    if (hour < 18) return "Buenas tardes";
+    return "Buenas noches";
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -105,16 +110,27 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) setGreeting("Buenos días");
-    else if (hour < 18) setGreeting("Buenas tardes");
-    else setGreeting("Buenas noches");
+    let isMounted = true;
 
-    fetchData();
+    const init = async () => {
+      if (isMounted) {
+        await fetchData();
+      }
+    };
+
+    init();
     
     // Auto-refresh every 5 minutes
-    const interval = setInterval(fetchData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (isMounted) {
+        void fetchData();
+      }
+    }, 5 * 60 * 1000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [fetchData]);
 
   if (stats.loading) {
@@ -426,7 +442,7 @@ export default function Home() {
                 <Sparkles className="h-8 w-8" />
               </div>
               <p className="text-sm font-bold text-center text-muted-foreground italic leading-relaxed relative z-10">
-                "El éxito es la suma de pequeños esfuerzos repetidos día tras día."
+                &ldquo;El éxito es la suma de pequeños esfuerzos repetidos día tras día.&rdquo;
               </p>
             </div>
           </div>
@@ -440,7 +456,7 @@ interface StatCardProps {
   title: string;
   value: string;
   change: string;
-  icon: any;
+  icon: React.ElementType;
   color?: "blue" | "emerald" | "purple" | "orange";
   delay?: number;
 }

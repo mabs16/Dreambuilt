@@ -9,7 +9,6 @@ import {
     Plus,
     Trash2,
     Settings2,
-    MessageSquare,
     CheckCircle2,
     RefreshCw,
   Sparkles,
