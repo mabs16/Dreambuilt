@@ -131,9 +131,9 @@ export default function FlowEditor() {
             is_active: true
         };
 
-        console.log('Intentando guardar en:', `${apiUrl}/flows`);
+        console.log('Intentando guardar en:', `${apiUrl}/api/flows`);
 
-        const res = await fetch(`${apiUrl}/flows`, {
+        const res = await fetch(`${apiUrl}/api/flows`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
