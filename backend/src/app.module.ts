@@ -44,6 +44,15 @@ import { ScoresModule } from './modules/scores/scores.module';
           password: configService.get<string>('redis.password'),
           tls: configService.get('redis.tls'),
         },
+        defaultJobOptions: {
+          removeOnComplete: 100, // Limpia jobs completados para no llenar Redis
+          removeOnFail: 500, // Limpia jobs fallidos
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 1000,
+          },
+        },
       }),
       inject: [ConfigService],
     }),
@@ -56,4 +65,4 @@ import { ScoresModule } from './modules/scores/scores.module';
     ScoresModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}

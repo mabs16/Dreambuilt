@@ -14,7 +14,11 @@ import { AdvisorsService } from '../../advisors/advisors.service';
 import { AutomationsService } from '../../whatsapp/services/automations.service';
 import { AdvisorAutomationConfig } from '../../whatsapp/entities/automation.entity';
 
-@Processor('sla-queue')
+@Processor('sla-queue', {
+  lockDuration: 300000, // 5 minutos
+  stalledInterval: 300000, // 5 minutos
+  maxStalledCount: 1,
+})
 export class SlaProcessor extends WorkerHost {
   private readonly logger = new Logger(SlaProcessor.name);
 
