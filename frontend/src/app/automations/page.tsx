@@ -12,20 +12,17 @@ import {
     MessageSquare,
     CheckCircle2,
     RefreshCw,
-    Sparkles,
-    ChevronDown,
-    ChevronUp,
-    Layout,
-    Cpu,
-    Shield,
-    Zap,
-    Users,
-    Clock,
-    Globe,
-    Package,
-    AlertCircle,
-    ArrowRight,
-    Bell
+  Sparkles,
+  ChevronDown,
+  Layout,
+  Cpu,
+  Zap,
+  Users,
+  Bell,
+  Package,
+  Clock,
+  Globe,
+  Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -119,8 +116,8 @@ function AutomationsContent() {
             if (text && text.trim().length > 0) {
                 try {
                     data = JSON.parse(text);
-                } catch (e) {
-                    console.error("Error parsing JSON response:", e);
+                } catch (error) {
+                    console.error("Error parsing JSON response:", error);
                 }
             }
             
@@ -806,11 +803,11 @@ function AutomationsContent() {
 }
 
 function ConfigSection({ icon: Icon, title, children, isOpen, onToggle }: { 
-    icon: any, 
-    title: string, 
-    children: React.ReactNode, 
-    isOpen: boolean, 
-    onToggle: () => void 
+  icon: React.ElementType, 
+  title: string, 
+  children: React.ReactNode, 
+  isOpen: boolean, 
+  onToggle: () => void 
 }) {
     return (
         <div className="rounded-[2.5rem] border border-white/5 bg-white/2 overflow-hidden transition-all duration-500 hover:border-white/10">

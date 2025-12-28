@@ -9,16 +9,12 @@ import {
     User,
     MessageCircle,
     RefreshCw,
-    Phone,
-    Clock,
-    ChevronLeft,
-    MoreVertical,
-    Check,
     CheckCheck,
     ArrowLeft,
-    Image as ImageIcon,
     Paperclip,
-    Smile
+    Smile,
+    Phone,
+    MoreVertical
 } from "lucide-react";
 import { format, isToday, isYesterday } from "date-fns";
 import { es } from "date-fns/locale";
@@ -132,8 +128,8 @@ function InboxContent() {
                 setNewMessage("");
                 fetchHistory(selectedContact);
             }
-        } catch (e) {
-            console.error("Error sending message:", e);
+        } catch (error) {
+            console.error("Error sending message:", error);
         } finally {
             setSending(false);
         }

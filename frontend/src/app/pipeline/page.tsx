@@ -13,7 +13,6 @@ import {
     Filter,
     ArrowRight,
     X,
-    ChevronRight,
     AlertCircle,
     Phone
 } from "lucide-react";
@@ -89,17 +88,28 @@ export default function PipelinePage() {
     }, [leads.length]);
 
     useEffect(() => {
-        fetchLeads();
+        let isMounted = true;
+
+        const init = async () => {
+            if (isMounted) {
+                await fetchLeads();
+            }
+        };
+
+        init();
 
         const channel = supabase
             .channel('public:leads')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
-                fetchLeads();
+                if (isMounted) {
+                    void fetchLeads();
+                }
             })
             .subscribe();
 
         return () => {
-            supabase.removeChannel(channel);
+            isMounted = false;
+            void supabase.removeChannel(channel);
         };
     }, [fetchLeads]);
 

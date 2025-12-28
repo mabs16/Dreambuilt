@@ -20,13 +20,38 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
+
+interface Advisor {
+  id: string;
+  name: string;
+  score: number;
+}
+
+interface DashboardEvent {
+  id: string;
+  type: string;
+  created_at: string;
+  leads?: { name: string };
+  advisors?: { name: string };
+  leadName?: string;
+  advisorName?: string;
+  time?: string;
+  date?: string;
+}
+
+interface DashboardStats {
+  totalLeads: number;
+  topAdvisors: Advisor[];
+  recentEvents: DashboardEvent[];
+  loading: boolean;
+  lastUpdate: Date;
+}
 
 export default function Home() {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     totalLeads: 0,
-    topAdvisors: [] as any[],
-    recentEvents: [] as any[],
+    topAdvisors: [],
+    recentEvents: [],
     loading: true,
     lastUpdate: new Date()
   });
@@ -411,7 +436,16 @@ export default function Home() {
   );
 }
 
-function StatCard({ title, value, change, icon: Icon, color = "blue", delay = 0 }: any) {
+interface StatCardProps {
+  title: string;
+  value: string;
+  change: string;
+  icon: any;
+  color?: "blue" | "emerald" | "purple" | "orange";
+  delay?: number;
+}
+
+function StatCard({ title, value, change, icon: Icon, color = "blue", delay = 0 }: StatCardProps) {
   const colors: Record<string, string> = {
     blue: "bg-blue-500/10 text-blue-500 border-blue-500/20 shadow-blue-500/5",
     emerald: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-emerald-500/5",
