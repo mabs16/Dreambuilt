@@ -115,7 +115,7 @@ export class WhatsappService {
       // Not an advisor, check if bot is active and handle as lead
       const isBotActive = await this.automationsService.isBotActive();
       if (isBotActive) {
-        await this.handleLeadMessage(from, body, profileName, waId);
+        await this.handleLeadMessage(from, body, profileName);
       }
     } catch (error: unknown) {
       const err = error as Error;
@@ -426,7 +426,6 @@ export class WhatsappService {
     from: string,
     body: string,
     profileName?: string,
-    waId?: string,
   ) {
     // Double check if this is an advisor (just in case)
     const isAdvisor = await this.advisorsService.findByPhone(from);
@@ -443,45 +442,18 @@ export class WhatsappService {
     const leadName = profileName || 'Prospecto WhatsApp';
 
     if (!lead) {
-      // Try to get avatar if we have waId
-      let avatarUrl: string | null = null;
-      if (waId) {
-        try {
-          avatarUrl = await this.getWhatsAppProfilePicture(from);
-        } catch (error) {
-          const e = error as Error;
-          this.logger.warn(`Could not fetch avatar for ${from}: ${e.message}`);
-        }
-      }
-
       lead = await this.leadsService.createLead({
         name: leadName,
         phone: from,
         source: 'WHATSAPP_BOT',
-        avatar_url: avatarUrl || undefined,
       });
-      this.logger.log(
-        `New lead created for bot: ${from} (Name: ${leadName}, Avatar: ${avatarUrl ? 'Yes' : 'No'})`,
-      );
+      this.logger.log(`New lead created for bot: ${from} (Name: ${leadName})`);
     } else {
       // Update name if needed
       if (profileName && lead.name === 'Prospecto WhatsApp') {
         await this.leadsService.updateName(lead.id, profileName);
         lead.name = profileName;
         this.logger.log(`Lead ${from} name updated to: ${profileName}`);
-      }
-      // Update avatar if missing
-      if (!lead.avatar_url && waId) {
-        try {
-          const avatarUrl = await this.getWhatsAppProfilePicture(from);
-          if (avatarUrl) {
-            await this.leadsService.updateAvatar(lead.id, avatarUrl);
-            lead.avatar_url = avatarUrl;
-            this.logger.log(`Lead ${from} avatar updated.`);
-          }
-        } catch {
-          // Ignore error on avatar update
-        }
       }
     }
 
@@ -617,9 +589,11 @@ export class WhatsappService {
           const advAuto =
             await this.automationsService.getConfig('advisor_automation');
           const advConfig = advAuto?.config as AdvisorAutomationConfig;
+          this.logger.debug(`Advisor automation config found: ${!!advConfig}`);
 
           // Notify Advisor
           const historyRaw = await this.redis.get(historyKey);
+          this.logger.debug(`History raw found: ${!!historyRaw}`);
           let summary = 'No hay historial.';
           if (historyRaw) {
             const history = JSON.parse(historyRaw) as Array<{
@@ -627,6 +601,7 @@ export class WhatsappService {
               content: string;
             }>;
             if (advConfig?.useAiSummary) {
+              this.logger.debug('Generating AI summary for advisor...');
               summary = await this.geminiService.summarizeLeadConversation(
                 history,
                 advConfig.aiSummaryPrompt || undefined,
@@ -651,37 +626,52 @@ export class WhatsappService {
               .replace(/\{\{response_limit\}\}/g, String(responseLimit));
           }
 
-          if (advConfig?.enableInteractiveButtons !== false) {
-            const payload: WhatsAppPayload = {
-              type: 'interactive',
-              interactive: {
-                type: 'button',
-                body: { text: advisorMsg },
-                action: {
-                  buttons: [
-                    {
-                      type: 'reply',
-                      reply: {
-                        id: `${lead.id} CONTACTADO`,
-                        title: '✅ CONTACTADO',
+          this.logger.debug(`Sending message to advisor ${advisor.phone}...`);
+          try {
+            if (advConfig?.enableInteractiveButtons !== false) {
+              const payload: WhatsAppPayload = {
+                type: 'interactive',
+                interactive: {
+                  type: 'button',
+                  body: { text: advisorMsg.substring(0, 1024) },
+                  action: {
+                    buttons: [
+                      {
+                        type: 'reply',
+                        reply: {
+                          id: `${lead.id} CONTACTADO`,
+                          title: '✅ CONTACTADO',
+                        },
                       },
-                    },
-                    {
-                      type: 'reply',
-                      reply: {
-                        id: `${lead.id} INFO`,
-                        title: 'ℹ️ VER INFO',
+                      {
+                        type: 'reply',
+                        reply: {
+                          id: `${lead.id} INFO`,
+                          title: 'ℹ️ VER INFO',
+                        },
                       },
-                    },
-                  ],
+                    ],
+                  },
                 },
-              },
-            };
-            await this.sendWhatsappMessage(advisor.phone, payload);
-          } else {
-            await this.sendWhatsappMessage(
-              advisor.phone,
-              `${advisorMsg}\n\nEscribe \`${lead.id} CONTACTADO\` para empezar.`,
+              };
+              this.logger.debug(
+                `Payload interactive: ${JSON.stringify(payload)}`,
+              );
+              await this.sendWhatsappMessage(advisor.phone, payload);
+            } else {
+              this.logger.debug(`Payload text: ${advisorMsg}`);
+              await this.sendWhatsappMessage(
+                advisor.phone,
+                `${advisorMsg}\n\nEscribe \`${lead.id} CONTACTADO\` para empezar.`,
+              );
+            }
+            this.logger.log(
+              `Assignment notification sent to advisor ${advisor.phone}`,
+            );
+          } catch (notifyError: unknown) {
+            const err = notifyError as Error;
+            this.logger.error(
+              `Failed to notify advisor ${advisor.phone}: ${err.message}`,
             );
           }
 
@@ -818,7 +808,19 @@ Link: https://wa.me/${lead.phone}
     const url = `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`;
 
     // Clean phone number: remove any + or spaces (just in case)
-    const cleanTo = to.replace(/\D/g, '');
+    let cleanTo = to.replace(/\D/g, '');
+
+    // Mexico Special Case: If it's a Mexican number (starts with 52)
+    // and has 10 digits after 52, it needs a '1' between 52 and the number
+    // for WhatsApp Cloud API to deliver it correctly to mobile numbers.
+    if (
+      cleanTo.startsWith('52') &&
+      cleanTo.length === 12 &&
+      cleanTo[2] !== '1'
+    ) {
+      cleanTo = '521' + cleanTo.substring(2);
+      this.logger.debug(`Normalized Mexico number: ${to} -> ${cleanTo}`);
+    }
 
     const payload: Record<string, any> = {
       messaging_product: 'whatsapp',
@@ -941,44 +943,6 @@ Link: https://wa.me/${lead.phone}
       order: { createdAt: 'ASC' },
       take: 100,
     });
-  }
-
-  private async getWhatsAppProfilePicture(
-    phone: string,
-  ): Promise<string | null> {
-    const accessToken = this.configService.get<string>('whatsapp.accessToken');
-    const phoneNumberId = this.configService.get<string>(
-      'whatsapp.phoneNumberId',
-    );
-
-    if (!accessToken || !phoneNumberId) return null;
-
-    try {
-      // Using the Graph API to get business contact profile (might require specific permissions)
-      // Note: Meta Graph API usually requires the wa_id
-      const url = `https://graph.facebook.com/v21.0/${phoneNumberId}/contacts`;
-      const response = await axios.post(
-        url,
-        {
-          blocking: 'wait',
-          contacts: [phone],
-          force_check: false,
-        },
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        },
-      );
-
-      // This is one way, another is via the /profile endpoint if available for the user
-      // For now, let's log and see what Meta returns in production logs
-      this.logger.debug(
-        `Profile lookup for ${phone}: ${JSON.stringify(response.data)}`,
-      );
-
-      return null; // Fallback until we confirm exact response path from Meta
-    } catch {
-      return null;
-    }
   }
 
   private buildSystemPrompt(

@@ -131,6 +131,15 @@ export default function LeadsPage() {
         lead.phone?.includes(searchTerm)
     );
 
+    const getInitials = (name?: string) => {
+        if (!name || name === 'Prospecto WhatsApp') return "?";
+        const parts = name.trim().split(/\s+/);
+        if (parts.length >= 2) {
+            return (parts[0][0] + parts[1][0]).toUpperCase();
+        }
+        return parts[0][0].toUpperCase();
+    };
+
     const containerVariants = {
         hidden: { opacity: 0 },
         show: {
@@ -263,7 +272,7 @@ export default function LeadsPage() {
                                                                         className="object-cover w-full h-full"
                                                                     />
                                                                 ) : (
-                                                                    lead.name.charAt(0)
+                                                                    getInitials(lead.name)
                                                                 )}
                                                             </div>
                                                             <div className="flex flex-col">
@@ -347,7 +356,7 @@ export default function LeadsPage() {
                                                         className="object-cover w-full h-full"
                                                     />
                                                 ) : (
-                                                    lead.name.charAt(0)
+                                                    getInitials(lead.name)
                                                 )}
                                             </div>
                                             <span className={cn(

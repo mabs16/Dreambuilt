@@ -156,6 +156,15 @@ function InboxContent() {
         return format(date, "dd MMM HH:mm", { locale: es });
     };
 
+    const getInitials = (name?: string) => {
+        if (!name || name === 'Prospecto WhatsApp') return "?";
+        const parts = name.trim().split(/\s+/);
+        if (parts.length >= 2) {
+            return (parts[0][0] + parts[1][0]).toUpperCase();
+        }
+        return parts[0][0].toUpperCase();
+    };
+
     return (
         <div className="flex h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)] flex-col gap-4 overflow-hidden px-4 md:px-0">
             {/* Header Desktop - Ultra Modern */}
@@ -311,10 +320,12 @@ function InboxContent() {
                                                             className="object-cover w-full h-full"
                                                         />
                                                     ) : (
-                                                        <User className={cn(
-                                                            "h-8 w-8 transition-all duration-500",
+                                                        <span className={cn(
+                                                            "font-black text-xl transition-all duration-500",
                                                             selectedContact === chat.contact ? "text-white scale-110" : "text-primary group-hover:scale-110"
-                                                        )} />
+                                                        )}>
+                                                            {getInitials(chat.name)}
+                                                        </span>
                                                     )}
                                                 </div>
                                                 <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-2xl border-4 border-[#080808] bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
@@ -394,7 +405,9 @@ function InboxContent() {
                                                     className="object-cover w-full h-full"
                                                 />
                                             ) : (
-                                                <User className="h-8 w-8 text-primary" />
+                                                <span className="font-black text-xl text-primary">
+                                                    {getInitials(chats.find(c => c.contact === selectedContact)?.name)}
+                                                </span>
                                             )}
                                         </div>
                                         <div className="absolute -inset-2 bg-primary/20 rounded-[2rem] blur-xl opacity-50" />
