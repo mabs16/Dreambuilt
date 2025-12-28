@@ -14,8 +14,11 @@ import {
     Paperclip,
     Smile,
     Phone,
-    MoreVertical
+    MoreVertical,
+    ChevronDown,
+    Filter
 } from "lucide-react";
+import Image from "next/image";
 import { format, isToday, isYesterday } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -25,6 +28,7 @@ interface ChatContact {
     name?: string;
     lastMessage: string;
     timestamp: string;
+    avatar?: string;
 }
 
 interface Message {
@@ -43,6 +47,7 @@ function InboxContent() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [filter, setFilter] = useState("Todos");
     const [refreshing, setRefreshing] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const searchParams = useSearchParams();
@@ -50,6 +55,14 @@ function InboxContent() {
     const [newMessage, setNewMessage] = useState("");
     const [sending, setSending] = useState(false);
     const [showMobileHistory, setShowMobileHistory] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     useEffect(() => {
         if (chatParam) {
@@ -113,6 +126,7 @@ function InboxContent() {
 
     const handleBack = () => {
         setShowMobileHistory(false);
+        setSelectedContact(null);
     };
 
     const handleSendMessage = async () => {
@@ -197,38 +211,48 @@ function InboxContent() {
                 <motion.div 
                     initial={false}
                     animate={{ 
-                        width: showMobileHistory ? "0%" : "100%",
-                        opacity: showMobileHistory ? 0 : 1,
-                        x: showMobileHistory ? -50 : 0
+                        width: isMobile && showMobileHistory ? "0%" : (isMobile ? "100%" : "400px"),
+                        opacity: isMobile && showMobileHistory ? 0 : 1,
+                        x: isMobile && showMobileHistory ? -50 : 0
                     }}
                     transition={{ type: "spring", damping: 25, stiffness: 200 }}
                     className={cn(
-                        "flex flex-col w-full md:w-[400px] lg:w-[440px] rounded-[3rem] border border-white/5 bg-white/[0.02] backdrop-blur-3xl overflow-hidden transition-all duration-700 md:!w-[400px] md:!opacity-100 md:!translate-x-0 relative",
-                        showMobileHistory ? "hidden md:flex" : "flex shadow-2xl shadow-black/50"
+                        "flex flex-col w-full md:w-[350px] lg:w-[400px] shrink-0 rounded-[3rem] border border-white/5 bg-[#0a0a0a]/80 backdrop-blur-3xl overflow-hidden transition-all duration-700 md:!opacity-100 md:!translate-x-0 relative",
+                        isMobile && showMobileHistory ? "hidden" : "flex shadow-2xl shadow-black/50"
                     )}
                 >
-                    <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none opacity-20" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent pointer-events-none opacity-20" />
                     
-                    <div className="p-8 border-b border-white/5 space-y-6 relative z-10">
+                    <div className="p-8 border-b border-white/5 space-y-4 relative z-10">
                         <div className="relative group">
                             <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-transparent rounded-[1.7rem] blur opacity-0 group-focus-within:opacity-100 transition duration-500" />
                             <div className="relative">
                                 <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                 <input
                                     type="text"
-                                    placeholder="Buscar en el ecosistema..."
-                                    className="w-full rounded-[1.5rem] border border-white/10 bg-black/40 py-4 pl-14 pr-6 text-sm font-bold focus:outline-none focus:border-primary/50 transition-all backdrop-blur-2xl placeholder:text-muted-foreground/30"
+                                    placeholder="Buscar conversación..."
+                                    className="w-full rounded-[1.5rem] border border-white/10 bg-black/40 py-4 pl-14 pr-6 text-sm font-bold focus:outline-none focus:border-primary/50 transition-all backdrop-blur-2xl placeholder:text-muted-foreground/30 text-white"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
                         </div>
-                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide no-scrollbar">
-                            {['Todos', 'No leídos', 'Prioridad', 'IA'].map((tab) => (
-                                <button key={tab} className="px-5 py-2.5 rounded-2xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-primary hover:text-white hover:border-primary transition-all whitespace-nowrap active:scale-95 shadow-lg">
-                                    {tab}
-                                </button>
-                            ))}
+                        
+                        {/* Dropdown de Filtros */}
+                        <div className="relative group/filter">
+                            <Filter className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within/filter:text-primary transition-colors z-10 pointer-events-none" />
+                            <select 
+                                value={filter}
+                                onChange={(e) => setFilter(e.target.value)}
+                                className="w-full appearance-none rounded-[1.2rem] border border-white/10 bg-black/40 py-3 pl-14 pr-10 text-[10px] font-black uppercase tracking-[0.2em] focus:outline-none focus:border-primary/50 transition-all backdrop-blur-2xl text-muted-foreground cursor-pointer"
+                            >
+                                {['Todos', 'No leídos', 'Prioridad', 'IA'].map((tab) => (
+                                    <option key={tab} value={tab} className="bg-[#0a0a0a] text-white py-2">
+                                        {tab.toUpperCase()}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none group-focus-within/filter:rotate-180 transition-transform" />
                         </div>
                     </div>
 
@@ -273,15 +297,25 @@ function InboxContent() {
                                         >
                                             <div className="relative flex-shrink-0">
                                                 <div className={cn(
-                                                    "h-16 w-16 rounded-[1.8rem] flex items-center justify-center border-2 transition-all duration-700",
+                                                    "h-16 w-16 rounded-[1.8rem] flex items-center justify-center border-2 transition-all duration-700 overflow-hidden",
                                                     selectedContact === chat.contact
                                                         ? "bg-white/20 border-white/40 rotate-12 shadow-inner"
                                                         : "bg-black/40 border-white/5 group-hover:rotate-12 group-hover:border-primary/30"
                                                 )}>
-                                                    <User className={cn(
-                                                        "h-8 w-8 transition-all duration-500",
-                                                        selectedContact === chat.contact ? "text-white scale-110" : "text-primary group-hover:scale-110"
-                                                    )} />
+                                                    {chat.avatar ? (
+                                                        <Image 
+                                                            src={chat.avatar} 
+                                                            alt={chat.name || chat.contact}
+                                                            width={64}
+                                                            height={64}
+                                                            className="object-cover w-full h-full"
+                                                        />
+                                                    ) : (
+                                                        <User className={cn(
+                                                            "h-8 w-8 transition-all duration-500",
+                                                            selectedContact === chat.contact ? "text-white scale-110" : "text-primary group-hover:scale-110"
+                                                        )} />
+                                                    )}
                                                 </div>
                                                 <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-2xl border-4 border-[#080808] bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
                                             </div>
@@ -289,20 +323,20 @@ function InboxContent() {
                                                 <div className="flex items-center justify-between mb-1.5">
                                                     <span className={cn(
                                                         "font-black text-[15px] truncate pr-2 tracking-tight uppercase",
-                                                        selectedContact === chat.contact ? "text-white" : "text-white/90"
+                                                        selectedContact === chat.contact ? "text-black" : "text-white"
                                                     )}>
                                                         {chat.name || `+${chat.contact}`}
                                                     </span>
                                                     <span className={cn(
-                                                        "text-[10px] font-black whitespace-nowrap opacity-60",
-                                                        selectedContact === chat.contact ? "text-white" : "text-muted-foreground"
+                                                        "text-[10px] font-black whitespace-nowrap opacity-80",
+                                                        selectedContact === chat.contact ? "text-black/70" : "text-muted-foreground"
                                                     )}>
                                                         {formatMessageTime(chat.timestamp)}
                                                     </span>
                                                 </div>
                                                 <p className={cn(
-                                                    "line-clamp-1 text-xs leading-relaxed font-bold tracking-tight opacity-70",
-                                                    selectedContact === chat.contact ? "text-white" : "text-muted-foreground"
+                                                    "line-clamp-1 text-xs leading-relaxed font-bold tracking-tight",
+                                                    selectedContact === chat.contact ? "text-black/80" : "text-muted-foreground"
                                                 )}>
                                                     {chat.lastMessage}
                                                 </p>
@@ -325,21 +359,21 @@ function InboxContent() {
                 <motion.div 
                     initial={false}
                     animate={{ 
-                        x: showMobileHistory ? 0 : "100%",
-                        opacity: showMobileHistory ? 1 : 0
+                        x: isMobile && !showMobileHistory ? "100%" : 0,
+                        opacity: isMobile && !showMobileHistory ? 0 : 1
                     }}
                     transition={{ type: "spring", damping: 25, stiffness: 200 }}
                     className={cn(
-                        "flex flex-1 flex-col rounded-[3rem] border border-white/5 bg-black/40 backdrop-blur-3xl overflow-hidden transition-all duration-700 md:!translate-x-0 md:!opacity-100 shadow-2xl relative",
-                        !showMobileHistory ? "hidden md:flex" : "flex"
+                        "flex flex-1 flex-col rounded-[3rem] border border-white/5 bg-[#050505]/60 backdrop-blur-3xl overflow-hidden transition-all duration-700 md:!translate-x-0 md:!opacity-100 shadow-2xl relative min-w-0",
+                        isMobile && !showMobileHistory ? "hidden" : "flex"
                     )}
                 >
-                    <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-transparent pointer-events-none opacity-20" />
+                    <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-transparent pointer-events-none opacity-20" />
                     
                     {selectedContact ? (
                         <>
                             {/* Chat Header - Ultra Glossy */}
-                            <div className="flex items-center justify-between p-8 border-b border-white/5 bg-white/[0.02] backdrop-blur-3xl relative z-20">
+                            <div className="flex items-center justify-between p-8 border-b border-white/5 bg-[#0a0a0a]/40 backdrop-blur-3xl relative z-20">
                                 <div className="flex items-center gap-6">
                                     <motion.button
                                         whileHover={{ x: -5 }}
@@ -350,8 +384,18 @@ function InboxContent() {
                                         <ArrowLeft className="h-6 w-6" />
                                     </motion.button>
                                     <div className="relative">
-                                        <div className="h-16 w-16 rounded-[1.8rem] bg-primary/10 flex items-center justify-center border-2 border-primary/20 shadow-2xl shadow-primary/20 relative z-10">
-                                            <User className="h-8 w-8 text-primary" />
+                                        <div className="h-16 w-16 rounded-[1.8rem] bg-primary/10 flex items-center justify-center border-2 border-primary/20 shadow-2xl shadow-primary/20 relative z-10 overflow-hidden">
+                                            {chats.find(c => c.contact === selectedContact)?.avatar ? (
+                                                <Image 
+                                                    src={chats.find(c => c.contact === selectedContact)!.avatar!}
+                                                    alt={selectedContact}
+                                                    width={64}
+                                                    height={64}
+                                                    className="object-cover w-full h-full"
+                                                />
+                                            ) : (
+                                                <User className="h-8 w-8 text-primary" />
+                                            )}
                                         </div>
                                         <div className="absolute -inset-2 bg-primary/20 rounded-[2rem] blur-xl opacity-50" />
                                     </div>
@@ -359,12 +403,9 @@ function InboxContent() {
                                         <h2 className="font-black text-xl text-white tracking-tighter leading-none mb-2 uppercase">
                                             {chats.find(c => c.contact === selectedContact)?.name || `+${selectedContact}`}
                                         </h2>
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                                                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                                                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em]">En línea</span>
-                                            </div>
-                                            <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.1em]">Canal WhatsApp</span>
+                                        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 w-fit">
+                                            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                                            <span className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em]">En línea</span>
                                         </div>
                                     </div>
                                 </div>
@@ -392,38 +433,31 @@ function InboxContent() {
                                                 animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
                                                 transition={{ type: "spring", damping: 20, stiffness: 100 }}
                                                 key={msg.id} 
-                                                className="flex flex-col gap-3"
+                                                className={cn(
+                                                    "flex w-full flex-col",
+                                                    isOutbound ? "items-end" : "items-start"
+                                                )}
                                             >
                                                 {showTime && (
-                                                    <div className="flex justify-center my-8">
-                                                        <span className="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/30 bg-white/[0.02] px-6 py-2 rounded-full border border-white/5 backdrop-blur-xl">
-                                                            {formatMessageTime(msg.createdAt)}
-                                                        </span>
-                                                    </div>
+                                                    <span className="mb-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 w-full text-center">
+                                                        {formatMessageTime(msg.createdAt)}
+                                                    </span>
                                                 )}
                                                 <div className={cn(
-                                                    "flex w-full group/msg",
-                                                    isOutbound ? "justify-end" : "justify-start"
+                                                    "relative max-w-[85%] md:max-w-[70%] px-6 py-4 rounded-[2rem] shadow-2xl transition-all hover:scale-[1.02]",
+                                                    isOutbound 
+                                                        ? "bg-primary text-black rounded-tr-none font-bold" 
+                                                        : "bg-white/5 border border-white/10 text-white rounded-tl-none font-medium backdrop-blur-xl"
                                                 )}>
+                                                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{msg.body}</p>
                                                     <div className={cn(
-                                                        "max-w-[85%] md:max-w-[70%] relative",
-                                                        isOutbound ? "items-end" : "items-start"
+                                                        "mt-2 flex items-center gap-1.5 opacity-40",
+                                                        isOutbound ? "justify-end text-black" : "justify-start text-white"
                                                     )}>
-                                                        <div className={cn(
-                                                            "px-6 py-4 rounded-[2rem] text-[14px] leading-relaxed font-bold tracking-tight shadow-2xl transition-all duration-500",
-                                                            isOutbound 
-                                                                ? "bg-gradient-to-br from-primary to-primary/80 text-white rounded-tr-none border border-white/10" 
-                                                                : "bg-white/[0.03] text-white/90 rounded-tl-none border border-white/5 backdrop-blur-2xl hover:bg-white/5"
-                                                        )}>
-                                                            {msg.body}
-                                                            <div className={cn(
-                                                                "flex items-center gap-2 mt-2 opacity-50 text-[10px] font-black uppercase tracking-tighter",
-                                                                isOutbound ? "justify-end" : "justify-start"
-                                                            )}>
-                                                                {format(new Date(msg.createdAt), "HH:mm")}
-                                                                {isOutbound && <CheckCheck className="h-3 w-3" />}
-                                                            </div>
-                                                        </div>
+                                                        <span className="text-[9px] font-black uppercase tracking-tighter">
+                                                            {format(new Date(msg.createdAt), "HH:mm")}
+                                                        </span>
+                                                        {isOutbound && <CheckCheck className="h-3 w-3" />}
                                                     </div>
                                                 </div>
                                             </motion.div>

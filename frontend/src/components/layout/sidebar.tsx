@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
     BarChart3,
@@ -9,7 +10,6 @@ import {
     Bell,
     LayoutDashboard,
     Settings,
-    ShieldCheck,
     MessageSquare,
     Bot,
     Table,
@@ -31,13 +31,14 @@ const navigation = [
 const NavContent = ({ pathname, setIsOpen }: { pathname: string, setIsOpen: (open: boolean) => void }) => (
     <>
         <div className="flex h-16 items-center px-6">
-            <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-                    <ShieldCheck className="h-5 w-5" />
-                </div>
-                <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                    DREAMBUILT OS
-                </span>
+            <div className="flex items-center gap-3">
+                <Image 
+                    src="/Logo-Dreambuilt OS.png" 
+                    alt="DREAMBUILT OS" 
+                    width={160} 
+                    height={40} 
+                    className="h-8 w-auto object-contain"
+                />
             </div>
         </div>
 
@@ -84,10 +85,13 @@ export function Sidebar() {
             {/* Mobile Header */}
             <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-md">
                 <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-                        <ShieldCheck className="h-5 w-5" />
-                    </div>
-                    <span className="text-lg font-bold tracking-tight">DREAMBUILT OS</span>
+                    <Image 
+                        src="/Logo-Dreambuilt OS.png" 
+                        alt="DREAMBUILT OS" 
+                        width={140} 
+                        height={35} 
+                        className="h-7 w-auto object-contain"
+                    />
                 </div>
                 <button
                     onClick={() => setIsOpen(!isOpen)}

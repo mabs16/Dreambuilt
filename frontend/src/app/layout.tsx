@@ -21,7 +21,7 @@ export default function RootLayout({
       <body className="font-sans antialiased bg-background" suppressHydrationWarning>
         <div className={`${inter.variable} ${outfit.variable} flex flex-col lg:flex-row h-screen overflow-hidden`}>
           <Sidebar />
-          <main className="flex-1 relative overflow-y-auto bg-background focus:outline-none">
+          <main className="flex-1 relative overflow-y-auto no-scrollbar bg-background focus:outline-none">
             <div className="mx-auto min-h-screen max-w-7xl px-4 py-4 sm:px-6 md:py-8 lg:px-8">
               {children}
             </div>

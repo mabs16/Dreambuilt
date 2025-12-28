@@ -63,6 +63,8 @@ export default function Home() {
     return "Buenas noches";
   }, []);
 
+  const userName = "Usuario"; // Placeholder para futuro sistema de autenticación
+
   const fetchData = useCallback(async () => {
     try {
       setStats(prev => ({ ...prev, loading: prev.totalLeads === 0 }));
@@ -183,7 +185,7 @@ export default function Home() {
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-md">
               <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Sistema Operativo v2.1</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-primary">Sistema Operativo Beta</span>
               <span className="h-1 w-1 rounded-full bg-primary/30" />
               <span className="text-[10px] font-bold text-primary/70">LIVE</span>
             </div>
@@ -191,12 +193,12 @@ export default function Home() {
             <h1 className="text-4xl md:text-6xl font-black tracking-tight font-outfit leading-none">
               {greeting},<br />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/40">
-                Comandante
+                {userName}
               </span>
             </h1>
             
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl font-medium leading-relaxed">
-              Mabo OS está operando a máxima capacidad. Hemos procesado <span className="text-white font-bold">{stats.totalLeads} leads</span> con una eficiencia del <span className="text-primary font-bold">98.2%</span>.
+              Dreambuilt OS está operando. Hemos procesado <span className="text-white font-bold">{stats.totalLeads} leads</span> con una eficiencia del <span className="text-primary font-bold">98.2%</span>.
             </p>
 
             <div className="flex flex-wrap gap-4 pt-4">
