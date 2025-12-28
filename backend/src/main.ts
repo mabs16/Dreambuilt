@@ -4,6 +4,17 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api'); // Añadir prefijo global
+  
+  // Log para verificar rutas registradas
+  const server = app.getHttpServer();
+  const router = server._events.request._router;
+  if (router) {
+    const availableRoutes: [] = router.stack
+      .filter((r: any) => r.route)
+      .map((r: any) => `${Object.keys(r.route.methods).toUpperCase()} ${r.route.path}`);
+    console.log('Rutas registradas:', availableRoutes);
+  }
+
   app.enableCors({
     origin: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
