@@ -252,10 +252,9 @@ export class WhatsappService {
       let messageToSend = currentNode.data?.label || '';
 
       // Robust cleaning of node labels
-      // 1. Remove "Mensaje: ", "Pregunta: ", "IA Action: ", "Etiqueta: " prefixes
-      // 2. Remove "Inicio: Palabra Clave \"...\"" completely or replace with a greeting
+      // 1. Remove prefixes including emojis if present
       messageToSend = messageToSend
-        .replace(/^(Mensaje|Pregunta|IA Action|Etiqueta):\s*/i, '')
+        .replace(/^([💬❓⚡🤖🏷️]\s*)?(Mensaje|Pregunta|IA Action|IA|Etiqueta|Condición|Tag):\s*/i, '')
         .trim();
 
       // Special handling for trigger nodes to avoid sending technical text
@@ -272,12 +271,13 @@ export class WhatsappService {
       // Logic: Tag the lead, do NOT send message to WhatsApp
       if (
         currentNode.type === 'Etiqueta' ||
+        currentNode.data?.type === 'Tag' || // Check explicit type from data
         (currentNode.data?.label &&
-          currentNode.data.label.toLowerCase().startsWith('etiqueta:'))
+          currentNode.data.label.toLowerCase().includes('etiqueta:'))
       ) {
         const labelText = currentNode.data?.label || '';
-        // Extract tag name: "Etiqueta: Interesado" -> "Interesado"
-        const tag = labelText.replace(/^Etiqueta:\s*/i, '').trim();
+        // Extract tag name
+        const tag = labelText.replace(/^([💬❓⚡🤖🏷️]\s*)?(Etiqueta|Tag):\s*/i, '').trim();
 
         if (tag) {
           this.logger.log(`Applying tag "${tag}" to lead ${session.lead_id}`);
@@ -336,8 +336,9 @@ export class WhatsappService {
       // If it's a 'Pregunta' node, wait for input
       if (
         currentNode.type === 'Pregunta' ||
+        currentNode.data?.type === 'Pregunta' || // Check explicit type from data
         (currentNode.data?.label &&
-          currentNode.data.label.toLowerCase().startsWith('pregunta:'))
+          currentNode.data.label.toLowerCase().includes('pregunta:'))
       ) {
         await this.flowsService.updateSessionVariables(session.id, {
           _waiting_for_input: true,

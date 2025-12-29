@@ -40,13 +40,13 @@ const initialNodes: Node[] = [
   {
     id: '1',
     type: 'input',
-    data: { label: 'Inicio: Palabra Clave "Info"' },
+    data: { label: 'Inicio: Palabra Clave "Info"', type: 'input' },
     position: { x: 250, y: 0 },
     style: { background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', padding: '10px', fontWeight: 'bold' }
   },
   {
     id: '2',
-    data: { label: 'Mensaje: Bienvenida Casa Arca' },
+    data: { label: 'Mensaje: Bienvenida Casa Arca', type: 'Mensaje' },
     position: { x: 250, y: 100 },
     style: { background: '#1f2937', color: 'white', border: '1px solid #374151', borderRadius: '8px', padding: '10px' }
   },
@@ -196,7 +196,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
     const newNode: Node = {
       id,
       position: { x: 100, y: 100 },
-      data: { label },
+      data: { label, type }, // Store logical type in data
       style
     };
     setNodes((nds) => nds.concat(newNode));
@@ -333,7 +333,17 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                 </div>
 
                 {/* Button Editor Section - Only for Message and Question nodes */}
-                {(selectedNode.type === 'Mensaje' || selectedNode.type === 'Pregunta') && (
+                {((selectedNode.data?.type === 'Mensaje' || selectedNode.data?.type === 'Pregunta') || 
+                  (selectedNode.type === 'Mensaje' || selectedNode.type === 'Pregunta') ||
+                  // Fallback for nodes without type but with buttons already
+                  (selectedNode.data?.buttons && (selectedNode.data.buttons as any[]).length > 0) ||
+                  // Fallback by label text (heuristic)
+                  (typeof selectedNode.data?.label === 'string' && (
+                    !selectedNode.data.label.startsWith('⚡') && 
+                    !selectedNode.data.label.startsWith('🤖') && 
+                    !selectedNode.data.label.startsWith('🏷️')
+                  ))
+                ) && (
                   <div className="border-t border-white/10 pt-4">
                     <div className="flex justify-between items-center mb-2">
                       <label className="text-xs text-white/50 font-bold">Botones (Máx 3)</label>
