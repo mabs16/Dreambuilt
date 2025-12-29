@@ -159,7 +159,7 @@ export default function AdvisorsPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight font-outfit">Ranking de Asesores</h1>
-                    <p className="text-muted-foreground">Rendimiento basado en el sistema de puntuación Mabō OS.</p>
+                    <p className="text-muted-foreground">Rendimiento basado en el sistema de puntuación Dreambuilt OS.</p>
                 </div>
                 <button
                     onClick={() => setIsAddModalOpen(true)}

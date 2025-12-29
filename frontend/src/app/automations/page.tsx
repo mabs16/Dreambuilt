@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { Node, Edge } from '@xyflow/react';
 import {
     Bot,
     Save,
@@ -72,6 +73,17 @@ interface Automation {
     name: string;
 }
 
+interface Flow {
+    id: number;
+    name: string;
+    description: string | null;
+    trigger_keywords: string[];
+    nodes: Node[];
+    edges: Edge[];
+    is_active: boolean;
+    created_at: string;
+}
+
 const TONE_OPTIONS = [
     { value: 'profesional', label: '💼 Profesional', desc: 'Formal y ejecutivo' },
     { value: 'amigable', label: '😊 Amigable', desc: 'Cálido y accesible' },
@@ -85,6 +97,9 @@ function AutomationsContent() {
     
     const [activeTab, setActiveTab] = useState<'lead_qualification' | 'advisor_automation' | 'flow_builder'>(tabParam || 'lead_qualification');
     const [automation, setAutomation] = useState<Automation | null>(null);
+    const [flows, setFlows] = useState<Flow[]>([]);
+    const [selectedFlow, setSelectedFlow] = useState<Flow | null>(null);
+    const [isCreatingFlow, setIsCreatingFlow] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [expandedSections, setExpandedSections] = useState({
@@ -101,7 +116,24 @@ function AutomationsContent() {
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+    const fetchFlows = useCallback(async () => {
+        try {
+            const res = await fetch(`${apiUrl}/api/flows`);
+            if (res.ok) {
+                const data = await res.json();
+                setFlows(data);
+            }
+        } catch (error) {
+            console.error("Error fetching flows:", error);
+        }
+    }, [apiUrl]);
+
     const fetchConfig = useCallback(async (name: string) => {
+        if (name === 'flow_builder') {
+            await fetchFlows();
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
             const res = await fetch(`${apiUrl}/api/automations?name=${name}`);
@@ -164,7 +196,7 @@ function AutomationsContent() {
         } finally {
             setLoading(false);
         }
-    }, [apiUrl]);
+    }, [apiUrl, fetchFlows]);
 
     useEffect(() => {
         if (tabParam && tabParam !== activeTab) {
@@ -274,6 +306,8 @@ function AutomationsContent() {
         updateConfig('products', (config.products || []).filter((_, i) => i !== index));
     };
 
+    const isEditingFlow = activeTab === 'flow_builder' && (isCreatingFlow || selectedFlow);
+
     if (loading) return (
         <div className="flex h-[80vh] items-center justify-center">
             <div className="flex flex-col items-center gap-6">
@@ -291,8 +325,31 @@ function AutomationsContent() {
         </div>
     );
 
+    if (isEditingFlow) {
+        return (
+            <div className="fixed inset-0 z-50 bg-black flex flex-col">
+                <div className="flex-1 w-full">
+                    <FlowEditor 
+                        initialData={selectedFlow ? {
+                            id: selectedFlow.id,
+                            name: selectedFlow.name,
+                            nodes: typeof selectedFlow.nodes === 'string' ? JSON.parse(selectedFlow.nodes) : selectedFlow.nodes,
+                            edges: typeof selectedFlow.edges === 'string' ? JSON.parse(selectedFlow.edges) : selectedFlow.edges,
+                            trigger_keywords: selectedFlow.trigger_keywords
+                        } : undefined}
+                        onBack={() => {
+                            setIsCreatingFlow(false);
+                            setSelectedFlow(null);
+                            fetchFlows();
+                        }}
+                    />
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="space-y-10 h-[calc(100vh-6rem)] flex flex-col overflow-hidden pb-4">
+        <div className="space-y-10 min-h-screen flex flex-col pb-4">
             {/* Header Section */}
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 px-1">
                 <div className="space-y-2">
@@ -360,7 +417,7 @@ function AutomationsContent() {
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 overflow-y-auto pr-2 -mr-2 space-y-8 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            <div className="flex-1 space-y-8">
                 {/* Status Card */}
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }}
@@ -419,7 +476,12 @@ function AutomationsContent() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Configuration Panels */}
-                    <div className="lg:col-span-8 space-y-6">
+                    <div className={cn(
+                        "transition-all duration-500",
+                        activeTab === 'flow_builder' && (isCreatingFlow || selectedFlow) 
+                            ? "lg:col-span-12" 
+                            : "lg:col-span-8 space-y-6"
+                    )}>
                         {activeTab === 'lead_qualification' ? (
                             <AnimatePresence mode="wait">
                                 <motion.div 
@@ -427,7 +489,7 @@ function AutomationsContent() {
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: 20 }}
-                                    className="space-y-6"
+                                    className="space-y-6 no-scrollbar"
                                 >
                                     <ConfigSection 
                                         icon={Layout} 
@@ -634,13 +696,88 @@ function AutomationsContent() {
                         ) : activeTab === 'flow_builder' ? (
                             <AnimatePresence mode="wait">
                                 <motion.div 
-                                    key="flow_builder"
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: 20 }}
-                                    className="h-[80vh]"
+                                    key={isCreatingFlow || selectedFlow ? "flow_editor" : "flow_list"}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -20 }}
+                                    className="no-scrollbar overflow-visible"
                                 >
-                                    <FlowEditor />
+                                    {isCreatingFlow || selectedFlow ? (
+                                        <div className="flex items-center justify-center py-20">
+                                            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-6">
+                                            <div className="flex justify-between items-center mb-8">
+                                                <div>
+                                                    <h3 className="text-xl font-black text-white uppercase tracking-tighter">Tus Flujos</h3>
+                                                    <p className="text-sm text-white/40">Gestiona y edita tus flujos de conversación automatizados.</p>
+                                                </div>
+                                                <button 
+                                                    onClick={() => setIsCreatingFlow(true)}
+                                                    className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all active:scale-95"
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                    Crear Nuevo Flujo
+                                                </button>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                                {flows.length === 0 ? (
+                                                    <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2.5rem] bg-white/[0.02]">
+                                                        <Workflow className="h-16 w-16 text-white/10 mb-4" />
+                                                        <p className="text-white/40 font-bold uppercase tracking-widest text-xs">No hay flujos creados aún</p>
+                                                    </div>
+                                                ) : (
+                                                    flows.map((flow) => (
+                                                        <motion.div 
+                                                            key={flow.id}
+                                                            whileHover={{ scale: 1.02, y: -5 }}
+                                                            className="p-6 rounded-[2rem] bg-white/5 border border-white/10 hover:border-primary/30 hover:bg-white/10 transition-all cursor-pointer group relative"
+                                                            onClick={() => setSelectedFlow(flow)}
+                                                        >
+                                                            <div className="flex justify-between items-start mb-4">
+                                                                <div className="p-3 bg-primary/10 rounded-2xl text-primary group-hover:scale-110 transition-transform">
+                                                                    <Workflow className="h-6 w-6" />
+                                                                </div>
+                                                                <div className="flex gap-2">
+                                                                    <button 
+                                                                        onClick={async (e) => {
+                                                                            e.stopPropagation();
+                                                                            if (confirm('¿Estás seguro de eliminar este flujo?')) {
+                                                                                await fetch(`${apiUrl}/api/flows/${flow.id}`, { method: 'DELETE' });
+                                                                                fetchFlows();
+                                                                            }
+                                                                        }}
+                                                                        className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20 transition-colors"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <h4 className="text-lg font-black text-white mb-2 line-clamp-1">{flow.name}</h4>
+                                                            <div className="flex flex-wrap gap-2 mb-4">
+                                                                {flow.trigger_keywords.map((kw, idx) => (
+                                                                    <span key={idx} className="text-[10px] font-black uppercase bg-primary/20 text-primary px-2 py-1 rounded-md border border-primary/20">
+                                                                        {kw}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                            <div className="flex items-center justify-between mt-6 pt-6 border-t border-white/5">
+                                                                <span className="text-[10px] text-white/20 font-bold uppercase tracking-widest">
+                                                                    {new Date(flow.created_at).toLocaleDateString()}
+                                                                </span>
+                                                                <div className="flex items-center gap-2 text-primary text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    Editar Flujo
+                                                                    <Zap className="h-3 w-3 fill-current" />
+                                                                </div>
+                                                            </div>
+                                                        </motion.div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </motion.div>
                             </AnimatePresence>
                         ) : (
@@ -761,68 +898,77 @@ function AutomationsContent() {
                     </div>
 
                     {/* Right Sidebar - Preview & Help */}
-                    <div className="lg:col-span-4 space-y-6">
-                        <div className="sticky top-0 space-y-6">
-                            {/* Preview Card */}
-                            <div className="p-8 rounded-[2.5rem] bg-black border border-white/10 shadow-2xl relative overflow-hidden">
-                                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50" />
-                                <h3 className="text-[11px] font-black text-muted-foreground/50 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
-                                    <Globe className="h-3 w-3" />
-                                    Live Preview
-                                </h3>
-                                
-                                <div className="space-y-4">
-                                    <div className="flex gap-3">
-                                        <div className="h-8 w-8 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/20">
-                                            <Bot className="h-4 w-4 text-primary" />
-                                        </div>
-                                        <div className="flex-1 p-4 rounded-2xl rounded-tl-none bg-white/5 border border-white/10 text-xs font-medium text-white/80 leading-relaxed">
-                                            {leadConfig?.welcomeMessage || "Hola, soy tu asistente virtual. ¿En qué puedo ayudarte?"}
+                    <AnimatePresence>
+                        {!(activeTab === 'flow_builder' && (isCreatingFlow || selectedFlow)) && (
+                            <motion.div 
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                className="lg:col-span-4 space-y-6"
+                            >
+                                <div className="sticky top-0 space-y-6">
+                                    {/* Preview Card */}
+                                    <div className="p-8 rounded-[2.5rem] bg-black border border-white/10 shadow-2xl relative overflow-hidden">
+                                        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50" />
+                                        <h3 className="text-[11px] font-black text-muted-foreground/50 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+                                            <Globe className="h-3 w-3" />
+                                            Live Preview
+                                        </h3>
+                                        
+                                        <div className="space-y-4">
+                                            <div className="flex gap-3">
+                                                <div className="h-8 w-8 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/20">
+                                                    <Bot className="h-4 w-4 text-primary" />
+                                                </div>
+                                                <div className="flex-1 p-4 rounded-2xl rounded-tl-none bg-white/5 border border-white/10 text-xs font-medium text-white/80 leading-relaxed">
+                                                    {leadConfig?.welcomeMessage || "Hola, soy tu asistente virtual. ¿En qué puedo ayudarte?"}
+                                                </div>
+                                            </div>
+                                            
+                                            {leadConfig?.welcomeButtonText && (
+                                                <div className="flex justify-end pr-11">
+                                                    <div className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+                                                        {leadConfig.welcomeButtonText}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {leadConfig?.questions && leadConfig.questions.length > 0 && (
+                                                <div className="flex gap-3 pt-4">
+                                                    <div className="h-8 w-8 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/20">
+                                                        <Bot className="h-4 w-4 text-primary" />
+                                                    </div>
+                                                    <div className="flex-1 p-4 rounded-2xl rounded-tl-none bg-white/5 border border-white/10 text-xs font-medium text-white/80 leading-relaxed italic opacity-60">
+                                                        {leadConfig.questions[0]}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-                                    
-                                    {leadConfig?.welcomeButtonText && (
-                                        <div className="flex justify-end pr-11">
-                                            <div className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">
-                                                {leadConfig.welcomeButtonText}
-                                            </div>
-                                        </div>
-                                    )}
 
-                                    {leadConfig?.questions && leadConfig.questions.length > 0 && (
-                                        <div className="flex gap-3 pt-4">
-                                            <div className="h-8 w-8 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/20">
-                                                <Bot className="h-4 w-4 text-primary" />
-                                            </div>
-                                            <div className="flex-1 p-4 rounded-2xl rounded-tl-none bg-white/5 border border-white/10 text-xs font-medium text-white/80 leading-relaxed italic opacity-60">
-                                                {leadConfig.questions[0]}
-                                            </div>
+                                    {/* Help Card */}
+                                    <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-primary/10 to-transparent border border-primary/20">
+                                        <h3 className="text-[11px] font-black text-primary uppercase tracking-[0.3em] mb-4">Dreambuilt Intelligence</h3>
+                                        <p className="text-xs font-medium text-white/60 leading-relaxed mb-6">
+                                            Nuestra IA utiliza modelos de lenguaje avanzados para entender la intención del usuario y extraer información clave de forma natural.
+                                        </p>
+                                        <div className="space-y-3">
+                                            {[
+                                                { icon: Shield, text: "Privacidad Corporativa" },
+                                                { icon: Zap, text: "Respuesta Sub-segundo" },
+                                                { icon: Users, text: "Multi-agente nativo" }
+                                            ].map((item, i) => (
+                                                <div key={i} className="flex items-center gap-3 text-white/40">
+                                                    <item.icon className="h-4 w-4" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">{item.text}</span>
+                                                </div>
+                                            ))}
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
-                            </div>
-
-                            {/* Help Card */}
-                            <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-primary/10 to-transparent border border-primary/20">
-                                <h3 className="text-[11px] font-black text-primary uppercase tracking-[0.3em] mb-4">Mabo Intelligence</h3>
-                                <p className="text-xs font-medium text-white/60 leading-relaxed mb-6">
-                                    Nuestra IA utiliza modelos de lenguaje avanzados para entender la intención del usuario y extraer información clave de forma natural.
-                                </p>
-                                <div className="space-y-3">
-                                    {[
-                                        { icon: Shield, text: "Privacidad Corporativa" },
-                                        { icon: Zap, text: "Respuesta Sub-segundo" },
-                                        { icon: Users, text: "Multi-agente nativo" }
-                                    ].map((item, i) => (
-                                        <div key={i} className="flex items-center gap-3 text-white/40">
-                                            <item.icon className="h-4 w-4" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">{item.text}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
         </div>

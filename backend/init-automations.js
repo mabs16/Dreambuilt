@@ -28,7 +28,7 @@ SELECT 'lead_qualification', false, '{
     "¿Cuál es tu presupuesto estimado?",
     "¿Para cuándo planeas iniciar?"
   ],
-  "welcomeMessage": "¡Hola! Soy el asistente virtual de Mabō OS. Para ayudarte mejor, ¿podrías responder unas preguntas rápidas?",
+  "welcomeMessage": "¡Hola! Soy el asistente virtual de Dreambuilt OS. Para ayudarte mejor, ¿podrías responder unas preguntas rápidas?",
   "completionMessage": "¡Excelente! He recibido tus datos. En breve un asesor especializado se pondrá en contacto contigo."
 }'::jsonb
 WHERE NOT EXISTS (SELECT 1 FROM automations WHERE name = 'lead_qualification');

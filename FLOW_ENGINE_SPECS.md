@@ -1,4 +1,4 @@
-# Mabō Flow Engine - Documentación Técnica
+# Dreambuilt Flow Engine - Documentación Técnica
 
 ## 1. Visión General
 El objetivo es transformar el sistema actual de automatización lineal en un motor de flujos visuales ("Flow Engine") que permita segmentación avanzada, lógica condicional y gestión multi-canal (WhatsApp inicial).

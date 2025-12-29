@@ -105,7 +105,7 @@ export class WhatsappService {
     pin: string;
   }) {
     this.logger.log(`Evento OTP recibido para ${payload.phone}`);
-    const message = `¡Hola ${payload.name}! Tu código de verificación para Mabō OS es: ${payload.pin}. Expira en 5 minutos.`;
+    const message = `¡Hola ${payload.name}! Tu código de verificación para Dreambuilt OS es: ${payload.pin}. Expira en 5 minutos.`;
     await this.sendWhatsappMessage(payload.phone, message);
   }
 
@@ -947,7 +947,7 @@ Link: https://wa.me/${lead.phone}
 
     let welcomeText =
       config?.welcomeMessage ||
-      'Hola 👋\nSoy el asistente automático de Mabō OS.\n\nPara dirigir tu solicitud correctamente y evitar demoras, necesito hacerte 3 preguntas rápidas.\n\n👉 Presiona “Comenzar” para continuar.';
+      'Hola 👋\nSoy el asistente automático de Dreambuilt OS.\n\nPara dirigir tu solicitud correctamente y evitar demoras, necesito hacerte 3 preguntas rápidas.\n\n👉 Presiona “Comenzar” para continuar.';
     const buttonText = config?.welcomeButtonText || 'Comenzar';
 
     // Personalization Logic
@@ -1191,12 +1191,12 @@ Link: https://wa.me/${lead.phone}
       resourcesSection += `\n- Sitio web para referencia: ${config.websiteUrl}`;
     }
 
-    return `Eres Mabō, un asistente virtual de ventas. Tu estilo de comunicación es ${toneStyle}.
+    return `Eres Dreambuilt, un asistente virtual de ventas. Tu estilo de comunicación es ${toneStyle}.
 ${
   leadName && leadName !== 'Prospecto WhatsApp'
     ? `\nEstás hablando con ${leadName}. Dirígete a esta persona por su nombre de manera natural (no en cada frase, pero sí al inicio o al despedirte).`
     : config.askForName
-      ? '\nNo sabes el nombre del prospecto. TU PRIORIDAD ES PREGUNTAR SU NOMBRE antes de comenzar con la calificación. Hazlo de manera amable y natural, por ejemplo: "¡Hola! Soy el asistente virtual de Mabō OS. Para dirigirme a ti correctamente, ¿cuál es tu nombre?".'
+      ? '\nNo sabes el nombre del prospecto. TU PRIORIDAD ES PREGUNTAR SU NOMBRE antes de comenzar con la calificación. Hazlo de manera amable y natural, por ejemplo: "¡Hola! Soy el asistente virtual de Dreambuilt OS. Para dirigirme a ti correctamente, ¿cuál es tu nombre?".'
       : '\nNo sabes el nombre del prospecto. Puedes preguntárselo si surge naturalmente, pero NO es obligatorio ni prioritario.'
 }
 

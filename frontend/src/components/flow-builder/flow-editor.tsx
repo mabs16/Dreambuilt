@@ -17,6 +17,7 @@ import {
   Panel
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { cn } from "@/lib/utils";
 import { 
   MessageSquare, 
   HelpCircle, 
@@ -48,11 +49,23 @@ const initialEdges: Edge[] = [
   { id: 'e1-2', source: '1', target: '2', animated: true, style: { stroke: '#10b981' } },
 ];
 
-export default function FlowEditor() {
-  const [nodes, setNodes] = useState<Node[]>(initialNodes);
-  const [edges, setEdges] = useState<Edge[]>(initialEdges);
+interface FlowEditorProps {
+    initialData?: {
+        id?: number;
+        name: string;
+        nodes: Node[];
+        edges: Edge[];
+        trigger_keywords: string[];
+    };
+    onBack?: () => void;
+}
+
+export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
+  const [nodes, setNodes] = useState<Node[]>(initialData?.nodes || initialNodes);
+  const [edges, setEdges] = useState<Edge[]>(initialData?.edges || initialEdges);
   const [isSaving, setIsSaving] = useState(false);
-  const [flowName, setFlowName] = useState("Nuevo Flujo");
+  const [flowName, setFlowName] = useState(initialData?.name || "Nuevo Flujo");
+  const [triggerKeywords, setTriggerKeywords] = useState<string>(initialData?.trigger_keywords?.join(', ') || "hola");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const onNodesChange = useCallback(
@@ -96,11 +109,43 @@ export default function FlowEditor() {
 
   const addNode = (type: string) => {
     const id = Math.random().toString();
+    let label = "";
+    const style = { background: '#1f2937', color: 'white', border: '1px solid #374151', borderRadius: '12px', padding: '15px', width: 200 };
+    
+    switch(type) {
+        case 'Mensaje':
+            label = "💬 Enviar Mensaje:\nEscribe aquí tu respuesta...";
+            style.background = '#1f2937';
+            break;
+        case 'Pregunta':
+            label = "❓ Pregunta:\n¿Cuál es tu correo?";
+            style.background = '#3b82f6';
+            style.border = 'none';
+            break;
+        case 'Condición':
+            label = "⚡ Condición:\nSi el mensaje contiene...";
+            style.background = '#f59e0b';
+            style.border = 'none';
+            break;
+        case 'IA':
+            label = "🤖 Acción IA:\nAnalizar sentimiento...";
+            style.background = '#8b5cf6';
+            style.border = 'none';
+            break;
+        case 'Tag':
+            label = "🏷️ Etiqueta:\nAsignar etiqueta 'Interesado'";
+            style.background = '#ec4899';
+            style.border = 'none';
+            break;
+        default:
+            label = `Nuevo ${type}`;
+    }
+
     const newNode: Node = {
       id,
-      position: { x: Math.random() * 400, y: Math.random() * 400 },
-      data: { label: `Nuevo ${type}` },
-      style: { background: '#1f2937', color: 'white', border: '1px solid #374151', borderRadius: '8px', padding: '10px' }
+      position: { x: 100, y: 100 },
+      data: { label },
+      style
     };
     setNodes((nds) => nds.concat(newNode));
   };
@@ -127,14 +172,14 @@ export default function FlowEditor() {
             name: flowName,
             nodes,
             edges,
-            trigger_keywords: ["info"], // Temporal, luego será configurable
+            trigger_keywords: triggerKeywords.split(',').map(k => k.trim()).filter(k => k !== ""),
             is_active: true
         };
 
-        console.log('Intentando guardar en:', `${apiUrl}/api/flows`);
+        console.log('Intentando guardar en:', `${apiUrl}/api/flows${initialData?.id ? `/${initialData.id}` : ''}`);
 
-        const res = await fetch(`${apiUrl}/api/flows`, {
-            method: 'POST',
+        const res = await fetch(`${apiUrl}/api/flows${initialData?.id ? `/${initialData.id}` : ''}`, {
+            method: initialData?.id ? 'PUT' : 'POST',
             headers: { 
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
@@ -160,30 +205,60 @@ export default function FlowEditor() {
   const selectedNode = nodes.find(n => n.id === selectedNodeId);
 
   return (
-    <div className="h-[80vh] w-full bg-black rounded-2xl border border-white/10 overflow-hidden relative">
-      <div className="absolute top-4 left-4 z-10 bg-black/80 backdrop-blur-md p-2 rounded-xl border border-white/10 flex flex-col gap-2">
-        <ToolButton icon={MessageSquare} label="Mensaje" onClick={() => addNode('Mensaje')} />
-        <ToolButton icon={HelpCircle} label="Pregunta" onClick={() => addNode('Pregunta')} />
-        <ToolButton icon={GitBranch} label="Condición" onClick={() => addNode('Condición')} />
-        <ToolButton icon={Bot} label="IA Action" onClick={() => addNode('IA')} />
-        <ToolButton icon={Tag} label="Etiqueta" onClick={() => addNode('Tag')} />
+    <div className="h-screen w-full bg-black overflow-hidden relative no-scrollbar">
+      <div className="absolute top-24 left-6 z-10 bg-black/40 backdrop-blur-xl p-4 rounded-[2rem] border border-white/10 flex flex-col gap-3 shadow-2xl">
+        <div className="text-[10px] font-black text-white/40 uppercase tracking-widest px-2 mb-1">Nodos</div>
+        <ToolButton icon={MessageSquare} label="Mensaje" onClick={() => addNode('Mensaje')} color="bg-gray-500" />
+        <ToolButton icon={HelpCircle} label="Pregunta" onClick={() => addNode('Pregunta')} color="bg-blue-500" />
+        <ToolButton icon={GitBranch} label="Condición" onClick={() => addNode('Condición')} color="bg-amber-500" />
+        <ToolButton icon={Bot} label="IA Action" onClick={() => addNode('IA')} color="bg-purple-500" />
+        <ToolButton icon={Tag} label="Etiqueta" onClick={() => addNode('Tag')} color="bg-pink-500" />
       </div>
 
-      <div className="absolute top-4 right-4 z-10 flex gap-2">
-        <input 
-            type="text" 
-            value={flowName}
-            onChange={(e) => setFlowName(e.target.value)}
-            className="bg-black/50 border border-white/10 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-primary/50"
-        />
-        <button 
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50"
-        >
-          <Save className="h-4 w-4" />
-          {isSaving ? 'Guardando...' : 'Guardar Flujo'}
-        </button>
+      <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
+        <div className="flex gap-2">
+            {onBack && (
+                <div className="flex items-end pb-0.5">
+                    <button 
+                        onClick={onBack}
+                        className="flex items-center gap-2 bg-white/5 text-white/80 px-4 py-2 rounded-xl font-bold text-sm border border-white/10 hover:bg-white/10 transition-all h-[38px]"
+                    >
+                        <X className="h-4 w-4" />
+                        Cancelar
+                    </button>
+                </div>
+            )}
+            <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-white/40 uppercase font-bold px-1">Nombre del Flujo</label>
+                <input 
+                    type="text" 
+                    placeholder="Nombre del flujo"
+                    value={flowName}
+                    onChange={(e) => setFlowName(e.target.value)}
+                    className="bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50 w-64"
+                />
+            </div>
+            <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-white/40 uppercase font-bold px-1">Palabras Clave (sep. por coma)</label>
+                <input 
+                    type="text" 
+                    placeholder="hola, info, precio"
+                    value={triggerKeywords}
+                    onChange={(e) => setTriggerKeywords(e.target.value)}
+                    className="bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50 w-64"
+                />
+            </div>
+            <div className="flex items-end pb-0.5">
+                <button 
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50 h-[38px]"
+                >
+                  <Save className="h-4 w-4" />
+                  {isSaving ? 'Guardando...' : 'Guardar Flujo'}
+                </button>
+            </div>
+        </div>
       </div>
 
       {selectedNode && (
@@ -228,27 +303,32 @@ export default function FlowEditor() {
         onPaneClick={onPaneClick}
         fitView
         colorMode="dark"
+        style={{ width: '100%', height: '100%' }}
       >
         <Background color="#333" gap={20} variant={BackgroundVariant.Dots} />
         <Controls className="bg-white/10 border-white/10 fill-white" />
         <Panel position="bottom-center" className="bg-black/50 backdrop-blur px-4 py-2 rounded-full border border-white/5 text-xs text-white/50">
-          Mabō Flow Engine v1.0
+          Dreambuilt Flow Engine v1.0
         </Panel>
       </ReactFlow>
     </div>
   );
 }
 
-function ToolButton({ icon: Icon, label, onClick }: { icon: React.ElementType, label: string, onClick: () => void }) {
+function ToolButton({ icon: Icon, label, onClick, color }: { icon: React.ElementType, label: string, onClick: () => void, color?: string }) {
   return (
     <button 
       onClick={onClick}
-      className="flex items-center gap-3 p-2 hover:bg-white/10 rounded-lg transition-colors text-white/80 hover:text-white w-32 group"
+      className="flex items-center gap-3 p-2 hover:bg-white/10 rounded-xl transition-all text-white/80 hover:text-white w-36 group active:scale-95"
     >
-      <div className="p-1.5 bg-white/5 rounded-md group-hover:bg-primary/20 group-hover:text-primary transition-colors">
-        <Icon className="h-4 w-4" />
+      <div className={cn(
+        "p-2 rounded-lg transition-colors shadow-lg",
+        color || "bg-white/5",
+        "group-hover:scale-110 transition-transform"
+      )}>
+        <Icon className="h-4 w-4 text-white" />
       </div>
-      <span className="text-xs font-medium">{label}</span>
+      <span className="text-xs font-bold uppercase tracking-wider">{label}</span>
     </button>
   );
 }
