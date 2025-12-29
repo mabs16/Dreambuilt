@@ -418,38 +418,51 @@ export class WhatsappService {
 
         if (label.toLowerCase().includes('manual')) {
           // Extract advisor name or ID from label "👤 Asignación:\nManual: Nombre (ID: 123)" or "Manual: Nombre"
-          
+
           // 1. Try to extract ID directly (more robust)
           const idMatch = label.match(/\(ID:\s*(\d+)\)/);
           if (idMatch && idMatch[1]) {
-             const advisorId = parseInt(idMatch[1], 10);
-             advisor = await this.advisorsService.findById(advisorId);
-             this.logger.log(`Manual assignment by ID: ${advisorId} -> Found: ${!!advisor ? advisor.name : 'No'}`);
-          } 
-          
+            const advisorId = parseInt(idMatch[1], 10);
+            advisor = await this.advisorsService.findById(advisorId);
+            this.logger.log(
+              `Manual assignment by ID: ${advisorId} -> Found: ${advisor ? advisor.name : 'No'}`,
+            );
+          }
+
           // 2. Fallback to name search if ID not found or advisor lookup failed
           if (!advisor) {
-              const parts = label.split('Manual:');
-              if (parts.length > 1) {
-                // Remove (ID: ...) part if present to clean the name
-                const advisorName = parts[1].replace(/\(ID:\s*\d+\)/, '').trim();
-                
-                this.logger.log(`Manual assignment searching by name: '${advisorName}'`);
-                
-                const allAdvisors = await this.advisorsService.findAll();
+            const parts = label.split('Manual:');
+            if (parts.length > 1) {
+              // Remove (ID: ...) part if present to clean the name
+              const advisorName = parts[1].replace(/\(ID:\s*\d+\)/, '').trim();
+
+              this.logger.log(
+                `Manual assignment searching by name: '${advisorName}'`,
+              );
+
+              const allAdvisors = await this.advisorsService.findAll();
+              advisor =
+                allAdvisors.find(
+                  (a) => a.name.toLowerCase() === advisorName.toLowerCase(),
+                ) || null;
+
+              if (!advisor) {
+                // Try partial match or more lenient search
                 advisor =
                   allAdvisors.find(
-                    (a) => a.name.toLowerCase() === advisorName.toLowerCase(),
+                    (a) =>
+                      a.name.toLowerCase().includes(advisorName.toLowerCase()) ||
+                      advisorName
+                        .toLowerCase()
+                        .includes(a.name.toLowerCase()),
                   ) || null;
-                  
-                if (!advisor) {
-                    // Try partial match or more lenient search
-                    advisor = allAdvisors.find(a => a.name.toLowerCase().includes(advisorName.toLowerCase()) || advisorName.toLowerCase().includes(a.name.toLowerCase())) || null;
-                    if (advisor) {
-                        this.logger.warn(`Advisor found via fuzzy match: '${advisorName}' -> '${advisor.name}'`);
-                    }
+                if (advisor) {
+                  this.logger.warn(
+                    `Advisor found via fuzzy match: '${advisorName}' -> '${advisor.name}'`,
+                  );
                 }
               }
+            }
           }
         } else {
           // Default: Round Robin
