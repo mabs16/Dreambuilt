@@ -254,7 +254,10 @@ export class WhatsappService {
       // Robust cleaning of node labels
       // 1. Remove prefixes including emojis if present
       messageToSend = messageToSend
-        .replace(/^([💬❓⚡🤖🏷️]\s*)?(Mensaje|Pregunta|IA Action|IA|Etiqueta|Condición|Tag):\s*/i, '')
+        .replace(
+          /^([💬❓⚡🤖🏷️]\s*)?(Mensaje|Pregunta|IA Action|IA|Etiqueta|Condición|Tag):\s*/iu,
+          '',
+        )
         .trim();
 
       // Special handling for trigger nodes to avoid sending technical text
@@ -277,7 +280,9 @@ export class WhatsappService {
       ) {
         const labelText = currentNode.data?.label || '';
         // Extract tag name
-        const tag = labelText.replace(/^([💬❓⚡🤖🏷️]\s*)?(Etiqueta|Tag):\s*/i, '').trim();
+        const tag = labelText
+          .replace(/^([💬❓⚡🤖🏷️]\s*)?(Etiqueta|Tag):\s*/iu, '')
+          .trim();
 
         if (tag) {
           this.logger.log(`Applying tag "${tag}" to lead ${session.lead_id}`);
