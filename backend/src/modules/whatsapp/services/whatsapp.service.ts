@@ -470,7 +470,9 @@ export class WhatsappService {
                   .replace(/{{response_limit}}/g, String(responseLimit));
               }
 
-              this.logger.debug(`Sending message to advisor ${advisor.phone}...`);
+              this.logger.debug(
+                `Sending message to advisor ${advisor.phone}...`,
+              );
               if (advConfig?.enableInteractiveButtons !== false) {
                 const payload: WhatsAppPayload = {
                   type: 'interactive',
