@@ -448,14 +448,14 @@ export class WhatsappService {
 
               if (!advisor) {
                 // Try partial match or more lenient search
+                const targetName = advisorName.toLowerCase();
                 advisor =
-                  allAdvisors.find(
-                    (a) =>
-                      a.name.toLowerCase().includes(advisorName.toLowerCase()) ||
-                      advisorName
-                        .toLowerCase()
-                        .includes(a.name.toLowerCase()),
-                  ) || null;
+                  allAdvisors.find((a) => {
+                    const aName = a.name.toLowerCase();
+                    return (
+                      aName.includes(targetName) || targetName.includes(aName)
+                    );
+                  }) || null;
                 if (advisor) {
                   this.logger.warn(
                     `Advisor found via fuzzy match: '${advisorName}' -> '${advisor.name}'`,
