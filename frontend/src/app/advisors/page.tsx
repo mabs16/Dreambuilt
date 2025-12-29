@@ -81,7 +81,7 @@ export default function AdvisorsPage() {
         const fullPhone = newAdvisor.countryCode + cleanPhonePart;
 
         try {
-            const response = await fetch(`${apiUrl}/advisors/request-otp`, {
+            const response = await fetch(`${apiUrl}/api/advisors/request-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: newAdvisor.name, phone: fullPhone }),
@@ -105,25 +105,25 @@ export default function AdvisorsPage() {
         const fullPhone = newAdvisor.countryCode + cleanPhonePart;
 
         try {
-            const response = await fetch(`${apiUrl}/advisors/verify-otp`, {
+            const response = await fetch(`${apiUrl}/api/advisors/verify-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    name: newAdvisor.name,
-                    phone: fullPhone, 
-                    pin: otpPin 
-                }),
+                body: JSON.stringify({ phone: fullPhone, otp: otpPin, name: newAdvisor.name }),
             });
 
-            if (!response.ok) throw new Error("Código OTP inválido");
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Error al verificar OTP");
+            }
 
+            alert("Asesor registrado exitosamente");
             setIsAddModalOpen(false);
             setRegistrationStep(1);
             setNewAdvisor({ name: "", countryCode: "52", phone: "" });
             setOtpPin("");
             fetchAdvisors();
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "Error al verificar OTP";
+            const message = error instanceof Error ? error.message : "Error desconocido";
             alert(message);
         } finally {
             setIsProcessing(false);
@@ -132,26 +132,21 @@ export default function AdvisorsPage() {
 
     const handleDeleteAdvisor = async () => {
         if (!deleteModal.id) return;
-
-        console.log("LOG: Iniciando proceso de eliminación para ID:", deleteModal.id);
-
+        setIsProcessing(true);
         try {
-            console.log("LOG: Llamando a Supabase DELETE...");
-            const { error } = await supabase
-                .from('advisors')
-                .delete()
-                .eq('id', deleteModal.id);
+            const response = await fetch(`${apiUrl}/api/advisors/${deleteModal.id}`, {
+                method: "DELETE",
+            });
 
-            if (error) {
-                console.error("LOG: Error de Supabase:", error);
-                alert("Error al eliminar: " + error.message);
-            } else {
-                console.log("LOG: Respuesta de Supabase exitosa");
-                setDeleteModal({ isOpen: false, id: null, name: "" });
-                fetchAdvisors();
-            }
-        } catch (err) {
-            console.error("LOG: Error inesperado en el catch:", err);
+            if (!response.ok) throw new Error("Error al eliminar asesor");
+
+            setDeleteModal({ isOpen: false, id: null, name: "" });
+            fetchAdvisors();
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Error desconocido";
+            alert(message);
+        } finally {
+            setIsProcessing(false);
         }
     };
 

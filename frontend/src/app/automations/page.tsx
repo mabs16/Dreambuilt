@@ -104,7 +104,7 @@ function AutomationsContent() {
     const fetchConfig = useCallback(async (name: string) => {
         setLoading(true);
         try {
-            const res = await fetch(`${apiUrl}/automations?name=${name}`);
+            const res = await fetch(`${apiUrl}/api/automations?name=${name}`);
             
             if (!res.ok) {
                 const errorText = await res.text();
@@ -180,7 +180,7 @@ function AutomationsContent() {
         if (!automation) return;
         setSaving(true);
         try {
-            const res = await fetch(`${apiUrl}/automations`, {
+            const res = await fetch(`${apiUrl}/api/automations`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
@@ -201,7 +201,7 @@ function AutomationsContent() {
         if (!automation) return;
         setSaving(true);
         try {
-            const res = await fetch(`${apiUrl}/automations`, {
+            const res = await fetch(`${apiUrl}/api/automations`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

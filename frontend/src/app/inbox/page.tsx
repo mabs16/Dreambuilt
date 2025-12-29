@@ -73,7 +73,7 @@ function InboxContent() {
 
     const fetchChats = useCallback(async () => {
         try {
-            const res = await fetch(`${apiUrl}/whatsapp/messages`);
+            const res = await fetch(`${apiUrl}/api/whatsapp/messages`);
             if (!res.ok) throw new Error("Failed to fetch chats");
             const data = await res.json();
             setChats(data || []);
@@ -87,7 +87,7 @@ function InboxContent() {
 
     const fetchHistory = useCallback(async (phone: string) => {
         try {
-            const res = await fetch(`${apiUrl}/whatsapp/messages/${phone}`);
+            const res = await fetch(`${apiUrl}/api/whatsapp/messages/${phone}`);
             if (!res.ok) throw new Error("Failed to fetch history");
             const data = await res.json();
             setMessages(data);
@@ -115,8 +115,8 @@ function InboxContent() {
     }, [messages]);
 
     const filteredChats = chats.filter(chat =>
-        chat.contact.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        chat.lastMessage.toLowerCase().includes(searchTerm.toLowerCase())
+        (chat.contact?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+        (chat.lastMessage?.toLowerCase() || "").includes(searchTerm.toLowerCase())
     );
 
     const handleSelectContact = (contact: string) => {
@@ -133,7 +133,7 @@ function InboxContent() {
         if (!newMessage.trim() || !selectedContact) return;
         setSending(true);
         try {
-            const res = await fetch(`${apiUrl}/whatsapp/messages`, {
+            const res = await fetch(`${apiUrl}/api/whatsapp/messages`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ to: selectedContact, message: newMessage })
