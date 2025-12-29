@@ -396,19 +396,22 @@ function InboxContent() {
                                     </motion.button>
                                     <div className="relative">
                                         <div className="h-16 w-16 rounded-[1.8rem] bg-primary/10 flex items-center justify-center border-2 border-primary/20 shadow-2xl shadow-primary/20 relative z-10 overflow-hidden">
-                                            {chats.find(c => c.contact === selectedContact)?.avatar ? (
-                                                <Image 
-                                                    src={chats.find(c => c.contact === selectedContact)!.avatar!}
-                                                    alt={selectedContact}
-                                                    width={64}
-                                                    height={64}
-                                                    className="object-cover w-full h-full"
-                                                />
-                                            ) : (
-                                                <span className="font-black text-xl text-primary">
-                                                    {getInitials(chats.find(c => c.contact === selectedContact)?.name)}
-                                                </span>
-                                            )}
+                                            {(() => {
+                                                const contactInfo = chats.find(c => c.contact === selectedContact);
+                                                return contactInfo?.avatar ? (
+                                                    <Image 
+                                                        src={contactInfo.avatar}
+                                                        alt={selectedContact}
+                                                        width={64}
+                                                        height={64}
+                                                        className="object-cover w-full h-full"
+                                                    />
+                                                ) : (
+                                                    <span className="font-black text-xl text-primary">
+                                                        {getInitials(contactInfo?.name)}
+                                                    </span>
+                                                );
+                                            })()}
                                         </div>
                                         <div className="absolute -inset-2 bg-primary/20 rounded-[2rem] blur-xl opacity-50" />
                                     </div>
