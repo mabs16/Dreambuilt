@@ -28,7 +28,10 @@ import {
   X,
   Trash2,
   PlusCircle,
-  MinusCircle
+  MinusCircle,
+  Upload,
+  Image as ImageIcon,
+  FileText
 } from 'lucide-react';
 import CustomNode from './custom-node';
 
@@ -145,6 +148,41 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
     const newButtons = [...currentButtons];
     newButtons.splice(index, 1);
     updateNodeButtons(newButtons);
+  };
+
+  const updateNodeMedia = (url: string | null, type: 'image' | 'document' | null) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === selectedNodeId) {
+          return { ...node, data: { ...node.data, mediaUrl: url, mediaType: type } };
+        }
+        return node;
+      })
+    );
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+          const response = await fetch(`${apiUrl}/api/storage/upload`, {
+              method: 'POST',
+              body: formData
+          });
+          
+          if (!response.ok) throw new Error('Upload failed');
+          
+          const data = await response.json();
+          updateNodeMedia(data.url, data.type);
+      } catch (error) {
+          console.error('Upload error:', error);
+          alert('Error subiendo archivo. Asegúrate de configurar las credenciales de Bunny.net en el backend.');
+      }
   };
 
   const updateButtonText = (index: number, text: string) => {
@@ -350,6 +388,47 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                     />
                     <p className="text-[10px] text-white/30 mt-1">Usa <code className="text-primary">{'{{name}}'}</code> para el nombre del cliente.</p>
                 </div>
+
+                {/* Media Upload Section */}
+                {((selectedNode.data?.type === 'Mensaje' || selectedNode.data?.type === 'Pregunta') || 
+                  (selectedNode.type === 'Mensaje' || selectedNode.type === 'Pregunta') ||
+                  (typeof selectedNode.data?.label === 'string' && (
+                    !selectedNode.data.label.startsWith('⚡') && 
+                    !selectedNode.data.label.startsWith('🤖') && 
+                    !selectedNode.data.label.startsWith('🏷️')
+                  ))
+                ) && (
+                    <div className="border-t border-white/10 pt-4">
+                        <label className="text-xs text-white/50 block mb-2 font-bold">Multimedia (Imagen/PDF)</label>
+                        
+                        {selectedNode.data?.mediaUrl ? (
+                            <div className="mb-2">
+                                <div className="flex items-center gap-2 bg-white/5 p-2 rounded-lg border border-white/10">
+                                    {selectedNode.data.mediaType === 'image' ? <ImageIcon className="h-4 w-4 text-primary"/> : <FileText className="h-4 w-4 text-primary"/>}
+                                    <span className="text-xs text-white truncate flex-1">{(selectedNode.data.mediaUrl as string).split('/').pop()}</span>
+                                    <button onClick={() => updateNodeMedia(null, null)} className="text-red-500 hover:text-red-400">
+                                        <Trash2 className="h-3 w-3" />
+                                    </button>
+                                </div>
+                                {selectedNode.data.mediaType === 'image' && (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img src={selectedNode.data.mediaUrl as string} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg border border-white/10" />
+                                )}
+                            </div>
+                        ) : null}
+
+                        <label className="flex items-center justify-center gap-2 w-full bg-white/5 hover:bg-white/10 border border-dashed border-white/20 hover:border-primary/50 rounded-lg p-3 cursor-pointer transition-all group">
+                            <Upload className="h-4 w-4 text-white/50 group-hover:text-primary transition-colors" />
+                            <span className="text-xs text-white/50 group-hover:text-white transition-colors">Subir Archivo</span>
+                            <input 
+                                type="file" 
+                                className="hidden" 
+                                accept="image/*,application/pdf"
+                                onChange={handleFileUpload}
+                            />
+                        </label>
+                    </div>
+                )}
 
                 {/* Button Editor Section - Only for Message and Question nodes */}
                 {((selectedNode.data?.type === 'Mensaje' || selectedNode.data?.type === 'Pregunta') || 

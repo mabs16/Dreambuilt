@@ -47,6 +47,13 @@ interface FlowEdge {
 
 interface WhatsAppInteractive {
   type: string;
+  header?: {
+    type: 'image' | 'document' | 'video' | 'text';
+    image?: { link: string };
+    document?: { link: string; filename?: string };
+    video?: { link: string };
+    text?: string;
+  };
   body: { text: string };
   action: {
     buttons: Array<{
@@ -57,9 +64,11 @@ interface WhatsAppInteractive {
 }
 
 interface WhatsAppPayload {
-  type: 'interactive' | 'text';
+  type: 'interactive' | 'text' | 'image' | 'document';
   interactive?: WhatsAppInteractive;
   text?: { body: string };
+  image?: { link: string; caption?: string };
+  document?: { link: string; caption?: string; filename?: string };
 }
 
 @Injectable()
@@ -351,7 +360,12 @@ export class WhatsappService {
         return;
       }
 
-      if (messageToSend) {
+      const mediaUrl = currentNode.data?.mediaUrl as string | undefined;
+      const mediaType = (currentNode.data?.mediaType || 'image') as
+        | 'image'
+        | 'document';
+
+      if (messageToSend || mediaUrl) {
         // Check for interactive buttons in node data
         const buttons = currentNode.data?.buttons as Array<{
           id: string;
@@ -363,7 +377,7 @@ export class WhatsappService {
             type: 'interactive',
             interactive: {
               type: 'button',
-              body: { text: messageToSend },
+              body: { text: messageToSend || ' ' },
               action: {
                 buttons: buttons.slice(0, 3).map((btn) => ({
                   type: 'reply',
@@ -375,6 +389,15 @@ export class WhatsappService {
               },
             },
           };
+
+          // Add Header if media exists
+          if (mediaUrl && payload.interactive) {
+            payload.interactive.header = {
+              type: mediaType,
+              [mediaType]: { link: mediaUrl },
+            };
+          }
+
           await this.sendWhatsappMessage(from, payload);
 
           // Stop execution and wait for user interaction (button click)
@@ -382,6 +405,19 @@ export class WhatsappService {
             _waiting_for_input: true,
           });
           return;
+        } else if (mediaUrl) {
+          // Media Only (with Caption)
+          const payload: WhatsAppPayload = {
+            type: mediaType,
+            [mediaType]: {
+              link: mediaUrl,
+              caption: messageToSend,
+            },
+          };
+          if (mediaType === 'document' && payload.document) {
+            payload.document.filename = 'Archivo'; // Default filename
+          }
+          await this.sendWhatsappMessage(from, payload);
         } else {
           await this.sendWhatsappMessage(from, messageToSend);
         }
@@ -1222,6 +1258,12 @@ Link: https://wa.me/${lead.phone}
     } else if (content.type === 'interactive') {
       payload.type = 'interactive';
       payload.interactive = content.interactive;
+    } else if (content.type === 'image') {
+      payload.type = 'image';
+      payload.image = content.image;
+    } else if (content.type === 'document') {
+      payload.type = 'document';
+      payload.document = content.document;
     } else {
       // Fallback/Generic object merge
       Object.assign(payload, content);
