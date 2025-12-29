@@ -150,6 +150,12 @@ export class WhatsappService {
         this.logger.log(`Created new lead: ${lead.id} for phone: ${from}`);
       }
 
+      // Associate message with lead
+      if (lead) {
+        msg.lead = lead;
+        await this.messageRepository.save(msg);
+      }
+
       if (isBotActive) {
         // 1. Check if user is in an active Flow Session
         const activeSession = await this.flowsService.getActiveSession(lead.id);
@@ -1054,6 +1060,17 @@ Link: https://wa.me/${lead.phone}
         .messages[0].id;
       this.logger.log(`WhatsApp message sent to ${cleanTo}. SID: ${waId}`);
 
+      // Find lead to associate message
+      let lead: any = null;
+      try {
+        const foundLead = await this.leadsService.findByPhone(cleanTo);
+        if (foundLead) {
+          lead = foundLead;
+        }
+      } catch (error) {
+        this.logger.warn(`Could not find lead for phone ${cleanTo} to associate message`);
+      }
+
       // Persist outbound message
       const bodyText =
         typeof content === 'string'
@@ -1065,6 +1082,7 @@ Link: https://wa.me/${lead.phone}
         to: cleanTo,
         body: bodyText,
         direction: MessageDirection.OUTBOUND,
+        lead: lead || undefined,
       });
       await this.messageRepository.save(msg);
       return response.data as Record<string, unknown>;
