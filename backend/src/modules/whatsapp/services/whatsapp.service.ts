@@ -448,6 +448,69 @@ export class WhatsappService {
           this.logger.log(
             `Assigned lead ${session.lead_id} to advisor ${advisor.id}`,
           );
+
+          // --- NOTIFY ADVISOR START ---
+          try {
+            const lead = await this.leadsService.findById(session.lead_id);
+            if (lead && advisor.phone) {
+              // Get Advisor Automation Config
+              const advAuto =
+                await this.automationsService.getConfig('advisor_automation');
+              const advConfig = advAuto?.config as AdvisorAutomationConfig;
+
+              const responseLimit = advConfig?.responseTimeLimitMinutes || 15;
+              let advisorMsg = `🔔 *NUEVO LEAD ASIGNADO*\n\n👤 *Prospecto:* ${lead.name}\n📱 *Teléfono:* ${lead.phone}\n\n*RESUMEN DE PRECALIFICACIÓN:*\n${aiSummary}\n\n⚠️ *URGENCIA:* Debes responder en menos de ${responseLimit} min.\n\nAcción rápida:`;
+
+              if (advConfig?.assignmentMessage) {
+                advisorMsg = advConfig.assignmentMessage
+                  .replace(/{{lead_id}}/g, String(lead.id))
+                  .replace(/{{lead_name}}/g, lead.name)
+                  .replace(/{{phone}}/g, lead.phone)
+                  .replace(/{{summary}}/g, aiSummary)
+                  .replace(/{{response_limit}}/g, String(responseLimit));
+              }
+
+              this.logger.debug(`Sending message to advisor ${advisor.phone}...`);
+              if (advConfig?.enableInteractiveButtons !== false) {
+                const payload: WhatsAppPayload = {
+                  type: 'interactive',
+                  interactive: {
+                    type: 'button',
+                    body: { text: advisorMsg.substring(0, 1024) },
+                    action: {
+                      buttons: [
+                        {
+                          type: 'reply',
+                          reply: {
+                            id: `${lead.id} CONTACTADO`,
+                            title: '✅ CONTACTADO',
+                          },
+                        },
+                        {
+                          type: 'reply',
+                          reply: {
+                            id: `${lead.id} INFO`,
+                            title: 'ℹ️ VER INFO',
+                          },
+                        },
+                      ],
+                    },
+                  },
+                };
+                await this.sendWhatsappMessage(advisor.phone, payload);
+              } else {
+                await this.sendWhatsappMessage(
+                  advisor.phone,
+                  `${advisorMsg}\n\nEscribe \`${lead.id} CONTACTADO\` para empezar.`,
+                );
+              }
+            }
+          } catch (error) {
+            this.logger.error(
+              `Failed to notify advisor ${advisor.id}: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          }
+          // --- NOTIFY ADVISOR END ---
         } else {
           this.logger.warn(
             `No advisor found to assign for lead ${session.lead_id}`,
