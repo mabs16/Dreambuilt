@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { 
   ReactFlow, 
   Controls, 
@@ -85,6 +85,24 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
   const [flowName, setFlowName] = useState(initialData?.name || "Nuevo Flujo");
   const [triggerKeywords, setTriggerKeywords] = useState<string>(initialData?.trigger_keywords?.join(', ') || "hola");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [advisors, setAdvisors] = useState<Array<{id: number, name: string}>>([]);
+
+  // Fetch advisors when component mounts
+  useEffect(() => {
+    const fetchAdvisors = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const res = await fetch(`${apiUrl}/api/advisors`);
+        if (res.ok) {
+            const data = await res.json();
+            setAdvisors(data);
+        }
+      } catch (err) {
+        console.error("Error fetching advisors:", err);
+      }
+    };
+    fetchAdvisors();
+  }, []);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -385,6 +403,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                 <div>
                     <div className="flex justify-between items-center mb-1">
                         <label className="text-xs text-white/50 block">Contenido / Etiqueta</label>
+                        {!(selectedNode.data.label as string)?.startsWith('📊') && !(selectedNode.data.label as string)?.startsWith('👤') && (
                         <div className="flex gap-1">
                             <button 
                                 onClick={() => updateNodeLabel((selectedNode.data.label as string) + " {{name}}")}
@@ -394,13 +413,93 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                                 + Nombre
                             </button>
                         </div>
+                        )}
                     </div>
-                    <textarea 
-                        value={selectedNode.data.label as string}
-                        onChange={(e) => updateNodeLabel(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50 h-32 resize-none"
-                    />
-                    <p className="text-[10px] text-white/30 mt-1">Usa <code className="text-primary">{'{{name}}'}</code> para el nombre del cliente.</p>
+
+                    {/* Conditional Input for Pipeline Node */}
+                    {(selectedNode.data.label as string)?.startsWith('📊') ? (
+                         <div className="flex flex-col gap-2">
+                             <p className="text-[10px] text-white/40 mb-1">Selecciona la acción del pipeline:</p>
+                             <div className="flex gap-2">
+                                 <button
+                                     onClick={() => updateNodeLabel("📊 Pipeline:\nActualizar Status (Precalificado)")}
+                                     className={cn(
+                                         "flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all",
+                                         (selectedNode.data.label as string).includes("Precalificado")
+                                             ? "bg-emerald-600 border-emerald-500 text-white shadow-[0_0_10px_rgba(5,150,105,0.5)]"
+                                             : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
+                                     )}
+                                 >
+                                     Precalificado
+                                 </button>
+                                 <button
+                                     onClick={() => updateNodeLabel("📊 Pipeline:\nActualizar Status (Asignado)")}
+                                     className={cn(
+                                         "flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all",
+                                         (selectedNode.data.label as string).includes("Asignado")
+                                             ? "bg-blue-600 border-blue-500 text-white shadow-[0_0_10px_rgba(37,99,235,0.5)]"
+                                             : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
+                                     )}
+                                 >
+                                     Asignado
+                                 </button>
+                             </div>
+                         </div>
+                    ) : (selectedNode.data.label as string)?.startsWith('👤') ? (
+                        <div className="flex flex-col gap-2">
+                            <p className="text-[10px] text-white/40 mb-1">Tipo de Asignación:</p>
+                            <div className="flex gap-2 mb-2">
+                                <button
+                                    onClick={() => updateNodeLabel("👤 Asignación:\nRound Robin")}
+                                    className={cn(
+                                        "flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all",
+                                        (selectedNode.data.label as string).includes("Round Robin")
+                                            ? "bg-amber-600 border-amber-500 text-white shadow-[0_0_10px_rgba(217,119,6,0.5)]"
+                                            : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
+                                    )}
+                                >
+                                    Round Robin
+                                </button>
+                                <button
+                                    onClick={() => updateNodeLabel("👤 Asignación:\nManual")}
+                                    className={cn(
+                                        "flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all",
+                                        (selectedNode.data.label as string).includes("Manual")
+                                            ? "bg-amber-600 border-amber-500 text-white shadow-[0_0_10px_rgba(217,119,6,0.5)]"
+                                            : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
+                                    )}
+                                >
+                                    Manual
+                                </button>
+                            </div>
+                            
+                            {(selectedNode.data.label as string).includes("Manual") && (
+                                <div className="mt-2">
+                                    <p className="text-[10px] text-white/40 mb-1">Seleccionar Asesor:</p>
+                                    <select 
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                                        onChange={(e) => updateNodeLabel(`👤 Asignación:\nManual: ${e.target.value}`)}
+                                        value={(selectedNode.data.label as string).split('Manual: ')[1]?.trim() || ""}
+                                    >
+                                        <option value="">Selecciona un asesor...</option>
+                                        {advisors.map(advisor => (
+                                            <option key={advisor.id} value={advisor.name}>{advisor.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <textarea 
+                            value={selectedNode.data.label as string}
+                            onChange={(e) => updateNodeLabel(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50 h-32 resize-none"
+                        />
+                    )}
+
+                    {!(selectedNode.data.label as string)?.startsWith('📊') && !(selectedNode.data.label as string)?.startsWith('👤') && (
+                        <p className="text-[10px] text-white/30 mt-1">Usa <code className="text-primary">{'{{name}}'}</code> para el nombre del cliente.</p>
+                    )}
                 </div>
 
                 {/* Media Upload Section */}

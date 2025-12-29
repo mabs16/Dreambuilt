@@ -45,6 +45,12 @@ export class AdvisorsService {
     return this.advisorsRepository.findOne({ where: { id } });
   }
 
+  async findAll(): Promise<Advisor[]> {
+    return this.advisorsRepository.find({
+      order: { name: 'ASC' },
+    });
+  }
+
   async findFirstAvailable(): Promise<Advisor | null> {
     // For v1, simplistically return the first advisor found
     const advisors = await this.advisorsRepository.find({

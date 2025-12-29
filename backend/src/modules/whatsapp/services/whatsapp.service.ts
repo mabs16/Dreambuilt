@@ -369,15 +369,18 @@ export class WhatsappService {
       ) {
         this.logger.log(`Executing Pipeline Node for lead ${session.lead_id}`);
 
-        // 1. Update Status to PRECALIFICADO (or configured status)
-        await this.leadsService.updateStatus(
-          session.lead_id,
-          LeadStatus.PRECALIFICADO,
-        );
+        // Determine status from node label
+        const label = (currentNode.data?.label as string) || '';
+        const targetStatus = label.toLowerCase().includes('asignado')
+          ? LeadStatus.ASIGNADO
+          : LeadStatus.PRECALIFICADO;
+
+        // 1. Update Status
+        await this.leadsService.updateStatus(session.lead_id, targetStatus);
 
         // 2. ONLY Status Update (Assignment moved to separate node)
         this.logger.log(
-          `Lead ${session.lead_id} status updated to PRECALIFICADO`,
+          `Lead ${session.lead_id} status updated to ${targetStatus}`,
         );
 
         // Move to next node immediately without sending message
@@ -409,8 +412,27 @@ export class WhatsappService {
           `Executing Assignment Node for lead ${session.lead_id}`,
         );
 
-        // 1. Find Advisor (Round Robin logic placeholder)
-        const advisor = await this.advisorsService.findFirstAvailable();
+        // 1. Determine Assignment Strategy
+        const label = (currentNode.data?.label as string) || '';
+        let advisor: Advisor | null = null;
+
+        if (label.toLowerCase().includes('manual')) {
+          // Extract advisor name or ID from label "👤 Asignación:\nManual: Nombre"
+          const parts = label.split('Manual:');
+          if (parts.length > 1) {
+            const advisorName = parts[1].trim();
+            // Find advisor by name (simplistic, assumes unique names or returns first match)
+            // Ideally we should store ID in data, but for now we search by name
+            const allAdvisors = await this.advisorsService.findAll();
+            advisor =
+              allAdvisors.find(
+                (a) => a.name.toLowerCase() === advisorName.toLowerCase(),
+              ) || null;
+          }
+        } else {
+          // Default: Round Robin
+          advisor = await this.advisorsService.findFirstAvailable();
+        }
 
         if (advisor) {
           // 2. Retrieve AI Summary if exists
@@ -463,7 +485,10 @@ export class WhatsappService {
         const history = await this.getMessageHistory(from); // Last 100 messages
         // Transform to format expected by GeminiService
         const formattedHistory = history.map((msg) => ({
-          role: (msg.direction === 'outbound' ? 'model' : 'user') as 'model' | 'user',
+          role:
+            msg.direction === 'outbound'
+              ? ('model' as const)
+              : ('user' as const),
           content: msg.body,
         }));
 
