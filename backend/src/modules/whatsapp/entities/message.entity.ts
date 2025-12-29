@@ -21,13 +21,13 @@ export class Message {
   @Column({ name: 'wa_id', nullable: true })
   waId: string; // WhatsApp Message ID from Meta
 
-  @Column()
+  @Column({ nullable: true })
   from: string;
 
-  @Column()
+  @Column({ nullable: true })
   to: string;
 
-  @Column('text')
+  @Column('text', { nullable: true })
   body: string;
 
   @Column({

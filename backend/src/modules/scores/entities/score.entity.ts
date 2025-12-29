@@ -14,10 +14,10 @@ export class Score {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   advisor_id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   lead_id: number;
 
   @ManyToOne(() => Advisor)
@@ -28,10 +28,10 @@ export class Score {
   @JoinColumn({ name: 'lead_id' })
   lead: Lead;
 
-  @Column()
+  @Column({ nullable: true })
   points: number;
 
-  @Column()
+  @Column({ nullable: true })
   reason: string;
 
   @CreateDateColumn()

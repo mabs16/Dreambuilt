@@ -20,10 +20,10 @@ export class SlaJob {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   lead_id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   advisor_id: number;
 
   @ManyToOne(() => Lead)
@@ -34,10 +34,10 @@ export class SlaJob {
   @JoinColumn({ name: 'advisor_id' })
   advisor: Advisor;
 
-  @Column({ default: 'CONTACT_SLA' })
+  @Column({ default: 'CONTACT_SLA', nullable: true })
   type: string;
 
-  @Column({ type: 'timestamptz' })
+  @Column({ type: 'timestamptz', nullable: true })
   due_at: Date;
 
   @Column({ default: 0 })

@@ -13,7 +13,7 @@ export class Advisor {
   @Column({ nullable: true })
   name: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   phone: string;
 
   @Column({ default: 0 })

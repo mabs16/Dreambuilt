@@ -14,7 +14,7 @@ export class Event {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   lead_id: number;
 
   @Column({ type: 'bigint', nullable: true })
@@ -28,7 +28,7 @@ export class Event {
   @JoinColumn({ name: 'advisor_id' })
   advisor: Advisor;
 
-  @Column()
+  @Column({ nullable: true })
   type: string;
 
   @Column({ type: 'jsonb', default: {} })

@@ -14,10 +14,10 @@ export class Assignment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   lead_id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   advisor_id: number;
 
   @ManyToOne(() => Lead)

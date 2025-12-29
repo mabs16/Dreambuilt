@@ -53,7 +53,7 @@ export class Automation {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ default: 'lead_qualification' })
+  @Column({ default: 'lead_qualification', nullable: true })
   name: string;
 
   @Column({ name: 'is_active', default: false })

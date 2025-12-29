@@ -18,17 +18,17 @@ export class FlowSession {
   @JoinColumn({ name: 'lead_id' })
   lead: Lead;
 
-  @Column()
+  @Column({ nullable: true })
   lead_id: number;
 
   @ManyToOne(() => Flow)
   @JoinColumn({ name: 'flow_id' })
   flow: Flow;
 
-  @Column()
+  @Column({ nullable: true })
   flow_id: number;
 
-  @Column()
+  @Column({ nullable: true })
   current_node_id: string;
 
   @Column('jsonb', { default: {} })

@@ -14,7 +14,7 @@ export class LeadNote {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   lead_id: number;
 
   @ManyToOne(() => Lead)
@@ -28,7 +28,7 @@ export class LeadNote {
   @JoinColumn({ name: 'advisor_id' })
   advisor: Advisor;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   content: string;
 
   @Column({ type: 'varchar', nullable: true })
