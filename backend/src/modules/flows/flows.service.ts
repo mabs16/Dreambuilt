@@ -31,6 +31,7 @@ export class FlowsService {
   }
 
   async findByKeyword(keyword: string): Promise<Flow | null> {
+    this.logger.log(`Searching for flow with keyword: "${keyword}"`);
     return await this.flowRepository
       .createQueryBuilder('flow')
       .where(':keyword = ANY(flow.trigger_keywords)', { keyword })

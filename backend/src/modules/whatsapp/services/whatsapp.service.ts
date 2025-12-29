@@ -134,21 +134,24 @@ export class WhatsappService {
         return await this.handleAdvisorMessage(advisor, from, body);
       }
 
-      // Not an advisor, check if bot is active and handle as lead
-      const isBotActive = await this.automationsService.isBotActive();
-      if (isBotActive) {
-        // --- FLOW ENGINE LOGIC ---
-        let lead = await this.leadsService.findByPhone(from);
-        if (!lead) {
-          // Create lead if not exists (needed for session)
-          lead = await this.leadsService.createLead({
-            name: profileName || 'Prospecto WhatsApp',
-            phone: from,
-            source: 'WHATSAPP_BOT',
-          });
-        }
+    // Not an advisor, check if bot is active and handle as lead
+    const isBotActive = await this.automationsService.isBotActive();
+    this.logger.log(`Is bot active: ${isBotActive}`);
 
-        // 1. Check if user is in an active Flow Session
+    // --- FLOW ENGINE LOGIC ---
+    let lead = await this.leadsService.findByPhone(from);
+    if (!lead) {
+      // Create lead if not exists (needed for session)
+      lead = await this.leadsService.createLead({
+        name: profileName || 'Prospecto WhatsApp',
+        phone: from,
+        source: 'WHATSAPP_BOT',
+      });
+      this.logger.log(`Created new lead: ${lead.id} for phone: ${from}`);
+    }
+
+    if (isBotActive) {
+      // 1. Check if user is in an active Flow Session
         const activeSession = await this.flowsService.getActiveSession(lead.id);
 
         if (activeSession) {
@@ -161,7 +164,8 @@ export class WhatsappService {
         }
 
         // 2. Check if message triggers a new Flow (Keywords)
-        const flow = await this.flowsService.findByKeyword(body.toLowerCase());
+        const flow = await this.flowsService.findByKeyword(body.toLowerCase().trim());
+        this.logger.log(`Checking keywords for: "${body.toLowerCase().trim()}". Flow found: ${flow?.name || 'none'}`);
         if (flow) {
           this.logger.log(`Flow triggered: ${flow.name} for ${from}`);
 
@@ -998,9 +1002,7 @@ Link: https://wa.me/${lead.phone}
       this.configService.get<string>('whatsapp.apiVersion') || 'v21.0';
 
     if (!accessToken || !phoneNumberId) {
-      this.logger.warn(
-        `WhatsApp credentials missing. Simulating send to ${to}`,
-      );
+      this.logger.error('WhatsApp credentials missing');
       return;
     }
 
@@ -1048,12 +1050,14 @@ Link: https://wa.me/${lead.phone}
     }
 
     try {
+      this.logger.log(`WhatsApp API Request: ${JSON.stringify(payload)}`);
       const response = await axios.post(url, payload, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
       });
+      this.logger.log(`WhatsApp API Success: ${JSON.stringify(response.data)}`);
       const waId = (response.data as { messages: Array<{ id: string }> })
         .messages[0].id;
       this.logger.log(`WhatsApp message sent to ${cleanTo}. SID: ${waId}`);
@@ -1071,6 +1075,7 @@ Link: https://wa.me/${lead.phone}
         direction: MessageDirection.OUTBOUND,
       });
       await this.messageRepository.save(msg);
+      return response.data;
     } catch (error: unknown) {
       if (axios.isAxiosError(error) && error.response) {
         this.logger.error(
@@ -1090,12 +1095,23 @@ Link: https://wa.me/${lead.phone}
   }
 
   async sendOutboundMessage(to: string, body: string) {
+    this.logger.log(`Sending outbound message to ${to}: ${body}`);
     // 1. Send via WhatsApp API
-    await this.sendWhatsappMessage(to, body);
+    try {
+      await this.sendWhatsappMessage(to, body);
+    } catch (error: unknown) {
+      const err = error as Error;
+      this.logger.error(`Failed to send WhatsApp message to ${to}: ${err.message}`);
+      throw error;
+    }
 
     // 2. Persist message
-    // Note: sendWhatsappMessage doesn't return the ID easily unless we parse response,
-    // but for now we create a record to show it in history.
+    // Note: sendWhatsappMessage already persists the message, we don't need to do it twice.
+    // However, if we want to be sure it shows up in history even if Meta fails (optional),
+    // but the current implementation of sendWhatsappMessage handles it correctly.
+    
+    // We'll remove this redundant persistence to avoid duplicates
+    /*
     const msg = this.messageRepository.create({
       from: 'SYSTEM', // Represents the advisor/bot
       to: to,
@@ -1104,6 +1120,7 @@ Link: https://wa.me/${lead.phone}
       waId: `out_${Date.now()}`,
     });
     await this.messageRepository.save(msg);
+    */
 
     // 3. Update Lead Status if applicable
     const lead = await this.leadsService.findByPhone(to);
@@ -1117,7 +1134,7 @@ Link: https://wa.me/${lead.phone}
       }
     }
 
-    return { status: 'sent', message: msg };
+    return { status: 'sent' };
   }
 
   async getLatestChats() {
