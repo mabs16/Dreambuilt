@@ -336,7 +336,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                 {((selectedNode.data?.type === 'Mensaje' || selectedNode.data?.type === 'Pregunta') || 
                   (selectedNode.type === 'Mensaje' || selectedNode.type === 'Pregunta') ||
                   // Fallback for nodes without type but with buttons already
-                  (selectedNode.data?.buttons && (selectedNode.data.buttons as any[]).length > 0) ||
+                  (selectedNode.data?.buttons && (selectedNode.data.buttons as FlowButton[]).length > 0) ||
                   // Fallback by label text (heuristic)
                   (typeof selectedNode.data?.label === 'string' && (
                     !selectedNode.data.label.startsWith('⚡') && 
