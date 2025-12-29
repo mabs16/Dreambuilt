@@ -32,7 +32,8 @@ import {
   Upload,
   Image as ImageIcon,
   FileText,
-  BarChart3
+  BarChart3,
+  UserPlus
 } from 'lucide-react';
 import CustomNode from './custom-node';
 
@@ -235,8 +236,13 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
             style.border = 'none';
             break;
         case 'Pipeline':
-            label = "📊 Pipeline:\nActualizar Status y Asignar";
+            label = "📊 Pipeline:\nActualizar Status (Precalificado)";
             style.background = '#059669'; // Emerald-600
+            style.border = 'none';
+            break;
+        case 'Asignación':
+            label = "👤 Asignación:\nRound Robin / Asesor";
+            style.background = '#d97706'; // Amber-600
             style.border = 'none';
             break;
         default:
@@ -317,6 +323,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
         <ToolButton icon={Bot} label="IA Action" onClick={() => addNode('IA')} color="bg-purple-500" />
         <ToolButton icon={Tag} label="Etiqueta" onClick={() => addNode('Tag')} color="bg-pink-500" />
         <ToolButton icon={BarChart3} label="Pipeline" onClick={() => addNode('Pipeline')} color="bg-emerald-600" />
+        <ToolButton icon={UserPlus} label="Asignación" onClick={() => addNode('Asignación')} color="bg-amber-600" />
       </div>
 
       <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
@@ -403,7 +410,8 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                     !selectedNode.data.label.startsWith('⚡') && 
                     !selectedNode.data.label.startsWith('🤖') && 
                     !selectedNode.data.label.startsWith('🏷️') &&
-                    !selectedNode.data.label.startsWith('📊')
+                    !selectedNode.data.label.startsWith('📊') &&
+                    !selectedNode.data.label.startsWith('👤')
                   ))
                 ) && (
                     <div className="border-t border-white/10 pt-4">
@@ -448,7 +456,8 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                     !selectedNode.data.label.startsWith('⚡') && 
                     !selectedNode.data.label.startsWith('🤖') && 
                     !selectedNode.data.label.startsWith('🏷️') &&
-                    !selectedNode.data.label.startsWith('📊')
+                    !selectedNode.data.label.startsWith('📊') &&
+                    !selectedNode.data.label.startsWith('👤')
                   ))
                 ) && (
                   <div className="border-t border-white/10 pt-4">

@@ -372,24 +372,8 @@ export class WhatsappService {
         // 1. Update Status to PRECALIFICADO (or configured status)
         await this.leadsService.updateStatus(session.lead_id, LeadStatus.PRECALIFICADO);
         
-        // 2. Assign Advisor (Round Robin or specific logic)
-        // For now, we trigger the 'pipeline.assign' event which handles assignment
-        // But we need an advisor ID. If no advisor assigned yet, pick one?
-        // Let's assume the pipeline.service handles assignment logic if we trigger a specific event
-        // or we manually call assign logic here.
-        
-        // Actually, let's look for an available advisor if none assigned
-        // TODO: Implement proper Round Robin. For now, find first active advisor.
-        const advisor = await this.advisorsService.findFirstAvailable();
-        if (advisor) {
-             this.eventEmitter.emit('pipeline.assign', {
-                leadId: session.lead_id,
-                advisorId: advisor.id,
-             });
-             this.logger.log(`Assigned lead ${session.lead_id} to advisor ${advisor.id}`);
-        } else {
-            this.logger.warn(`No advisor found to assign for lead ${session.lead_id}`);
-        }
+        // 2. ONLY Status Update (Assignment moved to separate node)
+        this.logger.log(`Lead ${session.lead_id} status updated to PRECALIFICADO`);
 
         // Move to next node immediately without sending message
         const edge = edges.find((e) => e.source === currentNodeId);
@@ -399,6 +383,97 @@ export class WhatsappService {
           const updatedSession = await this.flowsService.findOneSession(
             session.id,
           );
+          if (updatedSession) {
+            updatedSession.flow = flow;
+            await this.executeFlowStep(updatedSession, '', from);
+          }
+        } else {
+          await this.flowsService.completeSession(session.id);
+        }
+        return;
+      }
+
+      // Check if node is "Asignación" (Assignment)
+      if (
+        currentNode.type === 'Asignación' || 
+        currentNode.data?.type === 'Asignación' ||
+        (currentNode.data?.label &&
+          currentNode.data.label.toLowerCase().includes('asignación:'))
+      ) {
+        this.logger.log(`Executing Assignment Node for lead ${session.lead_id}`);
+
+        // 1. Find Advisor (Round Robin logic placeholder)
+        const advisor = await this.advisorsService.findFirstAvailable();
+        
+        if (advisor) {
+            // 2. Retrieve AI Summary if exists
+            const aiSummary = session.variables?.['ai_summary'] || 'Sin resumen previo.';
+
+            this.eventEmitter.emit('pipeline.assign', {
+                leadId: session.lead_id,
+                advisorId: advisor.id,
+                summary: aiSummary // Pass summary to event handler
+            });
+            this.logger.log(`Assigned lead ${session.lead_id} to advisor ${advisor.id}`);
+        } else {
+            this.logger.warn(`No advisor found to assign for lead ${session.lead_id}`);
+        }
+
+        // Move to next node immediately
+        const edge = edges.find((e) => e.source === currentNodeId);
+        if (edge) {
+          const nextNodeId = edge.target;
+          await this.flowsService.updateSessionNode(session.id, nextNodeId);
+          const updatedSession = await this.flowsService.findOneSession(session.id);
+          if (updatedSession) {
+            updatedSession.flow = flow;
+            await this.executeFlowStep(updatedSession, '', from);
+          }
+        } else {
+          await this.flowsService.completeSession(session.id);
+        }
+        return;
+      }
+
+      // Check if node is "IA" (IA Action)
+      if (
+        currentNode.type === 'IA' ||
+        currentNode.data?.type === 'IA' ||
+        (currentNode.data?.label &&
+          currentNode.data.label.toLowerCase().includes('ia action:'))
+      ) {
+        this.logger.log(`Executing IA Node for lead ${session.lead_id}`);
+        
+        // 1. Fetch Conversation History
+        const history = await this.getMessageHistory(from); // Last 100 messages
+        // Transform to format expected by GeminiService
+        const formattedHistory = history.map(msg => ({
+            role: (msg.direction === 'outbound' ? 'model' : 'user') as 'model' | 'user',
+            content: msg.body
+        }));
+
+        // 2. Generate Summary using GeminiService
+        const summary = await this.geminiService.summarizeLeadConversation(
+            formattedHistory, 
+            `Actúa como un Gerente de Ventas Inmobiliario. Analiza la siguiente conversación y genera un 'Briefing Ejecutivo' para el asesor humano.
+            Estructura tu respuesta en estos 3 puntos clave:
+            1. Perfil del Cliente: (ej. Inversionista, Familia, etc.)
+            2. Termómetro de Interés: (Frio/Tibio/Caliente y por qué)
+            3. Acción Sugerida: (ej. Llamar ya, Enviar brochure, etc.)`
+        );
+
+        // 3. Save Summary to Session Variables
+        await this.flowsService.updateSessionVariables(session.id, {
+            ai_summary: summary
+        });
+        this.logger.log(`IA Summary generated and saved for lead ${session.lead_id}`);
+
+        // Move to next node immediately
+        const edge = edges.find((e) => e.source === currentNodeId);
+        if (edge) {
+          const nextNodeId = edge.target;
+          await this.flowsService.updateSessionNode(session.id, nextNodeId);
+          const updatedSession = await this.flowsService.findOneSession(session.id);
           if (updatedSession) {
             updatedSession.flow = flow;
             await this.executeFlowStep(updatedSession, '', from);
