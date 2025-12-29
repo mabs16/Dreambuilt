@@ -22,13 +22,13 @@ export class Lead {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
 
-  @Column()
+  @Column({ nullable: true })
   name: string;
 
-  @Column()
+  @Column({ nullable: true })
   phone: string;
 
-  @Column()
+  @Column({ nullable: true })
   source: string;
 
   @Column({
