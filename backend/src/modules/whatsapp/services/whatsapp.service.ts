@@ -18,7 +18,7 @@ import { LeadsService } from '../../leads/leads.service';
 import { Message, MessageDirection } from '../entities/message.entity';
 import { AutomationsService } from './automations.service';
 import { GeminiService } from './gemini.service';
-import { LeadStatus } from '../../leads/entities/lead.entity';
+import { LeadStatus, Lead } from '../../leads/entities/lead.entity';
 import { FlowsService } from '../../flows/flows.service';
 import { FlowSession } from '../../flows/entities/flow-session.entity';
 import {
@@ -1061,14 +1061,16 @@ Link: https://wa.me/${lead.phone}
       this.logger.log(`WhatsApp message sent to ${cleanTo}. SID: ${waId}`);
 
       // Find lead to associate message
-      let lead: any = null;
+      let lead: Lead | null = null;
       try {
         const foundLead = await this.leadsService.findByPhone(cleanTo);
         if (foundLead) {
           lead = foundLead;
         }
-      } catch (error) {
-        this.logger.warn(`Could not find lead for phone ${cleanTo} to associate message`);
+      } catch (_error) {
+        this.logger.warn(
+          `Could not find lead for phone ${cleanTo} to associate message`,
+        );
       }
 
       // Persist outbound message
