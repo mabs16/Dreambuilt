@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Patch,
   Param,
@@ -29,6 +30,7 @@ export class FlowsController {
     return this.flowsService.findOne(+id);
   }
 
+  @Put(':id')
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateFlowDto: Partial<Flow>) {
     return this.flowsService.update(+id, updateFlowDto);
