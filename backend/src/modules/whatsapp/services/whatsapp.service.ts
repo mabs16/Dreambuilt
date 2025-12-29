@@ -245,21 +245,32 @@ export class WhatsappService {
       // We just arrived at this node. Execute its action.
       let messageToSend = currentNode.data?.label || '';
 
-      // Clean prefixes if present (legacy support)
+      // Robust cleaning of node labels
+      // 1. Remove "Mensaje: ", "Pregunta: ", "IA Action: ", "Etiqueta: " prefixes
+      // 2. Remove "Inicio: Palabra Clave \"...\"" completely or replace with a greeting
       messageToSend = messageToSend
-        .replace(/^Mensaje: /, '')
-        .replace(/^Pregunta: /, '')
-        .replace(/^Inicio: .*/, `¡Hola! Bienvenido al flujo ${flow.name}`);
+        .replace(/^(Mensaje|Pregunta|IA Action|Etiqueta):\s*/i, '')
+        .trim();
+
+      // Special handling for trigger nodes to avoid sending technical text
+      if (
+        currentNode.type === 'input' ||
+        currentNode.type === 'trigger' ||
+        messageToSend.toLowerCase().startsWith('inicio:')
+      ) {
+        this.logger.log('Skipping message sending for trigger node');
+        messageToSend = '';
+      }
 
       if (messageToSend) {
         await this.sendWhatsappMessage(from, messageToSend);
       }
 
-      // If it's a 'Pregunta' node (check type or label prefix), wait for input
+      // If it's a 'Pregunta' node, wait for input
       if (
         currentNode.type === 'Pregunta' ||
         (currentNode.data?.label &&
-          currentNode.data.label.startsWith('Pregunta'))
+          currentNode.data.label.toLowerCase().startsWith('pregunta:'))
       ) {
         await this.flowsService.updateSessionVariables(session.id, {
           _waiting_for_input: true,
@@ -269,11 +280,6 @@ export class WhatsappService {
     }
 
     // 3. Find Next Node
-    // Logic for branching based on edges
-    // If CONDITION node, we need to evaluate logic.
-
-    // Simple edge finding for now (taking the first one)
-    // TODO: Support handles (sourceHandle) for True/False branches
     const edge = edges.find((e) => e.source === currentNodeId);
 
     if (edge) {

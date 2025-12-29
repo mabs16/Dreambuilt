@@ -32,9 +32,14 @@ async function resetLead() {
         );
 
         // 2. Delete assignments (linked to lead)
-        // Need lead ID first? Or subquery
         await AppDataSource.query(
             `DELETE FROM assignments WHERE lead_id IN (SELECT id FROM leads WHERE phone = $1)`,
+            [phone]
+        );
+
+        // 2.5 Delete flow sessions
+        await AppDataSource.query(
+            `DELETE FROM flow_sessions WHERE lead_id IN (SELECT id FROM leads WHERE phone = $1)`,
             [phone]
         );
 
