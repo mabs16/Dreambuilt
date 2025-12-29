@@ -480,12 +480,25 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                                     <p className="text-[10px] text-white/40 mb-1">Seleccionar Asesor:</p>
                                     <select 
                                         className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500"
-                                        onChange={(e) => updateNodeLabel(`👤 Asignación:\nManual: ${e.target.value}`)}
-                                        value={(selectedNode.data.label as string).split('Manual: ')[1]?.trim() || ""}
+                                        onChange={(e) => {
+                                            const selectedId = parseInt(e.target.value);
+                                            const selectedAdvisor = advisors.find(a => a.id === selectedId);
+                                            if (selectedAdvisor) {
+                                                updateNodeLabel(`👤 Asignación:\nManual: ${selectedAdvisor.name} (ID: ${selectedAdvisor.id})`);
+                                            }
+                                        }}
+                                        value={(() => {
+                                            const label = selectedNode.data.label as string;
+                                            const idMatch = label.match(/\(ID:\s*(\d+)\)/);
+                                            if (idMatch) return idMatch[1];
+                                            const namePart = label.split('Manual: ')[1]?.trim();
+                                            const foundByName = advisors.find(a => a.name === namePart);
+                                            return foundByName ? foundByName.id : "";
+                                        })()}
                                     >
                                         <option value="">Selecciona un asesor...</option>
                                         {advisors.map(advisor => (
-                                            <option key={advisor.id} value={advisor.name}>{advisor.name}</option>
+                                            <option key={advisor.id} value={advisor.id}>{advisor.name}</option>
                                         ))}
                                     </select>
                                 </div>
