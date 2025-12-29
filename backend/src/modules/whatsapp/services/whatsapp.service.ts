@@ -255,10 +255,21 @@ export class WhatsappService {
       // 1. Remove prefixes including emojis if present
       messageToSend = messageToSend
         .replace(
-          /^([💬❓⚡🤖🏷️]\s*)?(Mensaje|Pregunta|IA Action|IA|Etiqueta|Condición|Tag):\s*/iu,
+          /^((💬|❓|⚡|🤖|🏷️)\s*)?(Mensaje|Pregunta|IA Action|IA|Etiqueta|Condición|Tag):\s*/iu,
           '',
         )
         .trim();
+
+      // 2. Variable Substitution (e.g., {{name}})
+      const lead = await this.leadsService.findById(session.lead_id);
+      if (lead) {
+        messageToSend = messageToSend.replace(
+          /{{name}}/gi,
+          lead.name || 'Cliente',
+        );
+        messageToSend = messageToSend.replace(/{{phone}}/gi, lead.phone || '');
+        // Add more variables here if needed
+      }
 
       // Special handling for trigger nodes to avoid sending technical text
       if (
@@ -268,6 +279,36 @@ export class WhatsappService {
       ) {
         this.logger.log('Skipping message sending for trigger node');
         messageToSend = '';
+      }
+
+      // Check if node is "IA" (AI Action)
+      // Logic: Perform AI analysis/action, do NOT send raw message to WhatsApp
+      if (
+        currentNode.type === 'IA' ||
+        currentNode.data?.type === 'IA' ||
+        (currentNode.data?.label &&
+          currentNode.data.label.toLowerCase().includes('ia action:'))
+      ) {
+        this.logger.log(`Executing IA Action for lead ${session.lead_id}`);
+        // TODO: Integrate with AI Service (OpenAI/Gemini) here
+        // For now, we just pass through to the next node
+
+        // Move to next node immediately
+        const edge = edges.find((e) => e.source === currentNodeId);
+        if (edge) {
+          const nextNodeId = edge.target;
+          await this.flowsService.updateSessionNode(session.id, nextNodeId);
+          const updatedSession = await this.flowsService.findOneSession(
+            session.id,
+          );
+          if (updatedSession) {
+            updatedSession.flow = flow;
+            await this.executeFlowStep(updatedSession, '', from);
+          }
+        } else {
+          await this.flowsService.completeSession(session.id);
+        }
+        return;
       }
 
       // Check if node is "Etiqueta" (Label)
@@ -281,7 +322,7 @@ export class WhatsappService {
         const labelText = currentNode.data?.label || '';
         // Extract tag name
         const tag = labelText
-          .replace(/^([💬❓⚡🤖🏷️]\s*)?(Etiqueta|Tag):\s*/iu, '')
+          .replace(/^((💬|❓|⚡|🤖|🏷️)\s*)?(Etiqueta|Tag):\s*/iu, '')
           .trim();
 
         if (tag) {
@@ -353,10 +394,56 @@ export class WhatsappService {
     }
 
     // 3. Find Next Node
-    const edge = edges.find((e) => e.source === currentNodeId);
+    let nextNodeId: string | null = null;
 
-    if (edge) {
-      const nextNodeId = edge.target;
+    // Check if we are coming from a button click (userMessage matches a button)
+    const buttons = currentNode.data?.buttons as
+      | Array<{ id: string; text: string }>
+      | undefined;
+
+    if (buttons && buttons.length > 0 && userMessage) {
+      // Find matching button
+      const matchedButton = buttons.find(
+        (b) =>
+          b.text.toLowerCase().trim() === userMessage.toLowerCase().trim() ||
+          b.id === userMessage,
+      );
+
+      if (matchedButton) {
+        // Find edge connected to this button
+        // Edge sourceHandle should be `btn-${matchedButton.id}`
+        const matchingEdge = edges.find(
+          (e) =>
+            e.source === currentNodeId &&
+            e.sourceHandle === `btn-${matchedButton.id}`,
+        );
+        if (matchingEdge) {
+          nextNodeId = matchingEdge.target;
+          this.logger.log(
+            `Button matched: ${matchedButton.text}. Going to node ${nextNodeId}`,
+          );
+        }
+      }
+    }
+
+    // If no button matched or no buttons, check for default edge
+    if (!nextNodeId) {
+      // Default edge usually has sourceHandle null or undefined
+      const defaultEdge = edges.find(
+        (e) => e.source === currentNodeId && !e.sourceHandle,
+      );
+      if (defaultEdge) {
+        nextNodeId = defaultEdge.target;
+      }
+    }
+
+    // Fallback for backward compatibility (if no sourceHandle info exists)
+    if (!nextNodeId && (!buttons || buttons.length === 0)) {
+      const anyEdge = edges.find((e) => e.source === currentNodeId);
+      if (anyEdge) nextNodeId = anyEdge.target;
+    }
+
+    if (nextNodeId) {
       await this.flowsService.updateSessionNode(session.id, nextNodeId);
 
       // Recursively execute next node immediately?

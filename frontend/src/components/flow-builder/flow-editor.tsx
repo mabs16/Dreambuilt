@@ -30,6 +30,11 @@ import {
   PlusCircle,
   MinusCircle
 } from 'lucide-react';
+import CustomNode from './custom-node';
+
+const nodeTypes = {
+  messageNode: CustomNode,
+};
 
 interface FlowButton {
   id: string;
@@ -46,6 +51,7 @@ const initialNodes: Node[] = [
   },
   {
     id: '2',
+    type: 'messageNode',
     data: { label: 'Mensaje: Bienvenida Casa Arca', type: 'Mensaje' },
     position: { x: 250, y: 100 },
     style: { background: '#1f2937', color: 'white', border: '1px solid #374151', borderRadius: '8px', padding: '10px' }
@@ -195,6 +201,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
 
     const newNode: Node = {
       id,
+      type: 'messageNode',
       position: { x: 100, y: 100 },
       data: { label, type }, // Store logical type in data
       style
@@ -324,12 +331,24 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
             
             <div className="space-y-4">
                 <div>
-                    <label className="text-xs text-white/50 block mb-1">Contenido / Etiqueta</label>
+                    <div className="flex justify-between items-center mb-1">
+                        <label className="text-xs text-white/50 block">Contenido / Etiqueta</label>
+                        <div className="flex gap-1">
+                            <button 
+                                onClick={() => updateNodeLabel((selectedNode.data.label as string) + " {{name}}")}
+                                className="text-[10px] bg-white/5 hover:bg-white/10 text-white/70 px-2 py-0.5 rounded border border-white/10 transition-colors"
+                                title="Insertar nombre del cliente"
+                            >
+                                + Nombre
+                            </button>
+                        </div>
+                    </div>
                     <textarea 
                         value={selectedNode.data.label as string}
                         onChange={(e) => updateNodeLabel(e.target.value)}
                         className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50 h-32 resize-none"
                     />
+                    <p className="text-[10px] text-white/30 mt-1">Usa <code className="text-primary">{'{{name}}'}</code> para el nombre del cliente.</p>
                 </div>
 
                 {/* Button Editor Section - Only for Message and Question nodes */}
@@ -398,6 +417,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
