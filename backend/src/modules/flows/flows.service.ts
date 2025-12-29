@@ -16,6 +16,11 @@ export class FlowsService {
   ) {}
 
   async create(createFlowDto: Partial<Flow>) {
+    if (createFlowDto.trigger_keywords) {
+      createFlowDto.trigger_keywords = createFlowDto.trigger_keywords.map((k) =>
+        k.toLowerCase().trim(),
+      );
+    }
     const flow = this.flowRepository.create(createFlowDto);
     return await this.flowRepository.save(flow);
   }
@@ -40,6 +45,11 @@ export class FlowsService {
   }
 
   async update(id: number, updateFlowDto: Partial<Flow>) {
+    if (updateFlowDto.trigger_keywords) {
+      updateFlowDto.trigger_keywords = updateFlowDto.trigger_keywords.map((k) =>
+        k.toLowerCase().trim(),
+      );
+    }
     await this.flowRepository.update(id, updateFlowDto);
     return this.findOne(id);
   }

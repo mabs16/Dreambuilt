@@ -134,24 +134,24 @@ export class WhatsappService {
         return await this.handleAdvisorMessage(advisor, from, body);
       }
 
-    // Not an advisor, check if bot is active and handle as lead
-    const isBotActive = await this.automationsService.isBotActive();
-    this.logger.log(`Is bot active: ${isBotActive}`);
+      // Not an advisor, check if bot is active and handle as lead
+      const isBotActive = await this.automationsService.isBotActive();
+      this.logger.log(`Is bot active: ${isBotActive}`);
 
-    // --- FLOW ENGINE LOGIC ---
-    let lead = await this.leadsService.findByPhone(from);
-    if (!lead) {
-      // Create lead if not exists (needed for session)
-      lead = await this.leadsService.createLead({
-        name: profileName || 'Prospecto WhatsApp',
-        phone: from,
-        source: 'WHATSAPP_BOT',
-      });
-      this.logger.log(`Created new lead: ${lead.id} for phone: ${from}`);
-    }
+      // --- FLOW ENGINE LOGIC ---
+      let lead = await this.leadsService.findByPhone(from);
+      if (!lead) {
+        // Create lead if not exists (needed for session)
+        lead = await this.leadsService.createLead({
+          name: profileName || 'Prospecto WhatsApp',
+          phone: from,
+          source: 'WHATSAPP_BOT',
+        });
+        this.logger.log(`Created new lead: ${lead.id} for phone: ${from}`);
+      }
 
-    if (isBotActive) {
-      // 1. Check if user is in an active Flow Session
+      if (isBotActive) {
+        // 1. Check if user is in an active Flow Session
         const activeSession = await this.flowsService.getActiveSession(lead.id);
 
         if (activeSession) {
@@ -164,8 +164,12 @@ export class WhatsappService {
         }
 
         // 2. Check if message triggers a new Flow (Keywords)
-        const flow = await this.flowsService.findByKeyword(body.toLowerCase().trim());
-        this.logger.log(`Checking keywords for: "${body.toLowerCase().trim()}". Flow found: ${flow?.name || 'none'}`);
+        const flow = await this.flowsService.findByKeyword(
+          body.toLowerCase().trim(),
+        );
+        this.logger.log(
+          `Checking keywords for: "${body.toLowerCase().trim()}". Flow found: ${flow?.name || 'none'}`,
+        );
         if (flow) {
           this.logger.log(`Flow triggered: ${flow.name} for ${from}`);
 
@@ -220,16 +224,6 @@ export class WhatsappService {
     }
 
     // 1. Process User Input (if we are waiting for an answer)
-    // If we are revisiting a node that is a QUESTION, and we have userMessage, it means the user just answered it.
-    // However, the logic here assumes 'executeFlowStep' is called AFTER moving to the new node or when a new message arrives.
-    // We need to know if we were WAITING at this node.
-
-    // Check if the current node is a QUESTION and if we already sent the question (status check ideally, but let's infer)
-    // For now, simpler logic:
-    // If currentNode is 'Question' and we just arrived (first execution), we send the question and stop.
-    // If we are called again (next message), we save the answer and move on.
-
-    // We'll use a session variable 'waiting_for_input' to track this.
     const isWaiting = session.variables?._waiting_for_input === true;
 
     if (isWaiting) {
@@ -247,34 +241,26 @@ export class WhatsappService {
           _waiting_for_input: false,
         });
       }
-
-      // Proceed to find next node
-      // We don't send the question again.
     } else {
       // We just arrived at this node. Execute its action.
+      let messageToSend = currentNode.data?.label || '';
 
-      // ACTION: Send Message / Question
-      if (currentNode.data && currentNode.data.label) {
-        let messageToSend = currentNode.data.label;
+      // Clean prefixes if present (legacy support)
+      messageToSend = messageToSend
+        .replace(/^Mensaje: /, '')
+        .replace(/^Pregunta: /, '')
+        .replace(/^Inicio: .*/, `¡Hola! Bienvenido al flujo ${flow.name}`);
 
-        // Clean prefixes
-        if (messageToSend.startsWith('Mensaje: '))
-          messageToSend = messageToSend.replace('Mensaje: ', '');
-        if (messageToSend.startsWith('Pregunta: '))
-          messageToSend = messageToSend.replace('Pregunta: ', '');
-        if (messageToSend.startsWith('Inicio: '))
-          messageToSend = `¡Hola! Bienvenido al flujo ${flow.name}`;
-
+      if (messageToSend) {
         await this.sendWhatsappMessage(from, messageToSend);
       }
 
-      // If it's a QUESTION node, stop here and wait for input
+      // If it's a 'Pregunta' node (check type or label prefix), wait for input
       if (
-        currentNode.data &&
-        currentNode.data.label &&
-        currentNode.data.label.startsWith('Pregunta')
+        currentNode.type === 'Pregunta' ||
+        (currentNode.data?.label &&
+          currentNode.data.label.startsWith('Pregunta'))
       ) {
-        // Or check type
         await this.flowsService.updateSessionVariables(session.id, {
           _waiting_for_input: true,
         });
@@ -993,7 +979,7 @@ Link: https://wa.me/${lead.phone}
   public async sendWhatsappMessage(
     to: string,
     content: string | WhatsAppPayload,
-  ) {
+  ): Promise<any> {
     const accessToken = this.configService.get<string>('whatsapp.accessToken');
     const phoneNumberId = this.configService.get<string>(
       'whatsapp.phoneNumberId',
@@ -1075,7 +1061,7 @@ Link: https://wa.me/${lead.phone}
         direction: MessageDirection.OUTBOUND,
       });
       await this.messageRepository.save(msg);
-      return response.data;
+      return response.data as Record<string, unknown>;
     } catch (error: unknown) {
       if (axios.isAxiosError(error) && error.response) {
         this.logger.error(
@@ -1101,7 +1087,9 @@ Link: https://wa.me/${lead.phone}
       await this.sendWhatsappMessage(to, body);
     } catch (error: unknown) {
       const err = error as Error;
-      this.logger.error(`Failed to send WhatsApp message to ${to}: ${err.message}`);
+      this.logger.error(
+        `Failed to send WhatsApp message to ${to}: ${err.message}`,
+      );
       throw error;
     }
 
@@ -1109,7 +1097,7 @@ Link: https://wa.me/${lead.phone}
     // Note: sendWhatsappMessage already persists the message, we don't need to do it twice.
     // However, if we want to be sure it shows up in history even if Meta fails (optional),
     // but the current implementation of sendWhatsappMessage handles it correctly.
-    
+
     // We'll remove this redundant persistence to avoid duplicates
     /*
     const msg = this.messageRepository.create({
