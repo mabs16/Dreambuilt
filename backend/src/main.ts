@@ -4,12 +4,12 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   console.log('--- [DEBUG] INICIANDO BOOTSTRAP DEL BACKEND ---');
   console.log('--- [DEBUG] PORT ENV:', process.env.PORT);
-  
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
 
   // Log para verificar rutas registradas de forma segura
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const server = app.getHttpServer();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const router = server._events?.request?._router;
