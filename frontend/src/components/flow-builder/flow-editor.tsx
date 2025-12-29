@@ -402,8 +402,10 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
             <div className="space-y-4">
                 <div>
                     <div className="flex justify-between items-center mb-1">
-                        <label className="text-xs text-white/50 block">Contenido / Etiqueta</label>
-                        {!(selectedNode.data.label as string)?.startsWith('📊') && !(selectedNode.data.label as string)?.startsWith('👤') && (
+                        <label className="text-xs text-white/50 block">
+                            {(selectedNode.data.label as string)?.startsWith('🤖') ? 'Instrucción / Prompt para la IA' : 'Contenido / Etiqueta'}
+                        </label>
+                        {!(selectedNode.data.label as string)?.startsWith('📊') && !(selectedNode.data.label as string)?.startsWith('👤') && !(selectedNode.data.label as string)?.startsWith('🤖') && (
                         <div className="flex gap-1">
                             <button 
                                 onClick={() => updateNodeLabel((selectedNode.data.label as string) + " {{name}}")}
@@ -494,10 +496,22 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                             value={selectedNode.data.label as string}
                             onChange={(e) => updateNodeLabel(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50 h-32 resize-none"
+                            placeholder={(selectedNode.data.label as string)?.startsWith('🤖') ? "Escribe aquí las instrucciones para la IA (ej. 'Analiza el interés del cliente...')" : "Contenido del nodo"}
                         />
                     )}
 
-                    {!(selectedNode.data.label as string)?.startsWith('📊') && !(selectedNode.data.label as string)?.startsWith('👤') && (
+                    {(selectedNode.data.label as string)?.startsWith('🤖') ? (
+                         <div className="mt-2 bg-white/5 p-2 rounded-lg border border-white/10">
+                            <p className="text-[10px] text-white/60 mb-1 font-bold">Configuración de IA:</p>
+                            <p className="text-[10px] text-white/40 mb-1">El historial de conversación se analiza automáticamente.</p>
+                            <p className="text-[10px] text-white/40">Variables disponibles:</p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                                {['{{name}}', '{{phone}}', '{{status}}'].map(v => (
+                                    <code key={v} className="text-[10px] bg-primary/20 text-primary px-1 rounded cursor-pointer hover:bg-primary/30" onClick={() => updateNodeLabel((selectedNode.data.label as string) + " " + v)}>{v}</code>
+                                ))}
+                            </div>
+                         </div>
+                    ) : !(selectedNode.data.label as string)?.startsWith('📊') && !(selectedNode.data.label as string)?.startsWith('👤') && (
                         <p className="text-[10px] text-white/30 mt-1">Usa <code className="text-primary">{'{{name}}'}</code> para el nombre del cliente.</p>
                     )}
                 </div>

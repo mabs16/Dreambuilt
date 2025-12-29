@@ -492,17 +492,38 @@ export class WhatsappService {
           content: msg.body,
         }));
 
-        // 2. Generate Summary using GeminiService
-        const summary = await this.geminiService.summarizeLeadConversation(
-          formattedHistory,
-          `Actúa como un Gerente de Ventas Inmobiliario. Analiza la siguiente conversación y genera un 'Briefing Ejecutivo' para el asesor humano.
+        // 2. Prepare Prompt from Node Label
+        const lead = await this.leadsService.findById(session.lead_id);
+        let prompt = (currentNode.data?.label as string) || '';
+
+        // Remove prefix "🤖 Acción IA:" or similar
+        prompt = prompt
+          .replace(/^((🤖)\s*)?(IA Action|IA|Acción IA):\s*/iu, '')
+          .trim();
+
+        // Variable Substitution
+        if (lead) {
+          prompt = prompt.replace(/{{name}}/gi, lead.name || 'Cliente');
+          prompt = prompt.replace(/{{phone}}/gi, lead.phone || '');
+          prompt = prompt.replace(/{{status}}/gi, lead.status || 'SIN_ESTADO');
+        }
+
+        // Default Prompt if empty
+        if (!prompt) {
+          prompt = `Actúa como un Gerente de Ventas Inmobiliario. Analiza la siguiente conversación y genera un 'Briefing Ejecutivo' para el asesor humano.
             Estructura tu respuesta en estos 3 puntos clave:
             1. Perfil del Cliente: (ej. Inversionista, Familia, etc.)
             2. Termómetro de Interés: (Frio/Tibio/Caliente y por qué)
-            3. Acción Sugerida: (ej. Llamar ya, Enviar brochure, etc.)`,
+            3. Acción Sugerida: (ej. Llamar ya, Enviar brochure, etc.)`;
+        }
+
+        // 3. Generate Summary using GeminiService with Custom Prompt
+        const summary = await this.geminiService.summarizeLeadConversation(
+          formattedHistory,
+          prompt,
         );
 
-        // 3. Save Summary to Session Variables
+        // 4. Save Summary to Session Variables
         await this.flowsService.updateSessionVariables(session.id, {
           ai_summary: summary,
         });
