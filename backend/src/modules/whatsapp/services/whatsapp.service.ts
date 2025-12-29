@@ -114,6 +114,7 @@ export class WhatsappService {
     body: string,
     waId?: string,
     profileName?: string,
+    buttonId?: string,
   ) {
     if (!body) return;
 
@@ -165,7 +166,7 @@ export class WhatsappService {
             `Active flow session found for ${from}. SessionID: ${activeSession.id}`,
           );
           // Execute next step in flow
-          await this.executeFlowStep(activeSession, body, from);
+          await this.executeFlowStep(activeSession, body, from, buttonId);
           return;
         }
 
@@ -193,13 +194,13 @@ export class WhatsappService {
             );
             // Ensure session has the flow object attached for execution
             session.flow = flow;
-            await this.executeFlowStep(session, body, from);
+            await this.executeFlowStep(session, body, from, buttonId);
             return;
           }
         }
 
         // 3. Fallback to Legacy Bot Logic
-        await this.handleLeadMessage(from, body, profileName);
+        await this.handleLeadMessage(from, body, profileName, buttonId);
       }
     } catch (error: unknown) {
       const err = error as Error;
@@ -215,6 +216,7 @@ export class WhatsappService {
     session: FlowSession,
     userMessage: string,
     from: string,
+    buttonId?: string,
   ) {
     const flow = session.flow;
     const currentNodeId = session.current_node_id;
@@ -411,6 +413,7 @@ export class WhatsappService {
       // Find matching button
       const matchedButton = buttons.find(
         (b) =>
+          (buttonId && b.id === buttonId) ||
           b.text.toLowerCase().trim() === userMessage.toLowerCase().trim() ||
           b.id === userMessage,
       );
@@ -783,6 +786,7 @@ export class WhatsappService {
     from: string,
     body: string,
     profileName?: string,
+    buttonId?: string,
   ) {
     // Double check if this is an advisor (just in case)
     const isAdvisor = await this.advisorsService.findByPhone(from);
@@ -822,14 +826,30 @@ export class WhatsappService {
     }
 
     // --- WELCOME & BUTTON LOGIC ---
-    if (body === 'START_QUALIFICATION') {
+    if (
+      body === 'START_QUALIFICATION' ||
+      (buttonId && buttonId === 'START_QUALIFICATION')
+    ) {
       // User clicked start, logic proceeds to AI
       // We transform the body so AI understands it naturally
       body = 'Hola, estoy listo para comenzar.';
     } else {
       // Check if we should enforce the button
+      // Clean phone number for query to match normalized outbound messages
+      let cleanFrom = from.replace(/\D/g, '');
+      if (
+        cleanFrom.startsWith('52') &&
+        cleanFrom.length === 13 &&
+        cleanFrom[2] === '1'
+      ) {
+        cleanFrom = '52' + cleanFrom.substring(3);
+      }
+
       const lastSystemMsg = await this.messageRepository.findOne({
-        where: { to: from, direction: MessageDirection.OUTBOUND },
+        where: [
+          { to: from, direction: MessageDirection.OUTBOUND },
+          { to: cleanFrom, direction: MessageDirection.OUTBOUND },
+        ],
         order: { createdAt: 'DESC' },
       });
 

@@ -106,15 +106,18 @@ export class WhatsappController {
             for (const message of messages) {
               const messageText = message.text;
               let messageBody = messageText?.body;
+              let buttonId: string | undefined;
 
               if (message.type === 'interactive' && message.interactive) {
                 const messageInteractive = message.interactive;
                 if (messageInteractive.type === 'button_reply') {
                   const buttonReply = messageInteractive.button_reply;
-                  messageBody = buttonReply?.id;
+                  messageBody = buttonReply?.title || buttonReply?.id;
+                  buttonId = buttonReply?.id;
                 } else if (messageInteractive.type === 'list_reply') {
                   const listReply = messageInteractive.list_reply;
-                  messageBody = listReply?.id;
+                  messageBody = listReply?.title || listReply?.id;
+                  buttonId = listReply?.id;
                 }
               }
 
@@ -128,6 +131,7 @@ export class WhatsappController {
                   messageBody,
                   messageId,
                   profileName,
+                  buttonId,
                 );
               }
             }
