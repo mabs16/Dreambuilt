@@ -5,19 +5,29 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
 
-  // Log para verificar rutas registradas (solo en desarrollo o para debug temporal)
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-  const server = app.getHttpServer();
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-  const router = server._events?.request?._router;
-  if (router) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return
-    const availableRoutes = router.stack
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
-      .filter((r: any) => r.route)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
-      .map((r: any) => `${Object.keys(r.route.methods).join(',').toUpperCase()} ${r.route.path}`);
-    console.log('Rutas registradas:', availableRoutes);
+  // Log para verificar rutas registradas de forma segura
+  try {
+    const server = app.getHttpServer();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const router = server._events?.request?._router;
+    if (router) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const availableRoutes = (router.stack as any[])
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        .filter((r: any) => r.route)
+        .map((r: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+          const methods = Object.keys(r.route.methods).join(',').toUpperCase();
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          const path = r.route.path as string;
+          return `${methods} ${path}`;
+        });
+      console.log('Rutas registradas:', availableRoutes);
+    } else {
+      console.log('No se pudo acceder al router para listar rutas');
+    }
+  } catch (error) {
+    console.error('Error al intentar listar las rutas:', error);
   }
 
   app.enableCors({
@@ -27,9 +37,11 @@ async function bootstrap() {
     allowedHeaders: 'Content-Type, Accept, Authorization, X-Requested-With',
     optionsSuccessStatus: 204,
   });
+
   const port = process.env.PORT || 8080;
+  console.log(`Intentando iniciar servidor en puerto ${port}...`);
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 Backend desplegado con éxito en el puerto ${port}`);
-  console.log(`🌍 Aceptando peticiones...`);
+  console.log(`🌍 Aceptando peticiones en 0.0.0.0:${port}`);
 }
 void bootstrap();

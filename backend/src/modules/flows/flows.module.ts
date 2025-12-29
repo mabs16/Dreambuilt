@@ -9,6 +9,6 @@ import { FlowSession } from './entities/flow-session.entity';
   imports: [TypeOrmModule.forFeature([Flow, FlowSession])],
   providers: [FlowsService],
   controllers: [FlowsController],
-  exports: [FlowsService]
+  exports: [FlowsService],
 })
 export class FlowsModule {}
