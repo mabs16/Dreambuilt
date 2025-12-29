@@ -374,6 +374,12 @@ export class WhatsappService {
             },
           };
           await this.sendWhatsappMessage(from, payload);
+
+          // Stop execution and wait for user interaction (button click)
+          await this.flowsService.updateSessionVariables(session.id, {
+            _waiting_for_input: true,
+          });
+          return;
         } else {
           await this.sendWhatsappMessage(from, messageToSend);
         }
@@ -1217,7 +1223,17 @@ Link: https://wa.me/${lead.phone}
       // Find lead to associate message
       let lead: Lead | null = null;
       try {
-        const foundLead = await this.leadsService.findByPhone(cleanTo);
+        let foundLead = await this.leadsService.findByPhone(cleanTo);
+
+        // If not found and cleaned number is different from original, try original
+        // This is common for Mexico numbers (521... vs 52...)
+        if (!foundLead && cleanTo !== to) {
+          this.logger.debug(
+            `Lead not found with ${cleanTo}, trying original ${to}`,
+          );
+          foundLead = await this.leadsService.findByPhone(to);
+        }
+
         if (foundLead) {
           lead = foundLead;
         }
@@ -1306,26 +1322,40 @@ Link: https://wa.me/${lead.phone}
   }
 
   async getLatestChats() {
-    // More robust query for latest messages per contact using subquery
+    // Determine the conversation partner (phone number)
+    // If direction is INBOUND, partner is 'from'
+    // If direction is OUTBOUND, partner is 'to'
+
+    // We want the LATEST message for each partner.
+
+    // Step 1: Get the latest message ID for each conversation partner
+    const subQuery = this.messageRepository
+      .createQueryBuilder('m_sub')
+      .select('MAX(m_sub.created_at)', 'max_ts')
+      .addSelect(
+        `CASE 
+          WHEN m_sub.direction = 'outbound' THEN m_sub.to 
+          ELSE m_sub.from 
+        END`,
+        'partner_phone',
+      )
+      .groupBy('partner_phone');
+
+    // Step 2: Join back to get message details
     return this.messageRepository
       .createQueryBuilder('message')
-      .select('message.from', 'contact')
-      .addSelect('COALESCE(leads.name, message.from)', 'name') // Use lead name if available, else phone
+      .innerJoin(
+        `(${subQuery.getQuery()})`,
+        'latest',
+        "message.created_at = latest.max_ts AND (CASE WHEN message.direction = 'outbound' THEN message.to ELSE message.from END) = latest.partner_phone",
+      )
+      .leftJoin('leads', 'leads', 'leads.phone = latest.partner_phone')
+      .select('latest.partner_phone', 'contact')
+      .addSelect('COALESCE(leads.name, latest.partner_phone)', 'name')
       .addSelect('message.body', 'lastMessage')
       .addSelect('message.created_at', 'timestamp')
       .addSelect('leads.avatar_url', 'avatar')
-      .innerJoin(
-        (qb) => {
-          return qb
-            .from(Message, 'm2')
-            .select('m2.from', 'f')
-            .addSelect('MAX(m2.created_at)', 'max_ts')
-            .groupBy('m2.from');
-        },
-        'latest',
-        'message.from = latest.f AND message.created_at = latest.max_ts',
-      )
-      .leftJoin('leads', 'leads', 'leads.phone = message.from')
+      .addSelect('message.direction', 'direction')
       .orderBy('message.created_at', 'DESC')
       .getRawMany();
   }
