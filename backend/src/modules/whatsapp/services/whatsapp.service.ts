@@ -360,6 +360,55 @@ export class WhatsappService {
         return;
       }
 
+      // Check if node is "Pipeline" (PipelineUpdate)
+      if (
+        currentNode.type === 'Pipeline' || 
+        currentNode.data?.type === 'Pipeline' ||
+        (currentNode.data?.label &&
+          currentNode.data.label.toLowerCase().includes('pipeline:'))
+      ) {
+        this.logger.log(`Executing Pipeline Node for lead ${session.lead_id}`);
+        
+        // 1. Update Status to PRECALIFICADO (or configured status)
+        await this.leadsService.updateStatus(session.lead_id, LeadStatus.PRECALIFICADO);
+        
+        // 2. Assign Advisor (Round Robin or specific logic)
+        // For now, we trigger the 'pipeline.assign' event which handles assignment
+        // But we need an advisor ID. If no advisor assigned yet, pick one?
+        // Let's assume the pipeline.service handles assignment logic if we trigger a specific event
+        // or we manually call assign logic here.
+        
+        // Actually, let's look for an available advisor if none assigned
+        // TODO: Implement proper Round Robin. For now, find first active advisor.
+        const advisor = await this.advisorsService.findFirstAvailable();
+        if (advisor) {
+             this.eventEmitter.emit('pipeline.assign', {
+                leadId: session.lead_id,
+                advisorId: advisor.id,
+             });
+             this.logger.log(`Assigned lead ${session.lead_id} to advisor ${advisor.id}`);
+        } else {
+            this.logger.warn(`No advisor found to assign for lead ${session.lead_id}`);
+        }
+
+        // Move to next node immediately without sending message
+        const edge = edges.find((e) => e.source === currentNodeId);
+        if (edge) {
+          const nextNodeId = edge.target;
+          await this.flowsService.updateSessionNode(session.id, nextNodeId);
+          const updatedSession = await this.flowsService.findOneSession(
+            session.id,
+          );
+          if (updatedSession) {
+            updatedSession.flow = flow;
+            await this.executeFlowStep(updatedSession, '', from);
+          }
+        } else {
+          await this.flowsService.completeSession(session.id);
+        }
+        return;
+      }
+
       const mediaUrl = currentNode.data?.mediaUrl as string | undefined;
       const mediaType = (currentNode.data?.mediaType || 'image') as
         | 'image'
@@ -1396,8 +1445,9 @@ Link: https://wa.me/${lead.phone}
       .select('MAX(m_sub.created_at)', 'max_ts')
       .addSelect(
         `CASE 
-          WHEN m_sub.direction = 'outbound' THEN m_sub.to 
-          ELSE m_sub.from 
+          WHEN m_sub.from = 'SYSTEM' THEN m_sub.to
+          WHEN m_sub.to = 'SYSTEM' THEN m_sub.from
+          ELSE (CASE WHEN m_sub.direction = 'outbound' THEN m_sub.to ELSE m_sub.from END)
         END`,
         'partner_phone',
       )
@@ -1409,7 +1459,7 @@ Link: https://wa.me/${lead.phone}
       .innerJoin(
         `(${subQuery.getQuery()})`,
         'latest',
-        "message.created_at = latest.max_ts AND (CASE WHEN message.direction = 'outbound' THEN message.to ELSE message.from END) = latest.partner_phone",
+        "message.created_at = latest.max_ts AND (CASE WHEN message.from = 'SYSTEM' THEN message.to WHEN message.to = 'SYSTEM' THEN message.from ELSE (CASE WHEN message.direction = 'outbound' THEN message.to ELSE message.from END) END) = latest.partner_phone",
       )
       .leftJoin('leads', 'leads', 'leads.phone = latest.partner_phone')
       .select('latest.partner_phone', 'contact')
@@ -1424,7 +1474,12 @@ Link: https://wa.me/${lead.phone}
 
   async getMessageHistory(phone: string) {
     return this.messageRepository.find({
-      where: [{ from: phone }, { to: phone }],
+      where: [
+          { from: phone }, 
+          { to: phone },
+          // Also include system messages related to this lead if we tracked lead_id
+          // But since we track by phone, let's make sure we get everything
+      ],
       order: { createdAt: 'ASC' },
       take: 100,
     });

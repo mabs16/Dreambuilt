@@ -1,9 +1,16 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 
+import { 
+  Image as ImageIcon,
+  FileText
+} from 'lucide-react';
+
 const CustomNode = ({ data }: NodeProps) => {
   const buttons = (data.buttons as Array<{ id: string; text: string }>) || [];
   const label = (data.label as string) || '';
+  const mediaUrl = data.mediaUrl as string | undefined;
+  const mediaType = data.mediaType as 'image' | 'document' | undefined;
   // Determine handles position based on layout preference? 
   // For now, let's stick to standard flow: Input Top, Output Bottom (default), Buttons Right.
 
@@ -19,6 +26,32 @@ const CustomNode = ({ data }: NodeProps) => {
             height: '10px',
         }} 
       />
+
+      {/* Media Thumbnail */}
+      {mediaUrl && (
+        <div className="mb-2 rounded-md overflow-hidden bg-black/20 border border-white/10 relative group">
+          {mediaType === 'image' ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img 
+              src={mediaUrl} 
+              alt="Media" 
+              className="w-full h-24 object-cover"
+            />
+          ) : (
+            <div className="w-full h-12 flex items-center justify-center gap-2 bg-white/5">
+              <FileText className="h-5 w-5 text-white/70" />
+              <span className="text-[10px] text-white/70 truncate max-w-[120px]">Documento PDF</span>
+            </div>
+          )}
+          <div className="absolute top-1 right-1 bg-black/50 p-1 rounded-full backdrop-blur-sm">
+            {mediaType === 'image' ? (
+              <ImageIcon className="h-3 w-3 text-white" />
+            ) : (
+              <FileText className="h-3 w-3 text-white" />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Node Content */}
       <div className="node-content">

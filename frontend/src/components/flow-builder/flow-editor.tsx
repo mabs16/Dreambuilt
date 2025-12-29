@@ -31,7 +31,8 @@ import {
   MinusCircle,
   Upload,
   Image as ImageIcon,
-  FileText
+  FileText,
+  BarChart3
 } from 'lucide-react';
 import CustomNode from './custom-node';
 
@@ -233,6 +234,11 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
             style.background = '#ec4899';
             style.border = 'none';
             break;
+        case 'Pipeline':
+            label = "📊 Pipeline:\nActualizar Status y Asignar";
+            style.background = '#059669'; // Emerald-600
+            style.border = 'none';
+            break;
         default:
             label = `Nuevo ${type}`;
     }
@@ -310,6 +316,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
         <ToolButton icon={GitBranch} label="Condición" onClick={() => addNode('Condición')} color="bg-amber-500" />
         <ToolButton icon={Bot} label="IA Action" onClick={() => addNode('IA')} color="bg-purple-500" />
         <ToolButton icon={Tag} label="Etiqueta" onClick={() => addNode('Tag')} color="bg-pink-500" />
+        <ToolButton icon={BarChart3} label="Pipeline" onClick={() => addNode('Pipeline')} color="bg-emerald-600" />
       </div>
 
       <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
@@ -395,7 +402,8 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                   (typeof selectedNode.data?.label === 'string' && (
                     !selectedNode.data.label.startsWith('⚡') && 
                     !selectedNode.data.label.startsWith('🤖') && 
-                    !selectedNode.data.label.startsWith('🏷️')
+                    !selectedNode.data.label.startsWith('🏷️') &&
+                    !selectedNode.data.label.startsWith('📊')
                   ))
                 ) && (
                     <div className="border-t border-white/10 pt-4">
@@ -439,7 +447,8 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                   (typeof selectedNode.data?.label === 'string' && (
                     !selectedNode.data.label.startsWith('⚡') && 
                     !selectedNode.data.label.startsWith('🤖') && 
-                    !selectedNode.data.label.startsWith('🏷️')
+                    !selectedNode.data.label.startsWith('🏷️') &&
+                    !selectedNode.data.label.startsWith('📊')
                   ))
                 ) && (
                   <div className="border-t border-white/10 pt-4">
