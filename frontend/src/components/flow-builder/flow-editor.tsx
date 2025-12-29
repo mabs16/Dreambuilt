@@ -27,7 +27,14 @@ import {
   Save,
   X,
   Trash2,
+  PlusCircle,
+  MinusCircle
 } from 'lucide-react';
+
+interface FlowButton {
+  id: string;
+  text: string;
+}
 
 const initialNodes: Node[] = [
   {
@@ -98,6 +105,51 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
         return node;
       })
     );
+  };
+
+  const updateNodeButtons = (buttons: Array<{id: string, text: string}>) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === selectedNodeId) {
+          return { ...node, data: { ...node.data, buttons } };
+        }
+        return node;
+      })
+    );
+  };
+
+  const addButtonToNode = () => {
+    if (!selectedNodeId) return;
+    const node = nodes.find(n => n.id === selectedNodeId);
+    if (!node) return;
+    
+    const currentButtons = (node.data.buttons as Array<{id: string, text: string}>) || [];
+    if (currentButtons.length >= 3) return; // WhatsApp limit
+
+    const newButton = { id: Math.random().toString(36).substr(2, 9), text: 'Opción' };
+    updateNodeButtons([...currentButtons, newButton]);
+  };
+
+  const removeButtonFromNode = (index: number) => {
+    if (!selectedNodeId) return;
+    const node = nodes.find(n => n.id === selectedNodeId);
+    if (!node) return;
+
+    const currentButtons = (node.data.buttons as Array<{id: string, text: string}>) || [];
+    const newButtons = [...currentButtons];
+    newButtons.splice(index, 1);
+    updateNodeButtons(newButtons);
+  };
+
+  const updateButtonText = (index: number, text: string) => {
+    if (!selectedNodeId) return;
+    const node = nodes.find(n => n.id === selectedNodeId);
+    if (!node) return;
+
+    const currentButtons = (node.data.buttons as Array<{id: string, text: string}>) || [];
+    const newButtons = [...currentButtons];
+    newButtons[index] = { ...newButtons[index], text };
+    updateNodeButtons(newButtons);
   };
 
   const deleteSelectedNode = () => {
@@ -262,7 +314,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
       </div>
 
       {selectedNode && (
-        <div className="absolute top-20 right-4 z-20 w-80 bg-black/90 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-2xl animate-in slide-in-from-right-10">
+        <div className="absolute top-20 right-4 z-20 w-80 bg-black/90 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-2xl animate-in slide-in-from-right-10 overflow-y-auto max-h-[80vh]">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-white font-bold text-sm">Editar Nodo</h3>
                 <button onClick={() => setSelectedNodeId(null)} className="text-white/50 hover:text-white">
@@ -279,6 +331,46 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                         className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50 h-32 resize-none"
                     />
                 </div>
+
+                {/* Button Editor Section - Only for Message and Question nodes */}
+                {(selectedNode.type === 'Mensaje' || selectedNode.type === 'Pregunta') && (
+                  <div className="border-t border-white/10 pt-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs text-white/50 font-bold">Botones (Máx 3)</label>
+                      <button 
+                        onClick={addButtonToNode}
+                        disabled={((selectedNode.data.buttons as FlowButton[])?.length || 0) >= 3}
+                        className="text-primary hover:text-primary/80 disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <PlusCircle className="h-4 w-4" />
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {((selectedNode.data.buttons as FlowButton[]) || []).map((btn, idx) => (
+                        <div key={idx} className="flex gap-2 items-center">
+                          <input
+                            type="text"
+                            value={btn.text}
+                            onChange={(e) => updateButtonText(idx, e.target.value)}
+                            maxLength={20}
+                            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-primary/50"
+                            placeholder="Texto del botón"
+                          />
+                          <button 
+                            onClick={() => removeButtonFromNode(idx)}
+                            className="text-red-500 hover:text-red-400"
+                          >
+                            <MinusCircle className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                      {((selectedNode.data.buttons as FlowButton[])?.length || 0) === 0 && (
+                        <p className="text-[10px] text-white/30 italic">Sin botones configurados</p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="pt-2 border-t border-white/10">
                     <button 

@@ -268,8 +268,69 @@ export class WhatsappService {
         messageToSend = '';
       }
 
+      // Check if node is "Etiqueta" (Label)
+      // Logic: Tag the lead, do NOT send message to WhatsApp
+      if (
+        currentNode.type === 'Etiqueta' ||
+        (currentNode.data?.label &&
+          currentNode.data.label.toLowerCase().startsWith('etiqueta:'))
+      ) {
+        const labelText = currentNode.data?.label || '';
+        // Extract tag name: "Etiqueta: Interesado" -> "Interesado"
+        const tag = labelText.replace(/^Etiqueta:\s*/i, '').trim();
+
+        if (tag) {
+          this.logger.log(`Applying tag "${tag}" to lead ${session.lead_id}`);
+          // TODO: Implement actual tagging logic in LeadsService
+          // await this.leadsService.addTag(session.lead_id, tag);
+        }
+
+        // Move to next node immediately without sending message
+        const edge = edges.find((e) => e.source === currentNodeId);
+        if (edge) {
+          const nextNodeId = edge.target;
+          await this.flowsService.updateSessionNode(session.id, nextNodeId);
+          const updatedSession = await this.flowsService.findOneSession(
+            session.id,
+          );
+          if (updatedSession) {
+            updatedSession.flow = flow;
+            await this.executeFlowStep(updatedSession, '', from);
+          }
+        } else {
+          await this.flowsService.completeSession(session.id);
+        }
+        return;
+      }
+
       if (messageToSend) {
-        await this.sendWhatsappMessage(from, messageToSend);
+        // Check for interactive buttons in node data
+        const buttons = currentNode.data?.buttons as Array<{
+          id: string;
+          text: string;
+        }>;
+
+        if (buttons && buttons.length > 0) {
+          const payload: WhatsAppPayload = {
+            type: 'interactive',
+            interactive: {
+              type: 'button',
+              body: { text: messageToSend },
+              action: {
+                buttons: buttons.slice(0, 3).map((btn) => ({
+                  type: 'reply',
+                  reply: {
+                    id: btn.id || btn.text, // Use text as ID if ID missing
+                    title: btn.text.substring(0, 20), // WhatsApp limit 20 chars
+                  },
+                })),
+              },
+            },
+          };
+          await this.sendWhatsappMessage(from, payload);
+        } else {
+          await this.sendWhatsappMessage(from, messageToSend);
+        }
       }
 
       // If it's a 'Pregunta' node, wait for input
@@ -1067,7 +1128,7 @@ Link: https://wa.me/${lead.phone}
         if (foundLead) {
           lead = foundLead;
         }
-      } catch (_error) {
+      } catch {
         this.logger.warn(
           `Could not find lead for phone ${cleanTo} to associate message`,
         );
