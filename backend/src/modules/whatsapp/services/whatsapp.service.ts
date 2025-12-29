@@ -362,18 +362,23 @@ export class WhatsappService {
 
       // Check if node is "Pipeline" (PipelineUpdate)
       if (
-        currentNode.type === 'Pipeline' || 
+        currentNode.type === 'Pipeline' ||
         currentNode.data?.type === 'Pipeline' ||
         (currentNode.data?.label &&
           currentNode.data.label.toLowerCase().includes('pipeline:'))
       ) {
         this.logger.log(`Executing Pipeline Node for lead ${session.lead_id}`);
-        
+
         // 1. Update Status to PRECALIFICADO (or configured status)
-        await this.leadsService.updateStatus(session.lead_id, LeadStatus.PRECALIFICADO);
-        
+        await this.leadsService.updateStatus(
+          session.lead_id,
+          LeadStatus.PRECALIFICADO,
+        );
+
         // 2. ONLY Status Update (Assignment moved to separate node)
-        this.logger.log(`Lead ${session.lead_id} status updated to PRECALIFICADO`);
+        this.logger.log(
+          `Lead ${session.lead_id} status updated to PRECALIFICADO`,
+        );
 
         // Move to next node immediately without sending message
         const edge = edges.find((e) => e.source === currentNodeId);
@@ -395,28 +400,36 @@ export class WhatsappService {
 
       // Check if node is "Asignación" (Assignment)
       if (
-        currentNode.type === 'Asignación' || 
+        currentNode.type === 'Asignación' ||
         currentNode.data?.type === 'Asignación' ||
         (currentNode.data?.label &&
           currentNode.data.label.toLowerCase().includes('asignación:'))
       ) {
-        this.logger.log(`Executing Assignment Node for lead ${session.lead_id}`);
+        this.logger.log(
+          `Executing Assignment Node for lead ${session.lead_id}`,
+        );
 
         // 1. Find Advisor (Round Robin logic placeholder)
         const advisor = await this.advisorsService.findFirstAvailable();
-        
-        if (advisor) {
-            // 2. Retrieve AI Summary if exists
-            const aiSummary = session.variables?.['ai_summary'] || 'Sin resumen previo.';
 
-            this.eventEmitter.emit('pipeline.assign', {
-                leadId: session.lead_id,
-                advisorId: advisor.id,
-                summary: aiSummary // Pass summary to event handler
-            });
-            this.logger.log(`Assigned lead ${session.lead_id} to advisor ${advisor.id}`);
+        if (advisor) {
+          // 2. Retrieve AI Summary if exists
+          const aiSummary =
+            (session.variables?.['ai_summary'] as string) ||
+            'Sin resumen previo.';
+
+          this.eventEmitter.emit('pipeline.assign', {
+            leadId: session.lead_id,
+            advisorId: advisor.id,
+            summary: aiSummary, // Pass summary to event handler
+          });
+          this.logger.log(
+            `Assigned lead ${session.lead_id} to advisor ${advisor.id}`,
+          );
         } else {
-            this.logger.warn(`No advisor found to assign for lead ${session.lead_id}`);
+          this.logger.warn(
+            `No advisor found to assign for lead ${session.lead_id}`,
+          );
         }
 
         // Move to next node immediately
@@ -424,7 +437,9 @@ export class WhatsappService {
         if (edge) {
           const nextNodeId = edge.target;
           await this.flowsService.updateSessionNode(session.id, nextNodeId);
-          const updatedSession = await this.flowsService.findOneSession(session.id);
+          const updatedSession = await this.flowsService.findOneSession(
+            session.id,
+          );
           if (updatedSession) {
             updatedSession.flow = flow;
             await this.executeFlowStep(updatedSession, '', from);
@@ -443,37 +458,41 @@ export class WhatsappService {
           currentNode.data.label.toLowerCase().includes('ia action:'))
       ) {
         this.logger.log(`Executing IA Node for lead ${session.lead_id}`);
-        
+
         // 1. Fetch Conversation History
         const history = await this.getMessageHistory(from); // Last 100 messages
         // Transform to format expected by GeminiService
-        const formattedHistory = history.map(msg => ({
-            role: (msg.direction === 'outbound' ? 'model' : 'user') as 'model' | 'user',
-            content: msg.body
+        const formattedHistory = history.map((msg) => ({
+          role: (msg.direction === 'outbound' ? 'model' : 'user') as 'model' | 'user',
+          content: msg.body,
         }));
 
         // 2. Generate Summary using GeminiService
         const summary = await this.geminiService.summarizeLeadConversation(
-            formattedHistory, 
-            `Actúa como un Gerente de Ventas Inmobiliario. Analiza la siguiente conversación y genera un 'Briefing Ejecutivo' para el asesor humano.
+          formattedHistory,
+          `Actúa como un Gerente de Ventas Inmobiliario. Analiza la siguiente conversación y genera un 'Briefing Ejecutivo' para el asesor humano.
             Estructura tu respuesta en estos 3 puntos clave:
             1. Perfil del Cliente: (ej. Inversionista, Familia, etc.)
             2. Termómetro de Interés: (Frio/Tibio/Caliente y por qué)
-            3. Acción Sugerida: (ej. Llamar ya, Enviar brochure, etc.)`
+            3. Acción Sugerida: (ej. Llamar ya, Enviar brochure, etc.)`,
         );
 
         // 3. Save Summary to Session Variables
         await this.flowsService.updateSessionVariables(session.id, {
-            ai_summary: summary
+          ai_summary: summary,
         });
-        this.logger.log(`IA Summary generated and saved for lead ${session.lead_id}`);
+        this.logger.log(
+          `IA Summary generated and saved for lead ${session.lead_id}`,
+        );
 
         // Move to next node immediately
         const edge = edges.find((e) => e.source === currentNodeId);
         if (edge) {
           const nextNodeId = edge.target;
           await this.flowsService.updateSessionNode(session.id, nextNodeId);
-          const updatedSession = await this.flowsService.findOneSession(session.id);
+          const updatedSession = await this.flowsService.findOneSession(
+            session.id,
+          );
           if (updatedSession) {
             updatedSession.flow = flow;
             await this.executeFlowStep(updatedSession, '', from);
@@ -1550,10 +1569,10 @@ Link: https://wa.me/${lead.phone}
   async getMessageHistory(phone: string) {
     return this.messageRepository.find({
       where: [
-          { from: phone }, 
-          { to: phone },
-          // Also include system messages related to this lead if we tracked lead_id
-          // But since we track by phone, let's make sure we get everything
+        { from: phone },
+        { to: phone },
+        // Also include system messages related to this lead if we tracked lead_id
+        // But since we track by phone, let's make sure we get everything
       ],
       order: { createdAt: 'ASC' },
       take: 100,
