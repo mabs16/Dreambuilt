@@ -482,8 +482,15 @@ export class WhatsappService {
 
           // Save Summary as Note only if it's not already "Sin resumen previo"
           // In Flow Engine, the IA node should have already created this.
-          // This block is more for legacy/manual assignment logic.
-          if (aiSummary && aiSummary !== 'Sin resumen previo.') {
+          // Check if a SYSTEM_SUMMARY already exists for this lead
+          const existingNotes = await this.leadsService.getNotes(
+            session.lead_id,
+          );
+          const hasSummary = existingNotes.some(
+            (n) => n.type === 'SYSTEM_SUMMARY',
+          );
+
+          if (aiSummary && aiSummary !== 'Sin resumen previo.' && !hasSummary) {
             await this.leadsService.addNote({
               leadId: session.lead_id,
               advisorId: advisor.id,
@@ -1448,8 +1455,8 @@ export class WhatsappService {
     const advConfig = advAuto?.config as AdvisorAutomationConfig;
     const responseLimit = advConfig?.responseTimeLimitMinutes || 15;
 
-    // MENSAJE 2: DETALLES DEL LEAD
-    const msg = `Esta es el detalle de tu lead asignado:
+    // MENSAJE 2: DETALLES DEL LEAD (TEXTO PLANO PARA EVITAR LIMITE DE 1024 CARACTERES)
+    const detailMsg = `Esta es el detalle de tu lead asignado:
     
 👤 *Prospecto:* ${lead.name}
 📱 *Teléfono:* ${phoneLink}
@@ -1457,18 +1464,22 @@ export class WhatsappService {
 👉 *Comienza el contacto:* ${chatLink}
 
 *RESUMEN DE PRECALIFICACIÓN:*
-${summary}
+${summary}`;
 
-⚠️ *URGENCIA:* El lead debe de ser contactado desde el momento que se te asignó en menos de ${responseLimit} min. o será reasignado.
+    // MENSAJE 3: ACCIÓN DE CONTACTO (BOTÓN INTERACTIVO)
+    const actionMsg = `⚠️ *URGENCIA:* El lead debe de ser contactado desde el momento que se te asignó en menos de ${responseLimit} min. o será reasignado.
 
 ✅ Presiona el botón de contactado después de tu primer mensaje con el lead.`;
+
+    // Enviar detalles primero como texto plano
+    await this.sendWhatsappMessage(from, detailMsg);
 
     if (advConfig?.enableInteractiveButtons !== false) {
       const payload: WhatsAppPayload = {
         type: 'interactive',
         interactive: {
           type: 'button',
-          body: { text: msg },
+          body: { text: actionMsg },
           action: {
             buttons: [
               {
@@ -1486,7 +1497,7 @@ ${summary}
     } else {
       await this.sendWhatsappMessage(
         from,
-        `${msg}\n\nEscribe \`${lead.id} CONTACTADO\` para confirmar.`,
+        `${actionMsg}\n\nEscribe \`${lead.id} CONTACTADO\` para confirmar.`,
       );
     }
   }
