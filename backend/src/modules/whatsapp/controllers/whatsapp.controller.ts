@@ -37,6 +37,7 @@ interface WhatsAppWebhookBody {
             body: string;
           };
           type: string;
+          from_me?: boolean;
           interactive?: {
             type: string;
             button_reply?: {
@@ -104,6 +105,12 @@ export class WhatsappController {
 
             const messages = changeValue.messages;
             for (const message of messages) {
+              // Ignore outbound messages (from_me = true) to prevent advisors triggering flows
+              if (message.from_me) {
+                this.logger.log(`Ignoring outbound message ${message.id}`);
+                continue;
+              }
+
               const messageText = message.text;
               let messageBody = messageText?.body;
               let buttonId: string | undefined;
