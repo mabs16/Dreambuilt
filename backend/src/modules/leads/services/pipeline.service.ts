@@ -94,6 +94,12 @@ export class PipelineService {
       payload.advisorId,
       LeadStatus.PERDIDO,
     );
+
+    // Emitir evento para posible flujo de nutrición
+    this.eventEmitter.emit('lead.perdido', {
+      leadId: payload.leadId,
+      advisorId: payload.advisorId,
+    });
   }
 
   @OnEvent('command.intento_contacto')

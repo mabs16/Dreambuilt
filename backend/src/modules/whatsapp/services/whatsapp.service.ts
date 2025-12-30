@@ -814,6 +814,50 @@ export class WhatsappService {
     }
   }
 
+  @OnEvent('lead.perdido')
+  async handleLeadPerdido(payload: { leadId: number; advisorId: number }) {
+    this.logger.log(`Handling lead.perdido event for lead ${payload.leadId}`);
+    try {
+      const lead = await this.leadsService.findById(payload.leadId);
+      if (!lead || !lead.phone) return;
+
+      // Buscar si existe un flujo de nutrición
+      const flows = await this.flowsService.findAll();
+      const nurturingFlow = flows.find(
+        (f) =>
+          f.name.toLowerCase().includes('nutrición') ||
+          f.name.toLowerCase().includes('perdido') ||
+          f.name.toLowerCase().includes('recuperación'),
+      );
+
+      if (nurturingFlow && nurturingFlow.is_active) {
+        this.logger.log(
+          `Starting nurturing flow "${nurturingFlow.name}" for lead ${lead.id}`,
+        );
+        const nodes = nurturingFlow.nodes;
+        const startNode =
+          nodes.find((n) => n.type === 'input' || n.type === 'trigger') ||
+          nodes[0];
+
+        if (startNode) {
+          const session = await this.flowsService.createSession(
+            lead.id,
+            nurturingFlow.id,
+            String(startNode.id),
+          );
+          session.flow = nurturingFlow;
+          await this.executeFlowStep(session, '', lead.phone);
+        }
+      } else {
+        this.logger.log(`No active nurturing flow found for lead ${lead.id}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error in handleLeadPerdido: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
   private async handleAdvisorMessage(
     advisor: Advisor,
     from: string,
@@ -950,12 +994,7 @@ export class WhatsappService {
           advisorId: advisor.id,
         });
 
-        const seguimientoMsg = advConfig?.notesPromptMessage
-          ? advConfig.notesPromptMessage.replace(
-              /\{\{lead_id\}\}/g,
-              String(parsed.leadId),
-            )
-          : `🔄 Lead #${parsed.leadId} ahora está en SEGUIMIENTO. ¿Alguna nota sobre el avance?`;
+        const seguimientoMsg = `🔄 Lead #${parsed.leadId} ahora está en SEGUIMIENTO. ¿Qué avances hubo hoy? Escribe una breve nota:`;
 
         await this.sendWhatsappMessage(from, seguimientoMsg);
         await this.redis.set(

@@ -99,8 +99,16 @@ export default function Home() {
           ...e,
           leadName: e.leads?.name,
           advisorName: e.advisors?.name,
-          time: new Date(e.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          date: new Date(e.created_at).toLocaleDateString([], { day: '2-digit', month: 'short' })
+          time: new Date(e.created_at).toLocaleTimeString('es-MX', { 
+            timeZone: 'America/Cancun',
+            hour: '2-digit', 
+            minute: '2-digit' 
+          }),
+          date: new Date(e.created_at).toLocaleDateString('es-MX', { 
+            timeZone: 'America/Cancun',
+            day: '2-digit', 
+            month: 'short' 
+          })
         })),
         loading: false,
         lastUpdate: new Date()

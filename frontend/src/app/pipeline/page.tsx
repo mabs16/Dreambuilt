@@ -14,7 +14,8 @@ import {
     ArrowRight,
     X,
     AlertCircle,
-    Phone
+    Phone,
+    LucideIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -51,11 +52,80 @@ const COLUMNS = [
     { id: "PERDIDO", title: "Perdidos", color: "from-slate-500/20 to-slate-500/5", textColor: "text-slate-400" },
 ];
 
+interface TimelineEvent {
+    id: number;
+    type: 'event' | 'note';
+    title: string;
+    description: string;
+    date: string;
+    icon: LucideIcon;
+    advisor?: string;
+}
+
 export default function PipelinePage() {
     const [leads, setLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
+    const [loadingTimeline, setLoadingTimeline] = useState(false);
+
+    const fetchTimeline = useCallback(async (leadId: number) => {
+        setLoadingTimeline(true);
+        try {
+            const { data: events, error: eventsError } = await supabase
+                .from('events')
+                .select(`*, advisors(name)`)
+                .eq('lead_id', leadId)
+                .order('created_at', { ascending: false });
+
+            const { data: notes, error: notesError } = await supabase
+                .from('lead_notes')
+                .select(`*, advisors(name)`)
+                .eq('lead_id', leadId)
+                .order('created_at', { ascending: false });
+
+            if (eventsError) console.error('Error fetching events:', eventsError);
+            if (notesError) console.error('Error fetching notes:', notesError);
+
+            const combined = [
+                ...(events || []).map(e => ({
+                    id: e.id,
+                    type: 'event' as const,
+                    title: e.type === 'STATUS_CHANGE' ? 'Cambio de Estado' : e.type,
+                    description: e.type === 'STATUS_CHANGE' 
+                        ? `El lead pasó de ${e.payload?.from || '?'} a ${e.payload?.to || '?'}`
+                        : `Evento: ${e.type}`,
+                    date: e.created_at,
+                    icon: e.type === 'STATUS_CHANGE' ? ArrowRight : AlertCircle,
+                    advisor: e.advisors?.name
+                })),
+                ...(notes || []).map(n => ({
+                    id: n.id,
+                    type: 'note' as const,
+                    title: n.type === 'SYSTEM_SUMMARY' ? 'Resumen IA' : 'Nota del Asesor',
+                    description: n.content,
+                    date: n.created_at,
+                    icon: n.type === 'SYSTEM_SUMMARY' ? MessageSquare : MoreHorizontal,
+                    advisor: n.advisors?.name
+                }))
+            ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            setTimelineEvents(combined);
+        } catch (err) {
+            console.error('Error in fetchTimeline:', err);
+        } finally {
+            setLoadingTimeline(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (selectedLead) {
+            fetchTimeline(selectedLead.id);
+        } else {
+            setTimelineEvents([]);
+        }
+    }, [selectedLead, fetchTimeline]);
 
     const fetchLeads = useCallback(async () => {
         setLoading(leads.length === 0);
@@ -138,11 +208,7 @@ export default function PipelinePage() {
         );
     }
 
-    const timeline = [
-        { id: 1, title: 'Cambio de estado', description: 'El lead pasó de NUEVO a PRECALIFICADO', date: 'Hace 2 horas', icon: ArrowRight },
-        { id: 2, title: 'Mensaje enviado', description: 'Se envió mensaje de bienvenida por WhatsApp', date: 'Hace 3 horas', icon: MessageSquare },
-        { id: 3, title: 'Asignación automática', description: 'Asignado al asesor Carlos Méndez', date: 'Hace 5 horas', icon: UserIcon },
-    ];
+
 
     return (
         <div className="space-y-8 h-[calc(100vh-6rem)] flex flex-col overflow-hidden">
@@ -309,7 +375,13 @@ export default function PipelinePage() {
                                         </h3>
                                         <div className="grid gap-5 bg-white/2 p-8 rounded-[2.5rem] border border-white/5 backdrop-blur-sm">
                                             <InfoRow label="Fuente de Captación" value={selectedLead.source || "Directo"} />
-                                            <InfoRow label="Fecha de Registro" value={new Date(selectedLead.created_at).toLocaleString('es-ES', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} />
+                                            <InfoRow label="Fecha de Registro" value={new Date(selectedLead.created_at).toLocaleString('es-MX', { 
+                                                timeZone: 'America/Cancun',
+                                                day: 'numeric', 
+                                                month: 'long', 
+                                                hour: '2-digit', 
+                                                minute: '2-digit' 
+                                            })} />
                                             <InfoRow label="Responsable" value={selectedLead.advisor || 'Sistema Automático'} highlight />
                                         </div>
                                     </section>
@@ -323,26 +395,50 @@ export default function PipelinePage() {
                                         </div>
                                         
                                         <div className="space-y-6 relative before:absolute before:left-6 before:top-2 before:bottom-2 before:w-px before:bg-white/5">
-                                            {timeline.map((item, idx) => (
-                                                <motion.div 
-                                                    key={item.id}
-                                                    initial={{ opacity: 0, x: 20 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ delay: 0.1 * idx }}
-                                                    className="relative pl-14 group"
-                                                >
-                                                    <div className="absolute left-0 top-0 h-12 w-12 rounded-2xl bg-white/2 border border-white/5 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/20 transition-all duration-500 z-10 backdrop-blur-md">
-                                                        <item.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                                                    </div>
-                                                    <div className="space-y-1 py-1">
-                                                        <div className="flex items-center justify-between">
-                                                            <p className="text-sm font-black text-white group-hover:text-primary transition-colors">{item.title}</p>
-                                                            <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">{item.date}</span>
+                                            {loadingTimeline ? (
+                                                <div className="flex justify-center py-10">
+                                                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+                                                </div>
+                                            ) : timelineEvents.length > 0 ? (
+                                                timelineEvents.map((item, idx) => (
+                                                    <motion.div 
+                                                        key={item.id}
+                                                        initial={{ opacity: 0, x: 20 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{ delay: 0.1 * idx }}
+                                                        className="relative pl-14 group"
+                                                    >
+                                                        <div className="absolute left-0 top-0 h-12 w-12 rounded-2xl bg-white/2 border border-white/5 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/20 transition-all duration-500 z-10 backdrop-blur-md">
+                                                            <item.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                                                         </div>
-                                                        <p className="text-xs text-muted-foreground/60 font-medium leading-relaxed">{item.description}</p>
-                                                    </div>
-                                                </motion.div>
-                                            ))}
+                                                        <div className="space-y-1 py-1">
+                                                            <div className="flex items-center justify-between">
+                                                                <p className="text-sm font-black text-white group-hover:text-primary transition-colors">{item.title}</p>
+                                                                <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">
+                                                                    {new Date(item.date).toLocaleTimeString('es-MX', {
+                                                                        timeZone: 'America/Cancun',
+                                                                        hour: '2-digit', 
+                                                                        minute: '2-digit' 
+                                                                    })}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-xs text-muted-foreground/60 leading-relaxed line-clamp-2 group-hover:line-clamp-none transition-all duration-500">
+                                                                {item.description}
+                                                            </p>
+                                                            {item.advisor && (
+                                                                <p className="text-[9px] font-black text-primary/40 uppercase tracking-widest mt-1">
+                                                                    Por: {item.advisor}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </motion.div>
+                                                ))
+                                            ) : (
+                                                <div className="text-center py-10 text-muted-foreground/30">
+                                                    <Clock className="h-8 w-8 mx-auto mb-2 opacity-10" />
+                                                    <p className="text-[10px] font-black uppercase tracking-widest">Sin actividad registrada</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </section>
                                 </div>

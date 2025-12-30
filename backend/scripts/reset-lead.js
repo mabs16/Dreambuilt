@@ -1,16 +1,17 @@
 // Reset lead status to NUEVO
 const { DataSource } = require('typeorm');
-require('dotenv').config({ path: '.env' });
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const AppDataSource = new DataSource({
     type: 'postgres',
     host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT),
+    port: parseInt(process.env.DB_PORT || '5432'),
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     ssl: { rejectUnauthorized: false },
-    entities: ['dist/**/*.entity.js'],
+    entities: [path.join(__dirname, '../dist/**/*.entity.js')],
     synchronize: false,
 });
 
@@ -55,7 +56,7 @@ async function resetLead() {
             host: process.env.REDIS_HOST,
             port: parseInt(process.env.REDIS_PORT || '6379'),
             password: process.env.REDIS_PASSWORD,
-            tls: { rejectUnauthorized: false }
+            tls: process.env.REDIS_TLS === 'true' ? { rejectUnauthorized: false } : undefined
         });
 
         await redis.del(`bot_history:${phone}`);

@@ -6,7 +6,12 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['eslint.config.mjs', 'list-models.js', 'reset-lead.js', 'test-gemini.js'],
+    ignores: [
+      'eslint.config.mjs',
+      'scripts/list-models.js',
+      'scripts/reset-lead.js',
+      'scripts/test-gemini.js',
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,

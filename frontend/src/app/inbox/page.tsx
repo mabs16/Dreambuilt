@@ -19,8 +19,7 @@ import {
     Filter
 } from "lucide-react";
 import Image from "next/image";
-import { format, isToday, isYesterday } from "date-fns";
-import { es } from "date-fns/locale";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface ChatContact {
@@ -51,6 +50,8 @@ function InboxContent() {
     const [filter, setFilter] = useState("Todos");
     const [refreshing, setRefreshing] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const lastContactRef = useRef<string | null>(null);
     const searchParams = useSearchParams();
     const chatParam = searchParams.get('chat');
     const [newMessage, setNewMessage] = useState("");
@@ -112,8 +113,22 @@ function InboxContent() {
     }, [selectedContact, fetchHistory]);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        const isNewContact = selectedContact !== lastContactRef.current;
+        
+        // Determinar si el usuario está cerca del fondo (margen de 150px)
+        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+
+        if (isNewContact || isNearBottom) {
+            messagesEndRef.current?.scrollIntoView({ 
+                behavior: isNewContact ? "auto" : "smooth" 
+            });
+        }
+        
+        lastContactRef.current = selectedContact;
+    }, [messages, selectedContact]);
 
     const filteredChats = chats.filter(chat =>
         (chat.contact?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
@@ -152,9 +167,44 @@ function InboxContent() {
 
     const formatMessageTime = (dateStr: string) => {
         const date = new Date(dateStr);
-        if (isToday(date)) return format(date, "HH:mm");
-        if (isYesterday(date)) return "Ayer " + format(date, "HH:mm");
-        return format(date, "dd MMM HH:mm", { locale: es });
+        
+        // Helper to get time in Cancun
+        const getTimeInCancun = (d: Date) => {
+            return d.toLocaleTimeString('es-MX', { 
+                timeZone: 'America/Cancun',
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false
+            });
+        };
+
+        const getFullDateInCancun = (d: Date) => {
+            return d.toLocaleDateString('es-MX', { 
+                timeZone: 'America/Cancun',
+                day: '2-digit',
+                month: 'short'
+            });
+        };
+
+        // Check if it's today in Cancun
+        const now = new Date();
+        const todayCancun = new Intl.DateTimeFormat('es-MX', { timeZone: 'America/Cancun', year: 'numeric', month: 'numeric', day: 'numeric' }).format(now);
+        const dateCancun = new Intl.DateTimeFormat('es-MX', { timeZone: 'America/Cancun', year: 'numeric', month: 'numeric', day: 'numeric' }).format(date);
+        
+        if (todayCancun === dateCancun) {
+            return getTimeInCancun(date);
+        }
+        
+        // Yesterday check
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        const yesterdayCancun = new Intl.DateTimeFormat('es-MX', { timeZone: 'America/Cancun', year: 'numeric', month: 'numeric', day: 'numeric' }).format(yesterday);
+        
+        if (dateCancun === yesterdayCancun) {
+            return `Ayer ${getTimeInCancun(date)}`;
+        }
+
+        return `${getFullDateInCancun(date)} ${getTimeInCancun(date)}`;
     };
 
     const getInitials = (name?: string) => {
@@ -448,7 +498,10 @@ function InboxContent() {
                             </div>
 
                             {/* Messages List - Modern Bubble Design */}
-                            <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-transparent custom-scrollbar relative z-10 no-scrollbar">
+                            <div 
+                                ref={scrollContainerRef}
+                                className="flex-1 overflow-y-auto p-8 space-y-8 bg-transparent custom-scrollbar relative z-10 no-scrollbar"
+                            >
                                 <AnimatePresence initial={false}>
                                     {messages.map((msg, i) => {
                                         const isOutbound = msg.direction === 'outbound';
