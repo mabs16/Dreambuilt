@@ -29,6 +29,7 @@ interface ChatContact {
     lastMessage: string;
     timestamp: string;
     avatar?: string;
+    is_advisor?: boolean;
 }
 
 interface Message {
@@ -309,7 +310,9 @@ function InboxContent() {
                                                     "h-16 w-16 rounded-[1.8rem] flex items-center justify-center border-2 transition-all duration-700 overflow-hidden",
                                                     selectedContact === chat.contact
                                                         ? "bg-white/20 border-white/40 rotate-12 shadow-inner"
-                                                        : "bg-black/40 border-white/5 group-hover:rotate-12 group-hover:border-primary/30"
+                                                        : chat.is_advisor 
+                                                            ? "bg-indigo-500/20 border-indigo-500/30 group-hover:border-indigo-500/50"
+                                                            : "bg-black/40 border-white/5 group-hover:rotate-12 group-hover:border-primary/30"
                                                 )}>
                                                     {chat.avatar ? (
                                                         <Image 
@@ -322,12 +325,21 @@ function InboxContent() {
                                                     ) : (
                                                         <span className={cn(
                                                             "font-black text-xl transition-all duration-500",
-                                                            selectedContact === chat.contact ? "text-white scale-110" : "text-primary group-hover:scale-110"
+                                                            selectedContact === chat.contact 
+                                                                ? "text-white scale-110" 
+                                                                : chat.is_advisor
+                                                                    ? "text-indigo-400 group-hover:scale-110"
+                                                                    : "text-primary group-hover:scale-110"
                                                         )}>
                                                             {getInitials(chat.name)}
                                                         </span>
                                                     )}
                                                 </div>
+                                                {chat.is_advisor && (
+                                                    <div className="absolute -top-2 -right-2 bg-indigo-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full border-2 border-[#080808] z-10 shadow-lg shadow-indigo-500/20">
+                                                        ASESOR
+                                                    </div>
+                                                )}
                                                 <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-2xl border-4 border-[#080808] bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
                                             </div>
                                             <div className="flex-1 min-w-0">

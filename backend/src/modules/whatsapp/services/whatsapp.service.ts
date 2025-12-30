@@ -516,7 +516,7 @@ export class WhatsappService {
               const advConfig = advAuto?.config as AdvisorAutomationConfig;
 
               const responseLimit = advConfig?.responseTimeLimitMinutes || 15;
-              
+
               // MENSAJE 1: ALERTA INICIAL
               const alertMsg = `🔔 *NUEVO LEAD ASIGNADO*\n\nℹ️ Presiona el botón de ver info para obtener detalles.\n\n⚠️ *URGENCIA:* Debes responder en menos de ${responseLimit} min. o será reasignado.`;
 
@@ -1420,20 +1420,23 @@ export class WhatsappService {
     const notes = await this.leadsService.getNotes(leadId);
     const summaryNote = notes.find((n) => n.type === 'SYSTEM_SUMMARY');
     let summary = 'Sin resumen previo.';
-    
+
     if (summaryNote) {
       summary = summaryNote.content.replace('RESUMEN IA INICIAL:\n', '');
     } else {
-       // Fallback to Redis history if needed
-       const historyKey = `bot_history:${lead.phone}`;
-       const historyRaw = await this.redis.get(historyKey);
-       if (historyRaw) {
-          const history = JSON.parse(historyRaw) as Array<{role: string, content: string}>;
-          summary = history
-             .filter((h) => h.role === 'user' || h.role === 'model')
-             .map((h) => `${h.role === 'user' ? '👤' : '🤖'}: ${h.content}`)
-             .join('\n');
-       }
+      // Fallback to Redis history if needed
+      const historyKey = `bot_history:${lead.phone}`;
+      const historyRaw = await this.redis.get(historyKey);
+      if (historyRaw) {
+        const history = JSON.parse(historyRaw) as Array<{
+          role: string;
+          content: string;
+        }>;
+        summary = history
+          .filter((h) => h.role === 'user' || h.role === 'model')
+          .map((h) => `${h.role === 'user' ? '👤' : '🤖'}: ${h.content}`)
+          .join('\n');
+      }
     }
 
     // Format Phone for Link (Remove '1' after '52')
@@ -1441,7 +1444,8 @@ export class WhatsappService {
     const chatLink = `https://wa.me/${phoneLink}`;
 
     // Get Config for limit
-    const advAuto = await this.automationsService.getConfig('advisor_automation');
+    const advAuto =
+      await this.automationsService.getConfig('advisor_automation');
     const advConfig = advAuto?.config as AdvisorAutomationConfig;
     const responseLimit = advConfig?.responseTimeLimitMinutes || 15;
 
@@ -1749,10 +1753,17 @@ ${summary}
     // We want the LATEST message for each partner.
 
     // Logic to determine partner phone for fallback
-    const partnerPhoneSql = `CASE 
+    const rawPartnerPhoneSql = `CASE 
           WHEN m_sub.from = 'SYSTEM' THEN m_sub.to
           WHEN m_sub.to = 'SYSTEM' THEN m_sub.from
           ELSE (CASE WHEN m_sub.direction = 'outbound' THEN m_sub.to ELSE m_sub.from END)
+        END`;
+
+    // Normalize Mexico phones: 521... -> 52...
+    const partnerPhoneSql = `CASE 
+          WHEN (${rawPartnerPhoneSql}) LIKE '521%' AND LENGTH(${rawPartnerPhoneSql}) = 13 
+          THEN '52' || SUBSTRING(${rawPartnerPhoneSql}, 4)
+          ELSE ${rawPartnerPhoneSql}
         END`;
 
     // Step 1: Get the latest message ID/Timestamp for each conversation
@@ -1767,10 +1778,16 @@ ${summary}
       .groupBy('conversation_key');
 
     // Logic to determine partner phone for the main query
-    const messagePartnerPhoneSql = `CASE 
+    const rawMessagePartnerPhoneSql = `CASE 
           WHEN message.from = 'SYSTEM' THEN message.to
           WHEN message.to = 'SYSTEM' THEN message.from
           ELSE (CASE WHEN message.direction = 'outbound' THEN message.to ELSE message.from END)
+        END`;
+
+    const messagePartnerPhoneSql = `CASE 
+          WHEN (${rawMessagePartnerPhoneSql}) LIKE '521%' AND LENGTH(${rawMessagePartnerPhoneSql}) = 13 
+          THEN '52' || SUBSTRING(${rawMessagePartnerPhoneSql}, 4)
+          ELSE ${rawMessagePartnerPhoneSql}
         END`;
 
     // Step 2: Join back to get message details
@@ -1789,9 +1806,15 @@ ${summary}
           'leads',
           `leads.id = message.lead_id OR leads.phone = ${messagePartnerPhoneSql}`,
         )
+        // Join advisors to identify internal chats
+        .leftJoin(
+          'advisors',
+          'advisors',
+          `advisors.phone = ${messagePartnerPhoneSql}`,
+        )
         .select(`COALESCE(leads.phone, ${messagePartnerPhoneSql})`, 'contact')
         .addSelect(
-          `COALESCE(leads.name, leads.phone, ${messagePartnerPhoneSql})`,
+          `COALESCE(advisors.name, leads.name, leads.phone, ${messagePartnerPhoneSql})`,
           'name',
         )
         .addSelect('message.body', 'lastMessage')
@@ -1799,6 +1822,10 @@ ${summary}
         .addSelect('leads.avatar_url', 'avatar')
         .addSelect('message.direction', 'direction')
         .addSelect('leads.id', 'leadId')
+        .addSelect(
+          'CASE WHEN advisors.id IS NOT NULL THEN true ELSE false END',
+          'is_advisor',
+        )
         .orderBy('message.created_at', 'DESC')
         .getRawMany()
     );
