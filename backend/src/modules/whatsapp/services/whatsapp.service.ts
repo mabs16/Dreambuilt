@@ -311,34 +311,14 @@ export class WhatsappService {
       if (
         currentNode.type === 'IA' ||
         currentNode.data?.type === 'IA' ||
+        currentNode.type === 'IA Action' ||
+        currentNode.data?.type === 'IA Action' ||
         (currentNode.data?.label &&
           currentNode.data.label.toLowerCase().includes('ia action:'))
       ) {
-        this.logger.log(`Executing IA Action for lead ${session.lead_id}`);
-        // TODO: Integrate with AI Service (OpenAI/Gemini) here
-        // For now, we just pass through to the next node
-
-        // Move to next node immediately
-        const edge = edges.find((e) => e.source === currentNodeId);
-        if (edge) {
-          const nextNodeId = edge.target;
-          await this.flowsService.updateSessionNode(session.id, nextNodeId);
-          const updatedSession = await this.flowsService.findOneSession(
-            session.id,
-          );
-          if (updatedSession) {
-            updatedSession.flow = flow;
-            await this.executeFlowStep(updatedSession, '', from);
-          }
-        } else {
-          await this.flowsService.completeSession(session.id);
-        }
-        return;
-      }
-
-      // Check if node is "Etiqueta" (Label)
-      // Logic: Tag the lead, do NOT send message to WhatsApp
-      if (
+        // Redirigir a la lógica de ejecución de IA que está más abajo
+        this.logger.log(`Routing to IA Execution logic for lead ${session.lead_id}`);
+      } else if (
         currentNode.type === 'Etiqueta' ||
         currentNode.data?.type === 'Tag' || // Check explicit type from data
         (currentNode.data?.label &&
@@ -584,13 +564,16 @@ export class WhatsappService {
         return;
       }
 
-      // Check if node is "IA" (IA Action)
-      if (
+      // Check if node is "IA" (IA Action) - MODIFIED: Unified check for IA Action
+      const isIAAction =
+        currentNode.type === 'IA Action' ||
+        currentNode.data?.type === 'IA Action' ||
         currentNode.type === 'IA' ||
         currentNode.data?.type === 'IA' ||
         (currentNode.data?.label &&
-          currentNode.data.label.toLowerCase().includes('ia action:'))
-      ) {
+          currentNode.data.label.toLowerCase().includes('ia action:'));
+
+      if (isIAAction) {
         this.logger.log(`Executing IA Node for lead ${session.lead_id}`);
 
         // 1. Fetch Conversation History
