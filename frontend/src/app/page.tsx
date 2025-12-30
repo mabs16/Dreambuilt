@@ -206,7 +206,7 @@ export default function Home() {
             </h1>
             
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl font-medium leading-relaxed">
-              Dreambuilt OS está operando. Hemos procesado <span className="text-white font-bold">{stats.totalLeads} leads</span> con una eficiencia del <span className="text-primary font-bold">98.2%</span>.
+              Dreambuilt OS está operando. Hemos procesado <span className="text-white font-bold">{stats.totalLeads} leads</span> con una eficiencia del <span className="text-primary font-bold">0.0%</span>.
             </p>
 
             <div className="flex flex-wrap gap-4 pt-4">
@@ -248,31 +248,31 @@ export default function Home() {
         <StatCard
           title="Leads Totales"
           value={stats.totalLeads.toLocaleString()}
-          change="+12.5%"
+          change="0%"
           icon={Users}
           color="blue"
           delay={0.1}
         />
         <StatCard
           title="Tasa de Cierre"
-          value="24.5%"
-          change="+4.2%"
+          value="0.0%"
+          change="0%"
           icon={TrendingUp}
           color="emerald"
           delay={0.2}
         />
         <StatCard
           title="Cumplimiento SLA"
-          value="98.2%"
-          change="+0.5%"
+          value="0.0%"
+          change="0%"
           icon={CheckCircle2}
           color="purple"
           delay={0.3}
         />
         <StatCard
           title="Tiempo Respuesta"
-          value="12m"
-          change="-2m"
+          value="0m"
+          change="0m"
           icon={Clock}
           color="orange"
           delay={0.4}
