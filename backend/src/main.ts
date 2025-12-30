@@ -9,19 +9,17 @@ async function bootstrap() {
 
   // Log para verificar rutas registradas de forma segura
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const server = app.getHttpServer();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
     const router = server._events?.request?._router;
     if (router) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const availableRoutes = (router.stack as any[])
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
         .filter((r: any) => r.route)
         .map((r: any) => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           const methods = Object.keys(r.route.methods).join(',').toUpperCase();
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
           const path = r.route.path as string;
           return `${methods} ${path}`;
         });

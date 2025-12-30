@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Score } from './entities/score.entity';
-import { Advisor } from '../advisors/entities/advisor.entity';
+import { Score } from '../entities/score.entity';
+import { Advisor } from '../../advisors/entities/advisor.entity';
 
 @Injectable()
 export class ScoresService {
@@ -18,7 +18,7 @@ export class ScoresService {
     leadId: number,
     points: number,
     reason: string,
-  ) {
+  ): Promise<Score> {
     const score = this.scoreRepository.create({
       advisor_id: advisorId,
       lead_id: leadId,

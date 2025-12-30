@@ -8,7 +8,7 @@ import {
   FileTypeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { StorageService } from './storage.service';
+import { StorageService } from '../services/storage.service';
 
 @Controller('storage')
 export class StorageController {

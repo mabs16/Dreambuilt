@@ -5,15 +5,17 @@ import {
   Get,
   BadRequestException,
 } from '@nestjs/common';
-import { AdvisorsService } from './advisors.service';
-import { Advisor } from './entities/advisor.entity';
+import { AdvisorsService } from '../services/advisors.service';
+import { Advisor } from '../entities/advisor.entity';
 
 @Controller('advisors')
 export class AdvisorsController {
   constructor(private readonly advisorsService: AdvisorsService) {}
 
   @Post('request-otp')
-  async requestOtp(@Body() body: { name: string; phone: string }) {
+  async requestOtp(
+    @Body() body: { name: string; phone: string },
+  ): Promise<{ message: string }> {
     return await this.advisorsService.requestOtp(body.name, body.phone);
   }
 

@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Flow } from './entities/flow.entity';
-import { FlowSession } from './entities/flow-session.entity';
+import { Flow } from '../entities/flow.entity';
+import { FlowSession } from '../entities/flow-session.entity';
 
 @Injectable()
 export class FlowsService {
@@ -15,7 +15,7 @@ export class FlowsService {
     private readonly sessionRepository: Repository<FlowSession>,
   ) {}
 
-  async create(createFlowDto: Partial<Flow>) {
+  async create(createFlowDto: Partial<Flow>): Promise<Flow> {
     if (createFlowDto.trigger_keywords) {
       createFlowDto.trigger_keywords = createFlowDto.trigger_keywords.map((k) =>
         k.toLowerCase().trim(),
@@ -25,13 +25,13 @@ export class FlowsService {
     return await this.flowRepository.save(flow);
   }
 
-  async findAll() {
+  async findAll(): Promise<Flow[]> {
     return await this.flowRepository.find({
       order: { updated_at: 'DESC' },
     });
   }
 
-  async findOne(id: number) {
+  async findOne(id: number): Promise<Flow | null> {
     return await this.flowRepository.findOne({ where: { id } });
   }
 
@@ -44,7 +44,7 @@ export class FlowsService {
       .getOne();
   }
 
-  async update(id: number, updateFlowDto: Partial<Flow>) {
+  async update(id: number, updateFlowDto: Partial<Flow>): Promise<Flow | null> {
     if (updateFlowDto.trigger_keywords) {
       updateFlowDto.trigger_keywords = updateFlowDto.trigger_keywords.map((k) =>
         k.toLowerCase().trim(),
@@ -54,8 +54,12 @@ export class FlowsService {
     return this.findOne(id);
   }
 
-  async remove(id: number) {
-    return await this.flowRepository.delete(id);
+  async findOneByUuid(id: string): Promise<Flow | null> {
+    return await this.flowRepository.findOne({ where: { id: Number(id) } });
+  }
+
+  async remove(id: number): Promise<void> {
+    await this.flowRepository.delete(id);
   }
 
   // --- SESSION MANAGEMENT ---

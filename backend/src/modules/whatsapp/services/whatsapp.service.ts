@@ -11,15 +11,15 @@ import {
   CommandType,
   ParsedCommand,
 } from './command-parser.service';
-import { AdvisorsService } from '../../advisors/advisors.service';
+import { AdvisorsService } from '../../advisors/services/advisors.service';
 import { Advisor } from '../../advisors/entities/advisor.entity';
-import { AssignmentsService } from '../../assignments/assignments.service';
-import { LeadsService } from '../../leads/leads.service';
+import { AssignmentsService } from '../../assignments/services/assignments.service';
+import { LeadsService } from '../../leads/services/leads.service';
 import { Message, MessageDirection } from '../entities/message.entity';
 import { AutomationsService } from './automations.service';
 import { GeminiService } from './gemini.service';
 import { LeadStatus, Lead } from '../../leads/entities/lead.entity';
-import { FlowsService } from '../../flows/flows.service';
+import { FlowsService } from '../../flows/services/flows.service';
 import { FlowSession } from '../../flows/entities/flow-session.entity';
 import {
   LeadQualificationConfig,

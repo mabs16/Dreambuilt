@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { LeadsService } from '../leads.service';
+import { LeadsService } from './leads.service';
 import { LeadStateMachine } from './lead-state-machine.service';
 import { LeadStatus } from '../entities/lead.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ScoresService } from '../../scores/scores.service';
+import { ScoresService } from '../../scores/services/scores.service';
 import { SlaService } from '../../sla/services/sla.service';
 
-import { AssignmentsService } from '../../assignments/assignments.service';
+import { AssignmentsService } from '../../assignments/services/assignments.service';
 
 @Injectable()
 export class PipelineService {

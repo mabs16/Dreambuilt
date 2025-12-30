@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
-import { Assignment } from './entities/assignment.entity';
+import { Assignment } from '../entities/assignment.entity';
 
 @Injectable()
 export class AssignmentsService {
@@ -18,7 +18,11 @@ export class AssignmentsService {
     });
   }
 
-  async reassign(leadId: number, oldAdvisorId: number, count: number) {
+  async reassign(
+    leadId: number,
+    oldAdvisorId: number,
+    count: number,
+  ): Promise<void> {
     // 1. Close active assignment
     const active = await this.findActiveAssignment(leadId);
     if (active) {
@@ -38,7 +42,10 @@ export class AssignmentsService {
     // I'll emit an event so a "Matchmaker" service can pick a new advisor.
   }
 
-  async createAssignment(leadId: number, advisorId: number) {
+  async createAssignment(
+    leadId: number,
+    advisorId: number,
+  ): Promise<Assignment> {
     this.logger.log(
       `Creating assignment for lead ${leadId} -> advisor ${advisorId}`,
     );

@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Lead, LeadStatus } from './entities/lead.entity';
-import { LeadNote } from './entities/lead-note.entity';
+import { Lead, LeadStatus } from '../entities/lead.entity';
+import { LeadNote } from '../entities/lead-note.entity';
 
 @Injectable()
 export class LeadsService {
@@ -28,7 +28,7 @@ export class LeadsService {
     phone: string;
     source: string;
     avatar_url?: string;
-  }) {
+  }): Promise<Lead> {
     const lead = this.leadsRepository.create({
       ...data,
       status: LeadStatus.NUEVO,
@@ -57,7 +57,7 @@ export class LeadsService {
     return this.leadsRepository.save(lead);
   }
 
-  async freezeForManualReview() {
+  async freezeForManualReview(): Promise<void> {
     // In v1, "frozen" might just be an event and a special property or just staying in ASIGNADO
     // but marked in the UI. For now, let's update a metadata field (payload) in the lead if we had it,
     // or just emit an event "lead.manual_review_needed".
@@ -68,7 +68,7 @@ export class LeadsService {
     advisorId?: number;
     content: string;
     type?: string;
-  }) {
+  }): Promise<LeadNote> {
     const note = this.notesRepository.create({
       lead_id: data.leadId,
       advisor_id: data.advisorId,
@@ -78,7 +78,7 @@ export class LeadsService {
     return this.notesRepository.save(note);
   }
 
-  async getNotes(leadId: number) {
+  async getNotes(leadId: number): Promise<LeadNote[]> {
     return this.notesRepository.find({
       where: { lead_id: leadId },
       order: { created_at: 'DESC' },

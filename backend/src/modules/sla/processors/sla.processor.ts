@@ -3,14 +3,14 @@ import { Job } from 'bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SlaJob, SlaStatus } from '../entities/sla-job.entity';
-import { LeadsService } from '../../leads/leads.service';
-import { AssignmentsService } from '../../assignments/assignments.service';
-import { ScoresService } from '../../scores/scores.service';
+import { LeadsService } from '../../leads/services/leads.service';
+import { AssignmentsService } from '../../assignments/services/assignments.service';
+import { ScoresService } from '../../scores/services/scores.service';
 import { LeadStatus } from '../../leads/entities/lead.entity';
 import { Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { WhatsappService } from '../../whatsapp/services/whatsapp.service';
-import { AdvisorsService } from '../../advisors/advisors.service';
+import { AdvisorsService } from '../../advisors/services/advisors.service';
 import { AutomationsService } from '../../whatsapp/services/automations.service';
 import { AdvisorAutomationConfig } from '../../whatsapp/entities/automation.entity';
 

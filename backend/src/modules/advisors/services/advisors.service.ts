@@ -1,7 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Advisor } from './entities/advisor.entity';
+import { Advisor } from '../entities/advisor.entity';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import Redis from 'ioredis';
@@ -60,7 +60,7 @@ export class AdvisorsService {
     return advisors.length > 0 ? advisors[0] : null;
   }
 
-  async requestOtp(name: string, phone: string) {
+  async requestOtp(name: string, phone: string): Promise<{ message: string }> {
     // Generate 6 digit PIN
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -79,7 +79,7 @@ export class AdvisorsService {
     return { message: 'OTP enviado' };
   }
 
-  async verifyOtp(name: string, phone: string, pin: string) {
+  async verifyOtp(name: string, phone: string, pin: string): Promise<Advisor> {
     const storedPin = await this.redis.get(`otp:${phone}`);
 
     if (!storedPin || storedPin !== pin) {

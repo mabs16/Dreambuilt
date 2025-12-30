@@ -15,7 +15,11 @@ export class SlaService {
     @InjectQueue('sla-queue') private slaQueue: Queue,
   ) {}
 
-  async createSla(leadId: number, advisorId: number, reassignmentCount = 0) {
+  async createSla(
+    leadId: number,
+    advisorId: number,
+    reassignmentCount = 0,
+  ): Promise<SlaJob> {
     const dueAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
     // Save to DB for audit
@@ -42,7 +46,7 @@ export class SlaService {
     return savedJob;
   }
 
-  async completeSla(leadId: number) {
+  async completeSla(leadId: number): Promise<void> {
     const pendingJob = await this.slaRepository.findOne({
       where: { lead_id: leadId, status: SlaStatus.PENDING },
     });
@@ -59,7 +63,7 @@ export class SlaService {
     }
   }
 
-  async cancelSla(leadId: number) {
+  async cancelSla(leadId: number): Promise<void> {
     const pendingJob = await this.slaRepository.findOne({
       where: { lead_id: leadId, status: SlaStatus.PENDING },
     });

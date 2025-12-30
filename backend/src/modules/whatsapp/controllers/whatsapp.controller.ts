@@ -4,7 +4,6 @@ import {
   Get,
   Body,
   Query,
-  Headers,
   BadRequestException,
   Logger,
   Param,
