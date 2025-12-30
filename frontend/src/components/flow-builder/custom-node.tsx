@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
+import { cn } from "@/lib/utils";
 
 import { 
   Image as ImageIcon,
@@ -11,8 +12,7 @@ const CustomNode = ({ data }: NodeProps) => {
   const label = (data.label as string) || '';
   const mediaUrl = data.mediaUrl as string | undefined;
   const mediaType = data.mediaType as 'image' | 'document' | undefined;
-  // Determine handles position based on layout preference? 
-  // For now, let's stick to standard flow: Input Top, Output Bottom (default), Buttons Right.
+  const isIA = data.type === 'IA' || label.startsWith('🤖');
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: '40px' }}>
@@ -54,10 +54,23 @@ const CustomNode = ({ data }: NodeProps) => {
       )}
 
       {/* Node Content */}
-      <div className="node-content">
+      <div 
+        className={cn(
+          "node-content text-[11px] leading-relaxed",
+          "max-h-[160px] overflow-hidden relative"
+        )}
+      >
          {label.split('\n').map((line, i) => (
-            <div key={i} style={{ minHeight: '1em' }}>{line}</div>
+            <div key={i} style={{ minHeight: '1.2em' }}>{line}</div>
          ))}
+         
+         {label.length > 150 && (
+           <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-black/80 to-transparent pointer-events-none flex items-end justify-center pb-1">
+             <div className="text-[9px] text-white/40 font-bold uppercase tracking-wider">
+               {isIA ? '⚡ Prompt IA Completo en Editor' : 'Ver más en Editor'}
+             </div>
+           </div>
+         )}
       </div>
 
       {/* Buttons Section */}

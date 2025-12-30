@@ -33,8 +33,11 @@ import {
   Image as ImageIcon,
   FileText,
   BarChart3,
-  UserPlus
+  UserPlus,
+  ChevronLeft,
+  Menu
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import CustomNode from './custom-node';
 
 const nodeTypes = {
@@ -86,6 +89,15 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
   const [triggerKeywords, setTriggerKeywords] = useState<string>(initialData?.trigger_keywords?.join(', ') || "hola");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [advisors, setAdvisors] = useState<Array<{id: number, name: string}>>([]);
+  const [isNodesPanelOpen, setIsNodesPanelOpen] = useState(true);
+
+  // Initialize panel state based on screen size
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isMobile = window.innerWidth < 768;
+      setIsNodesPanelOpen(!isMobile);
+    }
+  }, []);
 
   // Fetch advisors when component mounts
   useEffect(() => {
@@ -333,15 +345,39 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
 
   return (
     <div className="h-screen w-full bg-black overflow-hidden relative no-scrollbar">
-      <div className="absolute top-24 left-6 z-10 bg-black/40 backdrop-blur-xl p-4 rounded-[2rem] border border-white/10 flex flex-col gap-3 shadow-2xl">
-        <div className="text-[10px] font-black text-white/40 uppercase tracking-widest px-2 mb-1">Nodos</div>
-        <ToolButton icon={MessageSquare} label="Mensaje" onClick={() => addNode('Mensaje')} color="bg-gray-500" />
-        <ToolButton icon={HelpCircle} label="Pregunta" onClick={() => addNode('Pregunta')} color="bg-blue-500" />
-        <ToolButton icon={GitBranch} label="Condición" onClick={() => addNode('Condición')} color="bg-amber-500" />
-        <ToolButton icon={Bot} label="IA Action" onClick={() => addNode('IA')} color="bg-purple-500" />
-        <ToolButton icon={Tag} label="Etiqueta" onClick={() => addNode('Tag')} color="bg-pink-500" />
-        <ToolButton icon={BarChart3} label="Pipeline" onClick={() => addNode('Pipeline')} color="bg-emerald-600" />
-        <ToolButton icon={UserPlus} label="Asignación" onClick={() => addNode('Asignación')} color="bg-amber-600" />
+      {/* Retractable Nodes Panel */}
+      <div className="absolute top-24 left-6 z-10 flex flex-col items-start gap-2">
+        <button
+          onClick={() => setIsNodesPanelOpen(!isNodesPanelOpen)}
+          className={cn(
+            "p-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl text-white/70 hover:text-white transition-all shadow-2xl",
+            isNodesPanelOpen && "rounded-b-none border-b-0"
+          )}
+          title={isNodesPanelOpen ? "Contraer Nodos" : "Expandir Nodos"}
+        >
+          {isNodesPanelOpen ? <ChevronLeft className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+
+        <AnimatePresence>
+          {isNodesPanelOpen && (
+            <motion.div
+              initial={{ opacity: 0, x: -20, scale: 0.95 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: -20, scale: 0.95 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="bg-black/40 backdrop-blur-xl p-4 rounded-[2rem] rounded-tl-none border border-white/10 flex flex-col gap-3 shadow-2xl origin-top-left"
+            >
+              <div className="text-[10px] font-black text-white/40 uppercase tracking-widest px-2 mb-1">Nodos</div>
+              <ToolButton icon={MessageSquare} label="Mensaje" onClick={() => addNode('Mensaje')} color="bg-gray-500" />
+              <ToolButton icon={HelpCircle} label="Pregunta" onClick={() => addNode('Pregunta')} color="bg-blue-500" />
+              <ToolButton icon={GitBranch} label="Condición" onClick={() => addNode('Condición')} color="bg-amber-500" />
+              <ToolButton icon={Bot} label="IA Action" onClick={() => addNode('IA')} color="bg-purple-500" />
+              <ToolButton icon={Tag} label="Etiqueta" onClick={() => addNode('Tag')} color="bg-pink-500" />
+              <ToolButton icon={BarChart3} label="Pipeline" onClick={() => addNode('Pipeline')} color="bg-emerald-600" />
+              <ToolButton icon={UserPlus} label="Asignación" onClick={() => addNode('Asignación')} color="bg-amber-600" />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
@@ -353,7 +389,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                         className="flex items-center gap-2 bg-white/5 text-white/80 px-4 py-2 rounded-xl font-bold text-sm border border-white/10 hover:bg-white/10 transition-all h-[38px]"
                     >
                         <X className="h-4 w-4" />
-                        Cancelar
+                        Cerrar
                     </button>
                 </div>
             )}
