@@ -43,6 +43,7 @@ const COLUMNS = [
     { id: "NUEVO", title: "Nuevos", color: "from-blue-500/20 to-blue-500/5", textColor: "text-blue-400" },
     { id: "PRECALIFICADO", title: "Precalificados", color: "from-purple-500/20 to-purple-500/5", textColor: "text-purple-400" },
     { id: "ASIGNADO", title: "Asignados", color: "from-emerald-500/20 to-emerald-500/5", textColor: "text-emerald-400" },
+    { id: "ASESOR_INFORMADO", title: "Asesor Informado", color: "from-cyan-500/20 to-cyan-500/5", textColor: "text-cyan-400" },
     { id: "CONTACTADO", title: "Contactados", color: "from-teal-500/20 to-teal-500/5", textColor: "text-teal-400" },
     { id: "SEGUIMIENTO", title: "Seguimiento", color: "from-amber-500/20 to-amber-500/5", textColor: "text-amber-400" },
     { id: "CITA", title: "Cita Agendada", color: "from-indigo-500/20 to-indigo-500/5", textColor: "text-indigo-400" },

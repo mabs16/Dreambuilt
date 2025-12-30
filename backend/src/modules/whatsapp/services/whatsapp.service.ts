@@ -138,7 +138,21 @@ export class WhatsappService {
     await this.messageRepository.save(msg);
 
     try {
-      const advisor = await this.advisorsService.findByPhone(from);
+      let advisor = await this.advisorsService.findByPhone(from);
+
+      // Try alternate format for Mexico numbers (521 vs 52)
+      if (!advisor && from.startsWith('52') && from.length > 10) {
+        const is521 = from.startsWith('521');
+        const altPhone = is521
+          ? '52' + from.substring(3)
+          : '521' + from.substring(2);
+        advisor = await this.advisorsService.findByPhone(altPhone);
+        if (advisor) {
+          this.logger.log(
+            `Advisor found via alternate phone format: ${altPhone}`,
+          );
+        }
+      }
 
       if (advisor) {
         return await this.handleAdvisorMessage(advisor, from, body);
@@ -484,6 +498,14 @@ export class WhatsappService {
             `Assigned lead ${session.lead_id} to advisor ${advisor.id}`,
           );
 
+          // Save Summary as Note (Persistencia solicitada)
+          await this.leadsService.addNote({
+            leadId: session.lead_id,
+            advisorId: advisor.id,
+            content: `RESUMEN IA INICIAL:\n${aiSummary}`,
+            type: 'SYSTEM_SUMMARY',
+          });
+
           // --- NOTIFY ADVISOR START ---
           try {
             const lead = await this.leadsService.findById(session.lead_id);
@@ -494,16 +516,9 @@ export class WhatsappService {
               const advConfig = advAuto?.config as AdvisorAutomationConfig;
 
               const responseLimit = advConfig?.responseTimeLimitMinutes || 15;
-              let advisorMsg = `🔔 *NUEVO LEAD ASIGNADO*\n\n👤 *Prospecto:* ${lead.name}\n📱 *Teléfono:* ${lead.phone}\n\n*RESUMEN DE PRECALIFICACIÓN:*\n${aiSummary}\n\n⚠️ *URGENCIA:* Debes responder en menos de ${responseLimit} min.\n\nAcción rápida:`;
-
-              if (advConfig?.assignmentMessage) {
-                advisorMsg = advConfig.assignmentMessage
-                  .replace(/{{lead_id}}/g, String(lead.id))
-                  .replace(/{{lead_name}}/g, lead.name)
-                  .replace(/{{phone}}/g, lead.phone)
-                  .replace(/{{summary}}/g, aiSummary)
-                  .replace(/{{response_limit}}/g, String(responseLimit));
-              }
+              
+              // MENSAJE 1: ALERTA INICIAL
+              const alertMsg = `🔔 *NUEVO LEAD ASIGNADO*\n\nℹ️ Presiona el botón de ver info para obtener detalles.\n\n⚠️ *URGENCIA:* Debes responder en menos de ${responseLimit} min. o será reasignado.`;
 
               this.logger.debug(
                 `Sending message to advisor ${advisor.phone}...`,
@@ -513,21 +528,14 @@ export class WhatsappService {
                   type: 'interactive',
                   interactive: {
                     type: 'button',
-                    body: { text: advisorMsg.substring(0, 1024) },
+                    body: { text: alertMsg },
                     action: {
                       buttons: [
                         {
                           type: 'reply',
                           reply: {
-                            id: `${lead.id} CONTACTADO`,
-                            title: '✅ CONTACTADO',
-                          },
-                        },
-                        {
-                          type: 'reply',
-                          reply: {
                             id: `${lead.id} INFO`,
-                            title: 'ℹ️ VER INFO',
+                            title: 'ℹ️ VER INFO LEAD',
                           },
                         },
                       ],
@@ -538,7 +546,7 @@ export class WhatsappService {
               } else {
                 await this.sendWhatsappMessage(
                   advisor.phone,
-                  `${advisorMsg}\n\nEscribe \`${lead.id} CONTACTADO\` para empezar.`,
+                  `${alertMsg}\n\nEscribe \`${lead.id} INFO\` para ver detalles.`,
                 );
               }
             }
@@ -1402,47 +1410,92 @@ export class WhatsappService {
 
   private async handleInfo(leadId: number, from: string) {
     const lead = await this.leadsService.findById(leadId);
-    const notes = await this.leadsService.getNotes(leadId);
 
-    // Get pre-qualification history
-    const historyKey = `bot_history:${lead.phone}`;
-    const historyRaw = await this.redis.get(historyKey);
-    let summary = 'No hay historial de precalificación.';
-
-    if (historyRaw) {
-      const history = JSON.parse(historyRaw) as Array<{
-        role: string;
-        content: string;
-      }>;
-      summary = history
-        .filter((h) => h.role === 'user' || h.role === 'model')
-        .map((h) => `${h.role === 'user' ? '👤' : '🤖'}: ${h.content}`)
-        .join('\n');
+    // Update Status to ASESOR_INFORMADO if applicable
+    if (lead.status === LeadStatus.ASIGNADO) {
+      await this.leadsService.updateStatus(leadId, LeadStatus.ASESOR_INFORMADO);
     }
 
-    const info = `
-*DETALLE DEL LEAD #${lead.id}*
-👤 Nombre: ${lead.name}
-📱 Teléfono: ${lead.phone}
-🚦 Estado: ${lead.status}
-📅 Creado: ${lead.created_at.toLocaleString()}
+    // Get Notes (Summary)
+    const notes = await this.leadsService.getNotes(leadId);
+    const summaryNote = notes.find((n) => n.type === 'SYSTEM_SUMMARY');
+    let summary = 'Sin resumen previo.';
+    
+    if (summaryNote) {
+      summary = summaryNote.content.replace('RESUMEN IA INICIAL:\n', '');
+    } else {
+       // Fallback to Redis history if needed
+       const historyKey = `bot_history:${lead.phone}`;
+       const historyRaw = await this.redis.get(historyKey);
+       if (historyRaw) {
+          const history = JSON.parse(historyRaw) as Array<{role: string, content: string}>;
+          summary = history
+             .filter((h) => h.role === 'user' || h.role === 'model')
+             .map((h) => `${h.role === 'user' ? '👤' : '🤖'}: ${h.content}`)
+             .join('\n');
+       }
+    }
 
-*RESUMEN PRECALIFICACIÓN:*
+    // Format Phone for Link (Remove '1' after '52')
+    const phoneLink = this.formatPhoneForLink(lead.phone);
+    const chatLink = `https://wa.me/${phoneLink}`;
+
+    // Get Config for limit
+    const advAuto = await this.automationsService.getConfig('advisor_automation');
+    const advConfig = advAuto?.config as AdvisorAutomationConfig;
+    const responseLimit = advConfig?.responseTimeLimitMinutes || 15;
+
+    // MENSAJE 2: DETALLES DEL LEAD
+    const msg = `Esta es el detalle de tu lead asignado:
+    
+👤 *Prospecto:* ${lead.name}
+📱 *Teléfono:* ${phoneLink}
+
+👉 *Comienza el contacto:* ${chatLink}
+
+*RESUMEN DE PRECALIFICACIÓN:*
 ${summary}
 
-*ÚLTIMAS NOTAS:*
-${
-  notes.length > 0
-    ? notes
-        .slice(0, 3)
-        .map((n) => `- ${n.content}`)
-        .join('\n')
-    : 'Sin notas.'
-}
+⚠️ *URGENCIA:* El lead debe de ser contactado desde el momento que se te asignó en menos de ${responseLimit} min. o será reasignado.
 
-Link: https://wa.me/${lead.phone}
-`;
-    await this.sendWhatsappMessage(from, info);
+✅ Presiona el botón de contactado después de tu primer mensaje con el lead.`;
+
+    if (advConfig?.enableInteractiveButtons !== false) {
+      const payload: WhatsAppPayload = {
+        type: 'interactive',
+        interactive: {
+          type: 'button',
+          body: { text: msg },
+          action: {
+            buttons: [
+              {
+                type: 'reply',
+                reply: {
+                  id: `${lead.id} CONTACTADO`,
+                  title: '✅ LEAD CONTACTADO',
+                },
+              },
+            ],
+          },
+        },
+      };
+      await this.sendWhatsappMessage(from, payload);
+    } else {
+      await this.sendWhatsappMessage(
+        from,
+        `${msg}\n\nEscribe \`${lead.id} CONTACTADO\` para confirmar.`,
+      );
+    }
+  }
+
+  private formatPhoneForLink(phone: string): string {
+    // Remove all non-digits
+    const clean = phone.replace(/\D/g, '');
+    // If Mexico (52) and has 13 digits starting with 521, remove the 1
+    if (clean.startsWith('52') && clean.length === 13 && clean[2] === '1') {
+      return '52' + clean.substring(3);
+    }
+    return clean;
   }
 
   async sendWelcomeMessage(to: string, leadName?: string) {
