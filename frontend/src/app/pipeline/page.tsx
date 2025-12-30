@@ -62,6 +62,15 @@ interface TimelineEvent {
     advisor?: string;
 }
 
+const parseUTC = (dateStr: string) => {
+    if (!dateStr) return new Date();
+    // Si la fecha no termina en Z o tiene un offset (+/-), asumimos que es UTC y lo añadimos
+    const normalized = (dateStr.endsWith('Z') || dateStr.includes('+') || (dateStr.match(/-[0-9]{2}:[0-9]{2}$/))) 
+        ? dateStr 
+        : `${dateStr.replace(' ', 'T')}Z`;
+    return new Date(normalized);
+};
+
 export default function PipelinePage() {
     const [leads, setLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
@@ -109,7 +118,7 @@ export default function PipelinePage() {
                     icon: n.type === 'SYSTEM_SUMMARY' ? MessageSquare : MoreHorizontal,
                     advisor: n.advisors?.name
                 }))
-            ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            ].sort((a, b) => parseUTC(b.date).getTime() - parseUTC(a.date).getTime());
 
             setTimelineEvents(combined);
         } catch (err) {
@@ -150,7 +159,12 @@ export default function PipelinePage() {
                 return {
                     ...lead,
                     advisor: activeAssignment?.advisors?.name,
-                    time: new Date(lead.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    time: parseUTC(lead.created_at).toLocaleTimeString('es-MX', { 
+                        timeZone: 'America/Cancun',
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: true 
+                    })
                 };
             });
             setLeads(processed);
@@ -375,7 +389,7 @@ export default function PipelinePage() {
                                         </h3>
                                         <div className="grid gap-5 bg-white/2 p-8 rounded-[2.5rem] border border-white/5 backdrop-blur-sm">
                                             <InfoRow label="Fuente de Captación" value={selectedLead.source || "Directo"} />
-                                            <InfoRow label="Fecha de Registro" value={new Date(selectedLead.created_at).toLocaleString('es-MX', { 
+                                            <InfoRow label="Fecha de Registro" value={parseUTC(selectedLead.created_at).toLocaleString('es-MX', { 
                                                 timeZone: 'America/Cancun',
                                                 day: 'numeric', 
                                                 month: 'long', 
@@ -415,7 +429,7 @@ export default function PipelinePage() {
                                                             <div className="flex items-center justify-between">
                                                                 <p className="text-sm font-black text-white group-hover:text-primary transition-colors">{item.title}</p>
                                                                 <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">
-                                                                    {new Date(item.date).toLocaleTimeString('es-MX', {
+                                                                    {parseUTC(item.date).toLocaleTimeString('es-MX', {
                                                                         timeZone: 'America/Cancun',
                                                                         hour: '2-digit', 
                                                                         minute: '2-digit' 

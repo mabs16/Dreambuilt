@@ -21,6 +21,14 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
+const parseUTC = (dateStr: string) => {
+  if (!dateStr) return new Date();
+  const normalized = (dateStr.endsWith('Z') || dateStr.includes('+') || (dateStr.match(/-[0-9]{2}:[0-9]{2}$/))) 
+    ? dateStr 
+    : `${dateStr.replace(' ', 'T')}Z`;
+  return new Date(normalized);
+};
+
 interface Advisor {
   id: string;
   name: string;
@@ -99,12 +107,12 @@ export default function Home() {
           ...e,
           leadName: e.leads?.name,
           advisorName: e.advisors?.name,
-          time: new Date(e.created_at).toLocaleTimeString('es-MX', { 
+          time: parseUTC(e.created_at).toLocaleTimeString('es-MX', { 
             timeZone: 'America/Cancun',
             hour: '2-digit', 
             minute: '2-digit' 
           }),
-          date: new Date(e.created_at).toLocaleDateString('es-MX', { 
+          date: parseUTC(e.created_at).toLocaleDateString('es-MX', { 
             timeZone: 'America/Cancun',
             day: '2-digit', 
             month: 'short' 

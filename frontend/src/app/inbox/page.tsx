@@ -22,6 +22,14 @@ import Image from "next/image";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
+const parseUTC = (dateStr: string) => {
+    if (!dateStr) return new Date();
+    const normalized = (dateStr.endsWith('Z') || dateStr.includes('+') || (dateStr.match(/-[0-9]{2}:[0-9]{2}$/))) 
+        ? dateStr 
+        : `${dateStr.replace(' ', 'T')}Z`;
+    return new Date(normalized);
+};
+
 interface ChatContact {
     contact: string;
     name?: string;
@@ -166,7 +174,7 @@ function InboxContent() {
     };
 
     const formatMessageTime = (dateStr: string) => {
-        const date = new Date(dateStr);
+        const date = parseUTC(dateStr);
         
         // Helper to get time in Cancun
         const getTimeInCancun = (d: Date) => {
