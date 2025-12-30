@@ -1577,12 +1577,28 @@ Link: https://wa.me/${lead.phone}
         let foundLead = await this.leadsService.findByPhone(cleanTo);
 
         // If not found and cleaned number is different from original, try original
-        // This is common for Mexico numbers (521... vs 52...)
         if (!foundLead && cleanTo !== to) {
           this.logger.debug(
             `Lead not found with ${cleanTo}, trying original ${to}`,
           );
           foundLead = await this.leadsService.findByPhone(to);
+        }
+
+        // Specific check for Mexico numbers (52 vs 521)
+        if (!foundLead && cleanTo.startsWith('52') && cleanTo.length === 12) {
+          // Try adding '1' after '52'
+          const mexicoAlt = '521' + cleanTo.substring(2);
+          this.logger.debug(`Trying Mexico alternative: ${mexicoAlt}`);
+          foundLead = await this.leadsService.findByPhone(mexicoAlt);
+        } else if (
+          !foundLead &&
+          cleanTo.startsWith('521') &&
+          cleanTo.length === 13
+        ) {
+          // Try removing '1' after '52'
+          const mexicoAlt = '52' + cleanTo.substring(3);
+          this.logger.debug(`Trying Mexico alternative: ${mexicoAlt}`);
+          foundLead = await this.leadsService.findByPhone(mexicoAlt);
         }
 
         if (foundLead) {
@@ -1679,46 +1695,96 @@ Link: https://wa.me/${lead.phone}
 
     // We want the LATEST message for each partner.
 
-    // Step 1: Get the latest message ID for each conversation partner
+    // Logic to determine partner phone for fallback
+    const partnerPhoneSql = `CASE 
+          WHEN m_sub.from = 'SYSTEM' THEN m_sub.to
+          WHEN m_sub.to = 'SYSTEM' THEN m_sub.from
+          ELSE (CASE WHEN m_sub.direction = 'outbound' THEN m_sub.to ELSE m_sub.from END)
+        END`;
+
+    // Step 1: Get the latest message ID/Timestamp for each conversation
+    // Grouping by Lead ID (if available) takes precedence over Phone
     const subQuery = this.messageRepository
       .createQueryBuilder('m_sub')
       .select('MAX(m_sub.created_at)', 'max_ts')
       .addSelect(
-        `CASE 
-          WHEN m_sub.from = 'SYSTEM' THEN m_sub.to
-          WHEN m_sub.to = 'SYSTEM' THEN m_sub.from
-          ELSE (CASE WHEN m_sub.direction = 'outbound' THEN m_sub.to ELSE m_sub.from END)
-        END`,
-        'partner_phone',
+        `COALESCE(CAST(m_sub.lead_id AS VARCHAR), ${partnerPhoneSql})`,
+        'conversation_key',
       )
-      .groupBy('partner_phone');
+      .groupBy('conversation_key');
+
+    // Logic to determine partner phone for the main query
+    const messagePartnerPhoneSql = `CASE 
+          WHEN message.from = 'SYSTEM' THEN message.to
+          WHEN message.to = 'SYSTEM' THEN message.from
+          ELSE (CASE WHEN message.direction = 'outbound' THEN message.to ELSE message.from END)
+        END`;
 
     // Step 2: Join back to get message details
-    return this.messageRepository
-      .createQueryBuilder('message')
-      .innerJoin(
-        `(${subQuery.getQuery()})`,
-        'latest',
-        "message.created_at = latest.max_ts AND (CASE WHEN message.from = 'SYSTEM' THEN message.to WHEN message.to = 'SYSTEM' THEN message.from ELSE (CASE WHEN message.direction = 'outbound' THEN message.to ELSE message.from END) END) = latest.partner_phone",
-      )
-      .leftJoin('leads', 'leads', 'leads.phone = latest.partner_phone')
-      .select('latest.partner_phone', 'contact')
-      .addSelect('COALESCE(leads.name, latest.partner_phone)', 'name')
-      .addSelect('message.body', 'lastMessage')
-      .addSelect('message.created_at', 'timestamp')
-      .addSelect('leads.avatar_url', 'avatar')
-      .addSelect('message.direction', 'direction')
-      .orderBy('message.created_at', 'DESC')
-      .getRawMany();
+    return (
+      this.messageRepository
+        .createQueryBuilder('message')
+        .innerJoin(
+          `(${subQuery.getQuery()})`,
+          'latest',
+          `message.created_at = latest.max_ts AND 
+           COALESCE(CAST(message.lead_id AS VARCHAR), ${messagePartnerPhoneSql}) = latest.conversation_key`,
+        )
+        // Join leads. We try to match by ID first (more reliable), then by phone.
+        .leftJoin(
+          'leads',
+          'leads',
+          `leads.id = message.lead_id OR leads.phone = ${messagePartnerPhoneSql}`,
+        )
+        .select(`COALESCE(leads.phone, ${messagePartnerPhoneSql})`, 'contact')
+        .addSelect(
+          `COALESCE(leads.name, leads.phone, ${messagePartnerPhoneSql})`,
+          'name',
+        )
+        .addSelect('message.body', 'lastMessage')
+        .addSelect('message.created_at', 'timestamp')
+        .addSelect('leads.avatar_url', 'avatar')
+        .addSelect('message.direction', 'direction')
+        .addSelect('leads.id', 'leadId')
+        .orderBy('message.created_at', 'DESC')
+        .getRawMany()
+    );
   }
 
   async getMessageHistory(phone: string) {
+    // Try to find a lead first to get all messages associated with the lead
+    // Use the same robust search as in sendOutboundMessage
+    let lead = await this.leadsService.findByPhone(phone);
+
+    const altPhones = [phone];
+    if (phone.startsWith('52') && phone.length === 12) {
+      const alt = '521' + phone.substring(2);
+      altPhones.push(alt);
+      if (!lead) lead = await this.leadsService.findByPhone(alt);
+    } else if (phone.startsWith('521') && phone.length === 13) {
+      const alt = '52' + phone.substring(3);
+      altPhones.push(alt);
+      if (!lead) lead = await this.leadsService.findByPhone(alt);
+    }
+
+    if (lead) {
+      return this.messageRepository.find({
+        where: [
+          { leadId: lead.id }, // Primary check: messages linked to this lead
+          // Fallback: unlinked messages from/to this phone OR its alternative
+          ...altPhones.map((p) => ({ from: p })),
+          ...altPhones.map((p) => ({ to: p })),
+        ],
+        order: { createdAt: 'ASC' },
+        take: 100,
+      });
+    }
+
+    // If no lead found, just search by phones
     return this.messageRepository.find({
       where: [
-        { from: phone },
-        { to: phone },
-        // Also include system messages related to this lead if we tracked lead_id
-        // But since we track by phone, let's make sure we get everything
+        ...altPhones.map((p) => ({ from: p })),
+        ...altPhones.map((p) => ({ to: p })),
       ],
       order: { createdAt: 'ASC' },
       take: 100,
