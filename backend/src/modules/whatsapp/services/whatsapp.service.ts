@@ -814,15 +814,17 @@ export class WhatsappService {
     advisor: Advisor,
     from: string,
     body: string,
+    buttonId?: string,
   ) {
     // 1. Check if advisor is in a specific state (e.g., waiting for notes)
     const stateKey = `advisor_state:${from}`;
     const stateRaw = await this.redis.get(stateKey);
 
     // If it's a command, we prioritize parsing it even if in a state
+    const commandText = buttonId || body;
     let parsed: ParsedCommand | null = null;
     try {
-      parsed = this.commandParser.parse(body);
+      parsed = this.commandParser.parse(commandText);
     } catch {
       // Not a command, proceed to state check or ignore
     }

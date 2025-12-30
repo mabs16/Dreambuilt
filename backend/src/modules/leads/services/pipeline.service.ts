@@ -7,6 +7,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ScoresService } from '../../scores/scores.service';
 import { SlaService } from '../../sla/services/sla.service';
 
+import { AssignmentsService } from '../../assignments/assignments.service';
+
 @Injectable()
 export class PipelineService {
   private readonly logger = new Logger(PipelineService.name);
@@ -17,6 +19,7 @@ export class PipelineService {
     private readonly eventEmitter: EventEmitter2,
     private readonly scoresService: ScoresService,
     private readonly slaService: SlaService,
+    private readonly assignmentsService: AssignmentsService,
   ) {}
 
   @OnEvent('command.contactado')
