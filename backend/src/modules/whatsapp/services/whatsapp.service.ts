@@ -498,13 +498,17 @@ export class WhatsappService {
             `Assigned lead ${session.lead_id} to advisor ${advisor.id}`,
           );
 
-          // Save Summary as Note (Persistencia solicitada)
-          await this.leadsService.addNote({
-            leadId: session.lead_id,
-            advisorId: advisor.id,
-            content: `RESUMEN IA INICIAL:\n${aiSummary}`,
-            type: 'SYSTEM_SUMMARY',
-          });
+          // Save Summary as Note only if it's not already "Sin resumen previo"
+          // In Flow Engine, the IA node should have already created this.
+          // This block is more for legacy/manual assignment logic.
+          if (aiSummary && aiSummary !== 'Sin resumen previo.') {
+            await this.leadsService.addNote({
+              leadId: session.lead_id,
+              advisorId: advisor.id,
+              content: `RESUMEN IA INICIAL:\n${aiSummary}`,
+              type: 'SYSTEM_SUMMARY',
+            });
+          }
 
           // --- NOTIFY ADVISOR START ---
           try {
@@ -635,8 +639,16 @@ export class WhatsappService {
         await this.flowsService.updateSessionVariables(session.id, {
           ai_summary: summary,
         });
+
+        // 5. Persist Summary as Lead Note (Crucial for Advisor Info)
+        await this.leadsService.addNote({
+          leadId: session.lead_id,
+          content: `RESUMEN IA INICIAL:\n${summary}`,
+          type: 'SYSTEM_SUMMARY',
+        });
+
         this.logger.log(
-          `IA Summary generated and saved for lead ${session.lead_id}`,
+          `IA Summary generated, saved to session and persisted as note for lead ${session.lead_id}`,
         );
 
         // Move to next node immediately
