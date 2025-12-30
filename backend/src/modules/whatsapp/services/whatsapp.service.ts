@@ -317,7 +317,9 @@ export class WhatsappService {
           currentNode.data.label.toLowerCase().includes('ia action:'))
       ) {
         // Redirigir a la lógica de ejecución de IA que está más abajo
-        this.logger.log(`Routing to IA Execution logic for lead ${session.lead_id}`);
+        this.logger.log(
+          `Routing to IA Execution logic for lead ${session.lead_id}`,
+        );
       } else if (
         currentNode.type === 'Etiqueta' ||
         currentNode.data?.type === 'Tag' || // Check explicit type from data
