@@ -155,7 +155,7 @@ export class WhatsappService {
       }
 
       if (advisor) {
-        return await this.handleAdvisorMessage(advisor, from, body);
+        return await this.handleAdvisorMessage(advisor, from, body, buttonId);
       }
 
       // Not an advisor, check if bot is active and handle as lead

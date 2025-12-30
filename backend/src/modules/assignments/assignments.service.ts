@@ -39,10 +39,22 @@ export class AssignmentsService {
   }
 
   async createAssignment(leadId: number, advisorId: number) {
-    const assignment = this.assignmentsRepository.create({
-      lead_id: leadId,
-      advisor_id: advisorId,
-    });
-    return this.assignmentsRepository.save(assignment);
+    this.logger.log(
+      `Creating assignment for lead ${leadId} -> advisor ${advisorId}`,
+    );
+    try {
+      const assignment = this.assignmentsRepository.create({
+        lead_id: leadId,
+        advisor_id: advisorId,
+      });
+      const saved = await this.assignmentsRepository.save(assignment);
+      this.logger.log(
+        `Assignment saved successfully: ${JSON.stringify(saved)}`,
+      );
+      return saved;
+    } catch (error) {
+      this.logger.error(`Failed to create assignment: ${error}`);
+      throw error;
+    }
   }
 }

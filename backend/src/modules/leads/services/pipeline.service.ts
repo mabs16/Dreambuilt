@@ -107,13 +107,29 @@ export class PipelineService {
 
   @OnEvent('pipeline.assign')
   async handleAssign(payload: { leadId: number; advisorId: number }) {
-    await this.transitionLead(
-      payload.leadId,
-      payload.advisorId,
-      LeadStatus.ASIGNADO,
+    this.logger.log(
+      `Handling assignment event for lead ${payload.leadId} to advisor ${payload.advisorId}`,
     );
-    // Start SLA
-    await this.slaService.createSla(payload.leadId, payload.advisorId);
+    try {
+      const assignment = await this.assignmentsService.createAssignment(
+        payload.leadId,
+        payload.advisorId,
+      );
+      this.logger.log(`Assignment created with ID: ${assignment.id}`);
+
+      await this.transitionLead(
+        payload.leadId,
+        payload.advisorId,
+        LeadStatus.ASIGNADO,
+      );
+      // Start SLA
+      await this.slaService.createSla(payload.leadId, payload.advisorId);
+    } catch (error) {
+      this.logger.error(
+        `Error in handleAssign: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw error;
+    }
   }
 
   private async transitionLead(
