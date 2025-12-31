@@ -1,21 +1,55 @@
 import React, { memo } from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import { Handle, Position, NodeProps, NodeToolbar } from '@xyflow/react';
 import { cn } from "@/lib/utils";
 
 import { 
   Image as ImageIcon,
-  FileText
+  FileText,
+  Copy,
+  Trash2
 } from 'lucide-react';
 
-const CustomNode = ({ data }: NodeProps) => {
+  const CustomNode = ({ id, data, selected }: NodeProps) => {
   const buttons = (data.buttons as Array<{ id: string; text: string }>) || [];
   const label = (data.label as string) || '';
   const mediaUrl = data.mediaUrl as string | undefined;
   const mediaType = data.mediaType as 'image' | 'document' | undefined;
+  const autoContinue = data.autoContinue as boolean | undefined;
   const isIA = data.type === 'IA' || label.startsWith('🤖');
+
+  const onDuplicate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.dispatchEvent(new CustomEvent('duplicate-node', { detail: { nodeId: id } }));
+  };
+
+  const onDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.dispatchEvent(new CustomEvent('delete-node', { detail: { nodeId: id } }));
+  };
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: '40px' }}>
+      <NodeToolbar 
+        isVisible={selected} 
+        position={Position.Top}
+        className="flex gap-1 bg-gray-900 border border-white/20 rounded-lg p-1 shadow-xl"
+      >
+        <button 
+          onClick={onDuplicate}
+          className="p-1.5 hover:bg-white/10 rounded text-primary transition-colors"
+          title="Duplicar nodo"
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </button>
+        <button 
+          onClick={onDelete}
+          className="p-1.5 hover:bg-red-500/20 rounded text-red-500 transition-colors"
+          title="Eliminar nodo"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </NodeToolbar>
+
       {/* Input Handle - Always present */}
       <Handle 
         type="target" 
@@ -112,22 +146,30 @@ const CustomNode = ({ data }: NodeProps) => {
         </div>
       )}
 
-      {/* Default Output Handle - Only if NO buttons, or as a fallback? 
-          ManyChat usually removes the default output if buttons are present, 
-          forcing the user to choose a path. 
-          However, for "Next Step" logic without buttons, we need it.
-          Let's keep it if no buttons are present.
+      {/* Default Output Handle 
+          - For regular nodes: only if NO buttons
+          - For Condition nodes: ALWAYS (as the "True" path)
+          - For Auto-Continue: ALWAYS (as the automatic path)
       */}
-      {buttons.length === 0 && (
+      {(buttons.length === 0 || label.startsWith('⚡') || autoContinue) && (
         <Handle 
             type="source" 
             position={Position.Bottom} 
+            id="main"
+            className="w-3 h-3 border-2 border-white shadow-sm"
             style={{ 
-                background: '#fff',
-                width: '10px',
-                height: '10px',
+                background: label.startsWith('⚡') ? '#10b981' : (autoContinue ? '#3b82f6' : '#fff'),
+                bottom: '-6px',
+                zIndex: 50
             }} 
         />
+      )}
+      
+      {/* Auto-Continue Label Indicator */}
+      {autoContinue && (
+        <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] text-blue-400 font-bold uppercase tracking-tighter whitespace-nowrap bg-blue-400/10 px-1 rounded border border-blue-400/20 pointer-events-none z-0">
+          Auto-Continuar
+        </div>
       )}
     </div>
   );

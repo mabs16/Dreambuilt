@@ -261,6 +261,21 @@ export class WhatsappService {
       // User just answered the question of 'currentNode'
       if (currentNode.data && currentNode.data.variable) {
         const varName = currentNode.data.variable;
+
+        // SPECIAL CASE: If variable is 'name', update the lead name in database
+        if (varName === 'name') {
+          try {
+            await this.leadsService.updateName(session.lead_id, userMessage);
+            this.logger.log(
+              `Updated lead ${session.lead_id} name to: ${userMessage}`,
+            );
+          } catch (error) {
+            this.logger.error(
+              `Failed to update lead name: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          }
+        }
+
         await this.flowsService.updateSessionVariables(session.id, {
           [varName]: userMessage,
           _waiting_for_input: false,
@@ -287,6 +302,81 @@ export class WhatsappService {
 
       // 2. Variable Substitution (e.g., {{name}})
       const lead = await this.leadsService.findById(session.lead_id);
+
+      // Check if node is "Condición"
+      if (
+        currentNode.type === 'Condición' ||
+        currentNode.data?.type === 'Condición' ||
+        (currentNode.data?.label &&
+          currentNode.data.label.toLowerCase().includes('condición:'))
+      ) {
+        this.logger.log(`Executing Condition Node for lead ${session.lead_id}`);
+        const label = (currentNode.data?.label as string) || '';
+        let conditionMet = false;
+
+        if (label.includes('¿Tiene nombre')) {
+          // Check if lead has a real name (not 'Prospecto WhatsApp' or similar)
+          const name = lead?.name || '';
+          conditionMet =
+            name.length > 0 &&
+            !name.toLowerCase().includes('prospecto') &&
+            !name.toLowerCase().includes('whatsapp');
+          this.logger.log(
+            `Condition "Has Name" check: ${conditionMet} (Name: ${name})`,
+          );
+        } else if (label.includes('contiene')) {
+          // Check if message contains keyword
+          const match = label.match(/'([^']+)'/);
+          const keyword = match ? match[1].toLowerCase() : '';
+          conditionMet = userMessage.toLowerCase().includes(keyword);
+          this.logger.log(
+            `Condition "Contains '${keyword}'" check: ${conditionMet}`,
+          );
+        }
+
+        // Routing logic for Condition
+        let nextNodeId: string | null = null;
+        if (conditionMet) {
+          // Use main handle (sourceHandle === 'main' or null)
+          const edge = edges.find(
+            (e) =>
+              e.source === currentNodeId &&
+              (e.sourceHandle === 'main' || !e.sourceHandle),
+          );
+          nextNodeId = edge?.target || null;
+        } else {
+          // Use the "False" handle (the first button handle)
+          const edge = edges.find(
+            (e) =>
+              e.source === currentNodeId &&
+              e.sourceHandle &&
+              e.sourceHandle.startsWith('btn-'),
+          );
+          nextNodeId = edge?.target || null;
+        }
+
+        if (nextNodeId) {
+          await this.flowsService.updateSessionNode(session.id, nextNodeId);
+          const updatedSession = await this.flowsService.findOneSession(
+            session.id,
+          );
+          if (updatedSession) {
+            updatedSession.flow = flow;
+            return await this.executeFlowStep(
+              updatedSession,
+              userMessage,
+              from,
+            );
+          }
+        } else {
+          this.logger.warn(
+            `No next node found for condition result: ${conditionMet}`,
+          );
+          await this.flowsService.completeSession(session.id);
+          return;
+        }
+      }
+
       if (lead) {
         messageToSend = messageToSend.replace(
           /{{name}}/gi,

@@ -34,14 +34,23 @@ import {
   FileText,
   BarChart3,
   UserPlus,
+  User,
+  Mail,
   ChevronLeft,
-  Menu
+  Menu,
+  Download,
+  FileJson
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomNode from './custom-node';
+import RemovableEdge from './removable-edge';
 
 const nodeTypes = {
   messageNode: CustomNode,
+};
+
+const edgeTypes = {
+  removable: RemovableEdge,
 };
 
 interface FlowButton {
@@ -67,7 +76,7 @@ const initialNodes: Node[] = [
 ];
 
 const initialEdges: Edge[] = [
-  { id: 'e1-2', source: '1', target: '2', animated: true, style: { stroke: '#10b981' } },
+  { id: 'e1-2', source: '1', target: '2', animated: true, type: 'removable', style: { stroke: '#10b981' } },
 ];
 
 interface FlowEditorProps {
@@ -116,6 +125,55 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
     fetchAdvisors();
   }, []);
 
+  const deleteSelectedNode = () => {
+    if (!selectedNodeId) return;
+    setNodes((nds) => nds.filter((node) => node.id !== selectedNodeId));
+    setEdges((eds) => eds.filter((edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId));
+    setSelectedNodeId(null);
+  };
+
+  const duplicateNode = useCallback((nodeId: string) => {
+    const nodeToDuplicate = nodes.find(n => n.id === nodeId);
+    if (!nodeToDuplicate) return;
+
+    const newId = `node_${Math.random().toString(36).substr(2, 9)}`;
+    const newNode: Node = {
+      ...nodeToDuplicate,
+      id: newId,
+      position: {
+        x: nodeToDuplicate.position.x + 40,
+        y: nodeToDuplicate.position.y + 40,
+      },
+      selected: false,
+    };
+
+    setNodes((nds) => nds.concat(newNode));
+    setSelectedNodeId(newId);
+  }, [nodes]);
+
+  useEffect(() => {
+    const handleDuplicateEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ nodeId: string }>;
+      if (customEvent.detail && customEvent.detail.nodeId) {
+        duplicateNode(customEvent.detail.nodeId);
+      }
+    };
+    const handleDeleteEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ nodeId: string }>;
+      if (customEvent.detail && customEvent.detail.nodeId) {
+        setNodes((nds) => nds.filter((node) => node.id !== customEvent.detail.nodeId));
+        setEdges((eds) => eds.filter((edge) => edge.source !== customEvent.detail.nodeId && edge.target !== customEvent.detail.nodeId));
+        setSelectedNodeId(null);
+      }
+    };
+    window.addEventListener('duplicate-node', handleDuplicateEvent);
+    window.addEventListener('delete-node', handleDeleteEvent);
+    return () => {
+      window.removeEventListener('duplicate-node', handleDuplicateEvent);
+      window.removeEventListener('delete-node', handleDeleteEvent);
+    };
+  }, [duplicateNode]);
+
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
     [],
@@ -125,7 +183,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
     [],
   );
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#10b981' } }, eds)),
+    (params: Connection) => setEdges((eds) => addEdge({ ...params, type: 'removable', animated: true, style: { stroke: '#10b981', strokeWidth: 2 } }, eds)),
     [],
   );
 
@@ -141,6 +199,13 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === selectedNodeId) {
+          // If it's a capture node, we only want to update the text part, not the prefix
+          if (node.data.type === 'CapturaNombre' || node.data.type === 'CapturaEmail') {
+            const prefix = node.data.type === 'CapturaNombre' ? "👤 Solicitar Nombre:\n" : "📧 Solicitar Email:\n";
+            // If the label doesn't start with the prefix (user might have deleted it), we re-add it
+            const newLabel = label.startsWith(prefix) ? label : prefix + label;
+            return { ...node, data: { ...node.data, label: newLabel } };
+          }
           return { ...node, data: { ...node.data, label } };
         }
         return node;
@@ -228,13 +293,6 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
     updateNodeButtons(newButtons);
   };
 
-  const deleteSelectedNode = () => {
-    if (!selectedNodeId) return;
-    setNodes((nds) => nds.filter((node) => node.id !== selectedNodeId));
-    setEdges((eds) => eds.filter((edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId));
-    setSelectedNodeId(null);
-  };
-
   const addNode = (type: string) => {
     const id = Math.random().toString();
     let label = "";
@@ -254,7 +312,17 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
             label = "⚡ Condición:\nSi el mensaje contiene...";
             style.background = '#f59e0b';
             style.border = 'none';
-            break;
+            // Automatically add a "No cumple" button for the false path
+            const falseButton = { id: 'false-' + Math.random().toString(36).substr(2, 4), text: '❌ No cumple' };
+            const newNodeCond: Node = {
+              id,
+              type: 'messageNode',
+              position: { x: 100, y: 100 },
+              data: { label, type, buttons: [falseButton] },
+              style
+            };
+            setNodes((nds) => nds.concat(newNodeCond));
+            return;
         case 'IA':
             label = "🤖 Acción IA:\nAnalizar sentimiento...";
             style.background = '#8b5cf6';
@@ -275,6 +343,16 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
             style.background = '#d97706'; // Amber-600
             style.border = 'none';
             break;
+        case 'CapturaNombre':
+            label = "👤 Solicitar Nombre:\n¿Cómo te llamas?";
+            style.background = '#6366f1'; // Indigo-500
+            style.border = 'none';
+            break;
+        case 'CapturaEmail':
+            label = "📧 Solicitar Email:\n¿Cuál es tu correo electrónico?";
+            style.background = '#06b6d4'; // Cyan-500
+            style.border = 'none';
+            break;
         default:
             label = `Nuevo ${type}`;
     }
@@ -283,7 +361,12 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
       id,
       type: 'messageNode',
       position: { x: 100, y: 100 },
-      data: { label, type }, // Store logical type in data
+      data: { 
+        label, 
+        type,
+        ...(type === 'CapturaNombre' ? { variable: 'name' } : {}),
+        ...(type === 'CapturaEmail' ? { variable: 'email' } : {})
+      }, // Store logical type in data
       style
     };
     setNodes((nds) => nds.concat(newNode));
@@ -341,6 +424,55 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
     }
   };
 
+  const exportToJson = () => {
+    const flowData = {
+      name: flowName,
+      nodes,
+      edges,
+      trigger_keywords: triggerKeywords.split(',').map(k => k.trim()).filter(k => k !== ""),
+      exported_at: new Date().toISOString(),
+      version: "1.0"
+    };
+
+    const dataStr = JSON.stringify(flowData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `${flowName.replace(/\s+/g, '_').toLowerCase()}_export.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
+  const importFromJson = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        
+        if (json.nodes && json.edges) {
+          setNodes(json.nodes);
+          setEdges(json.edges);
+          if (json.name) setFlowName(json.name + " (Importado)");
+          if (json.trigger_keywords) setTriggerKeywords(json.trigger_keywords.join(', '));
+          alert('Flujo importado correctamente');
+        } else {
+          alert('El archivo JSON no tiene un formato de flujo válido');
+        }
+      } catch (error) {
+        console.error('Error parsing JSON:', error);
+        alert('Error al leer el archivo JSON');
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so the same file can be imported again
+    e.target.value = '';
+  };
+
   const selectedNode = nodes.find(n => n.id === selectedNodeId);
 
   return (
@@ -375,6 +507,9 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
               <ToolButton icon={Tag} label="Etiqueta" onClick={() => addNode('Tag')} color="bg-pink-500" />
               <ToolButton icon={BarChart3} label="Pipeline" onClick={() => addNode('Pipeline')} color="bg-emerald-600" />
               <ToolButton icon={UserPlus} label="Asignación" onClick={() => addNode('Asignación')} color="bg-amber-600" />
+              <div className="h-px bg-white/5 mx-2 my-1" />
+              <ToolButton icon={User} label="Captura Nombre" onClick={() => addNode('CapturaNombre')} color="bg-indigo-500" />
+              <ToolButton icon={Mail} label="Captura Email" onClick={() => addNode('CapturaEmail')} color="bg-cyan-500" />
             </motion.div>
           )}
         </AnimatePresence>
@@ -412,6 +547,31 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                     onChange={(e) => setTriggerKeywords(e.target.value)}
                     className="bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50 w-64"
                 />
+            </div>
+            <div className="flex items-end pb-0.5">
+                <label 
+                    className="flex items-center gap-2 bg-white/5 text-white/80 px-4 py-2 rounded-xl font-bold text-sm border border-white/10 hover:bg-white/10 transition-all h-[38px] cursor-pointer"
+                    title="Importar flujo desde JSON"
+                >
+                    <FileJson className="h-4 w-4" />
+                    Importar JSON
+                    <input 
+                        type="file" 
+                        accept=".json" 
+                        onChange={importFromJson} 
+                        className="hidden" 
+                    />
+                </label>
+            </div>
+            <div className="flex items-end pb-0.5">
+                <button 
+                    onClick={exportToJson}
+                    className="flex items-center gap-2 bg-white/5 text-white/80 px-4 py-2 rounded-xl font-bold text-sm border border-white/10 hover:bg-white/10 transition-all h-[38px]"
+                    title="Exportar flujo a JSON"
+                >
+                    <Download className="h-4 w-4" />
+                    Exportar JSON
+                </button>
             </div>
             <div className="flex items-end pb-0.5">
                 <button 
@@ -454,8 +614,35 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                         )}
                     </div>
 
-                    {/* Conditional Input for Pipeline Node */}
-                    {(selectedNode.data.label as string)?.startsWith('📊') ? (
+                    {/* Conditional Input for Name/Email Node */}
+                    {(selectedNode.data.label as string)?.startsWith('👤') || (selectedNode.data.label as string)?.startsWith('📧') ? (
+                         <div className="flex flex-col gap-2">
+                             <p className="text-[10px] text-white/40 mb-1">Personaliza la pregunta para el lead:</p>
+                             <textarea 
+                                value={(() => {
+                                    const label = selectedNode.data.label as string;
+                                    const prefix = (selectedNode.data.type === 'CapturaNombre' || label.startsWith('👤')) 
+                                        ? "👤 Solicitar Nombre:\n" 
+                                        : "📧 Solicitar Email:\n";
+                                    return label.startsWith(prefix) ? label.replace(prefix, "") : label;
+                                })()}
+                                onChange={(e) => updateNodeLabel(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50 h-24 resize-none"
+                                placeholder="Escribe la pregunta aquí..."
+                             />
+                             <div className="flex items-center gap-2 mt-1">
+                                <div className={cn(
+                                     "px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider",
+                                     (selectedNode.data.label as string)?.startsWith('👤') ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30" : "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                 )}>
+                                     Variable: {(selectedNode.data.variable as string) || ((selectedNode.data.label as string)?.startsWith('👤') ? 'name' : 'email')}
+                                 </div>
+                             </div>
+                             <p className="text-[10px] text-primary/80 bg-primary/10 p-2 rounded-lg border border-primary/20 mt-2">
+                                 Tip: El flujo se detendrá aquí hasta que el lead responda. La respuesta se guardará automáticamente en la variable indicada arriba.
+                             </p>
+                         </div>
+                    ) : (selectedNode.data.label as string)?.startsWith('📊') ? (
                          <div className="flex flex-col gap-2">
                              <p className="text-[10px] text-white/40 mb-1">Selecciona la acción del pipeline:</p>
                              <div className="flex gap-2">
@@ -483,6 +670,63 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                                  </button>
                              </div>
                          </div>
+                    ) : (selectedNode.data.label as string)?.startsWith('⚡') ? (
+                        <div className="flex flex-col gap-3">
+                            <p className="text-[10px] text-white/40 mb-1">Tipo de Condición:</p>
+                            <div className="space-y-2">
+                                <button
+                                    onClick={() => updateNodeLabel("⚡ Condición:\nSi el mensaje contiene...")}
+                                    className={cn(
+                                        "w-full py-2 px-3 rounded-lg text-xs font-bold border transition-all text-left flex items-center justify-between",
+                                        (selectedNode.data.label as string).includes("contiene")
+                                            ? "bg-amber-600 border-amber-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                                            : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
+                                    )}
+                                >
+                                    <span>Contenido de Mensaje</span>
+                                    {(selectedNode.data.label as string).includes("contiene") && <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />}
+                                </button>
+                                
+                                <button
+                                    onClick={() => updateNodeLabel("⚡ Condición:\n¿Tiene nombre el Lead?")}
+                                    className={cn(
+                                        "w-full py-2 px-3 rounded-lg text-xs font-bold border transition-all text-left flex items-center justify-between",
+                                        (selectedNode.data.label as string).includes("¿Tiene nombre")
+                                            ? "bg-amber-600 border-amber-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                                            : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
+                                    )}
+                                >
+                                    <span>Validar Nombre del Lead</span>
+                                    {(selectedNode.data.label as string).includes("¿Tiene nombre") && <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />}
+                                </button>
+                            </div>
+
+                            {(selectedNode.data.label as string).includes("contiene") && (
+                                <div className="mt-2">
+                                    <p className="text-[10px] text-white/40 mb-1">Palabra clave a buscar:</p>
+                                    <input 
+                                        type="text"
+                                        placeholder="ej: precio, info, cita"
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                                        onChange={(e) => {
+                                            const keyword = e.target.value;
+                                            updateNodeLabel(`⚡ Condición:\nSi el mensaje contiene '${keyword}'`);
+                                        }}
+                                        value={(() => {
+                                            const label = selectedNode.data.label as string;
+                                            const match = label.match(/'([^']+)'/);
+                                            return match ? match[1] : "";
+                                        })()}
+                                    />
+                                </div>
+                            )}
+                            
+                            <p className="text-[10px] text-amber-500/80 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20 mt-2 italic">
+                                Tip: Las condiciones generan dos salidas automáticas: <br/>
+                                🟢 <b>Abajo:</b> Si cumple (True) <br/>
+                                🔴 <b>Botón lateral:</b> Si no cumple (False)
+                            </p>
+                        </div>
                     ) : (selectedNode.data.label as string)?.startsWith('👤') ? (
                         <div className="flex flex-col gap-2">
                             <p className="text-[10px] text-white/40 mb-1">Tipo de Asignación:</p>
@@ -549,6 +793,73 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                         />
                     )}
 
+                    {/* Variable Selection for Question and Capture Nodes */}
+                    {((selectedNode.data?.type === 'Pregunta') || 
+                      (selectedNode.type === 'Pregunta') || 
+                      (selectedNode.data?.type === 'CapturaNombre') || 
+                      (selectedNode.data?.type === 'CapturaEmail') || 
+                      (selectedNode.data?.label as string)?.startsWith('❓') ||
+                      (selectedNode.data?.label as string)?.startsWith('👤') ||
+                      (selectedNode.data?.label as string)?.startsWith('📧')
+                    ) && (
+                        <div className="mt-2 bg-white/5 p-2 rounded-lg border border-white/10">
+                            <p className="text-[10px] text-white/60 mb-1 font-bold">Guardar respuesta en:</p>
+                            <div className="flex gap-2">
+                                <select 
+                                    className="flex-1 bg-black/50 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-primary/50"
+                                    value={(() => {
+                                        const val = selectedNode.data?.variable as string || "";
+                                        const predefined = ['name', 'email', 'budget', ''];
+                                        return predefined.includes(val) ? val : "custom";
+                                    })()}
+                                    onChange={(e) => {
+                                        const variable = e.target.value;
+                                        setNodes((nds) =>
+                                            nds.map((node) => {
+                                                if (node.id === selectedNodeId) {
+                                                    return { ...node, data: { ...node.data, variable } };
+                                                }
+                                                return node;
+                                            })
+                                        );
+                                    }}
+                                >
+                                    <option value="">-- Seleccionar variable --</option>
+                                    <option value="name">Nombre del Cliente (Sincronizado)</option>
+                                    <option value="email">Correo Electrónico</option>
+                                    <option value="budget">Presupuesto</option>
+                                    <option value="custom">Otra variable...</option>
+                                </select>
+                            </div>
+                            {(() => {
+                                const val = selectedNode.data?.variable as string || "";
+                                const isCustom = val === "custom" || (val !== "" && !['name', 'email', 'budget'].includes(val));
+                                if (!isCustom) return null;
+
+                                return (
+                                    <input 
+                                        type="text"
+                                        placeholder="Nombre de variable (ej: interes)"
+                                        className="w-full mt-2 bg-black/50 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-primary/50"
+                                        value={val === 'custom' ? '' : val}
+                                        onChange={(e) => {
+                                            const variable = e.target.value;
+                                            setNodes((nds) =>
+                                                nds.map((node) => {
+                                                    if (node.id === selectedNodeId) {
+                                                        return { ...node, data: { ...node.data, variable } };
+                                                    }
+                                                    return node;
+                                                })
+                                            );
+                                        }}
+                                        autoFocus={val === 'custom'}
+                                    />
+                                );
+                            })()}
+                        </div>
+                    )}
+
                     {(selectedNode.data.label as string)?.startsWith('🤖') ? (
                          <div className="mt-2 bg-white/5 p-2 rounded-lg border border-white/10">
                             <p className="text-[10px] text-white/60 mb-1 font-bold">Configuración de IA:</p>
@@ -573,7 +884,8 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                     !selectedNode.data.label.startsWith('🤖') && 
                     !selectedNode.data.label.startsWith('🏷️') &&
                     !selectedNode.data.label.startsWith('📊') &&
-                    !selectedNode.data.label.startsWith('👤')
+                    !selectedNode.data.label.startsWith('👤') &&
+                    !selectedNode.data.label.startsWith('📧')
                   ))
                 ) && (
                     <div className="border-t border-white/10 pt-4">
@@ -619,7 +931,8 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                     !selectedNode.data.label.startsWith('🤖') && 
                     !selectedNode.data.label.startsWith('🏷️') &&
                     !selectedNode.data.label.startsWith('📊') &&
-                    !selectedNode.data.label.startsWith('👤')
+                    !selectedNode.data.label.startsWith('👤') &&
+                    !selectedNode.data.label.startsWith('📧')
                   ))
                 ) && (
                   <div className="border-t border-white/10 pt-4">
@@ -660,13 +973,64 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                   </div>
                 )}
 
-                <div className="pt-2 border-t border-white/10">
+                {/* Auto-Continue Toggle */}
+                {((selectedNode.data?.type === 'Mensaje' || selectedNode.data?.type === 'Pregunta' || selectedNode.data?.type === 'CapturaNombre' || selectedNode.data?.type === 'CapturaEmail') || 
+                  (selectedNode.type === 'Mensaje' || selectedNode.type === 'Pregunta') ||
+                  (typeof selectedNode.data?.label === 'string' && (
+                    !selectedNode.data.label.startsWith('⚡') && 
+                    !selectedNode.data.label.startsWith('🤖') && 
+                    !selectedNode.data.label.startsWith('🏷️') &&
+                    !selectedNode.data.label.startsWith('📊') &&
+                    !selectedNode.data.label.startsWith('👤') &&
+                    !selectedNode.data.label.startsWith('📧')
+                  ))
+                ) && (
+                  <div className="border-t border-white/10 pt-4 pb-2">
+                    <label className="flex items-center justify-between cursor-pointer group">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-white/70 font-bold group-hover:text-white transition-colors">Continuar flujo automáticamente</span>
+                        <span className="text-[9px] text-white/30">Activa un conector de salida adicional sin botones</span>
+                      </div>
+                      <div 
+                        onClick={() => {
+                          const current = !!selectedNode.data?.autoContinue;
+                          setNodes((nds) =>
+                            nds.map((node) => {
+                              if (node.id === selectedNodeId) {
+                                return { ...node, data: { ...node.data, autoContinue: !current } };
+                              }
+                              return node;
+                            })
+                          );
+                        }}
+                        className={cn(
+                          "w-10 h-5 rounded-full p-1 transition-colors relative",
+                          selectedNode.data?.autoContinue ? "bg-primary" : "bg-white/10"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-3 h-3 bg-white rounded-full transition-all duration-200",
+                          selectedNode.data?.autoContinue ? "translate-x-5" : "translate-x-0"
+                        )} />
+                      </div>
+                    </label>
+                  </div>
+                )}
+
+                <div className="pt-2 border-t border-white/10 flex gap-2">
+                    <button 
+                        onClick={() => duplicateNode(selectedNodeId!)}
+                        className="flex-1 flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 text-primary py-2 rounded-lg text-xs font-bold transition-colors"
+                    >
+                        <PlusCircle className="h-3 w-3" />
+                        Duplicar
+                    </button>
                     <button 
                         onClick={deleteSelectedNode}
-                        className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 py-2 rounded-lg text-xs font-bold transition-colors"
+                        className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 py-2 rounded-lg text-xs font-bold transition-colors"
                     >
                         <Trash2 className="h-3 w-3" />
-                        Eliminar Nodo
+                        Eliminar
                     </button>
                 </div>
             </div>
@@ -677,6 +1041,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
@@ -685,6 +1050,13 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
         fitView
         colorMode="dark"
         style={{ width: '100%', height: '100%' }}
+        deleteKeyCode={["Backspace", "Delete"]}
+        multiSelectionKeyCode={["Control", "Shift"]}
+        selectionKeyCode={["s"]}
+        onEdgeContextMenu={(e, edge) => {
+          e.preventDefault();
+          setEdges((eds) => eds.filter((eb) => eb.id !== edge.id));
+        }}
       >
         <Background color="#333" gap={20} variant={BackgroundVariant.Dots} />
         <Controls className="bg-white/10 border-white/10 fill-white" />
