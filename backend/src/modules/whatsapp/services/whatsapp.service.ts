@@ -551,8 +551,8 @@ export class WhatsappService {
 
         if (tag) {
           this.logger.log(`Applying tag "${tag}" to lead ${session.lead_id}`);
-          // TODO: Implement actual tagging logic in LeadsService
-          // await this.leadsService.addTag(session.lead_id, tag);
+          // Implement actual tagging logic in LeadsService
+          await this.leadsService.addTag(session.lead_id, tag);
         }
 
         // Move to next node immediately without sending message

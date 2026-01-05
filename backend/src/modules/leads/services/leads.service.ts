@@ -50,6 +50,19 @@ export class LeadsService {
     return this.leadsRepository.save(lead);
   }
 
+  async addTag(id: number, tag: string): Promise<Lead> {
+    const lead = await this.findById(id);
+    if (!lead.tags) {
+      lead.tags = [];
+    }
+    if (!lead.tags.includes(tag)) {
+      lead.tags.push(tag);
+      lead.updated_at = new Date();
+      return this.leadsRepository.save(lead);
+    }
+    return lead;
+  }
+
   async updateName(id: number, name: string): Promise<Lead> {
     const lead = await this.findById(id);
     lead.name = name;

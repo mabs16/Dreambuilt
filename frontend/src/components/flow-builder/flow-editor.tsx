@@ -772,7 +772,39 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                          </div>
                     ) : (selectedNode.data.label as string)?.startsWith('🏷️') ? (
                          <div className="flex flex-col gap-2">
-                             <p className="text-[10px] text-white/40 mb-1">Selecciona la etiqueta del Lead:</p>
+                             <p className="text-[10px] text-white/40 mb-1">Selecciona o crea una etiqueta para el Lead:</p>
+                             
+                             {/* Input para etiqueta personalizada */}
+                             <div className="flex gap-2 mb-2">
+                                <input 
+                                    type="text"
+                                    placeholder="Nueva etiqueta..."
+                                    className="flex-1 bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-pink-500/50"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            const val = (e.target as HTMLInputElement).value.trim();
+                                            if (val) {
+                                                updateNodeLabel(`🏷️ Etiqueta:\n${val.toLowerCase()}`);
+                                                (e.target as HTMLInputElement).value = '';
+                                            }
+                                        }
+                                    }}
+                                />
+                                <button 
+                                    onClick={(e) => {
+                                        const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                                        const val = input.value.trim();
+                                        if (val) {
+                                            updateNodeLabel(`🏷️ Etiqueta:\n${val.toLowerCase()}`);
+                                            input.value = '';
+                                        }
+                                    }}
+                                    className="bg-pink-600 hover:bg-pink-500 text-white p-2 rounded-lg transition-colors"
+                                >
+                                    <PlusCircle className="h-4 w-4" />
+                                </button>
+                             </div>
+
                              <div className="grid grid-cols-1 gap-2">
                                  {['lead frio', 'lead tibio', 'lead caliente'].map((tag) => (
                                      <button

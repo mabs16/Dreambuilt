@@ -42,6 +42,9 @@ export class Lead {
   @Column({ nullable: true })
   avatar_url: string;
 
+  @Column({ type: 'jsonb', default: [] })
+  tags: string[];
+
   @CreateDateColumn()
   created_at: Date;
 
