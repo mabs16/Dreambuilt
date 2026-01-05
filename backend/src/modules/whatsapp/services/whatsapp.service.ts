@@ -254,6 +254,10 @@ export class WhatsappService {
       return;
     }
 
+    this.logger.log(
+      `Executing node ${currentNodeId} [${currentNode.type || 'no-type'}] (data.type: ${currentNode.data?.type || 'no-data-type'}) for lead ${session.lead_id}`,
+    );
+
     // 1. Process User Input (if we are waiting for an answer)
     const isWaiting = session.variables?._waiting_for_input === true;
 
@@ -288,6 +292,68 @@ export class WhatsappService {
         });
       }
     } else {
+      // Check if node is "Espera" (Wait) - Robust detection
+      const isWaitNode =
+        currentNode.type === 'Espera' ||
+        currentNode.data?.type === 'Espera' ||
+        currentNode.type?.toLowerCase() === 'espera' ||
+        currentNode.data?.type?.toLowerCase() === 'espera' ||
+        (currentNode.data?.label &&
+          (currentNode.data.label.toLowerCase().includes('espera:') ||
+            currentNode.data.label.includes('⏳')));
+
+      if (isWaitNode) {
+        const waitTime = (currentNode.data?.waitTime as number) || 5;
+        const waitUnit = (currentNode.data?.waitUnit as string) || 'seconds';
+        const delayMs =
+          waitUnit === 'minutes' ? waitTime * 60 * 1000 : waitTime * 1000;
+
+        this.logger.log(
+          `⏳ Wait Node detected for lead ${session.lead_id}: ${waitTime} ${waitUnit} (${delayMs}ms)`,
+        );
+
+        // Move to next node immediately after delay
+        const edge = edges.find((e) => e.source === currentNodeId);
+        if (edge) {
+          const nextNodeId = edge.target;
+
+          // Use setTimeout to delay the execution of the next step
+          setTimeout(() => {
+            void (async () => {
+              try {
+                this.logger.log(
+                  `⏰ Delay finished for lead ${session.lead_id}. Moving to node ${nextNodeId}`,
+                );
+                await this.flowsService.updateSessionNode(
+                  session.id,
+                  nextNodeId,
+                );
+                const updatedSession = await this.flowsService.findOneSession(
+                  session.id,
+                );
+                if (updatedSession) {
+                  updatedSession.flow = flow;
+                  // Recursive call after delay
+                  await this.executeFlowStep(updatedSession, '', from);
+                }
+              } catch (error) {
+                this.logger.error(
+                  `Error after wait delay: ${error instanceof Error ? error.message : String(error)}`,
+                );
+              }
+            })();
+          }, delayMs);
+
+          return; // IMPORTANT: Stop current execution, setTimeout will pick it up
+        } else {
+          this.logger.warn(
+            `Wait node ${currentNodeId} has no outgoing edge. Completing session.`,
+          );
+          await this.flowsService.completeSession(session.id);
+          return;
+        }
+      }
+
       // We just arrived at this node. Execute its action.
       let messageToSend = currentNode.data?.label || '';
 
@@ -295,7 +361,7 @@ export class WhatsappService {
       // 1. Remove prefixes including emojis if present
       messageToSend = messageToSend
         .replace(
-          /^((💬|❓|⚡|🤖|🏷️)\s*)?(Mensaje|Pregunta|IA Action|IA|Etiqueta|Condición|Tag):\s*/iu,
+          /^((💬|❓|⚡|🤖|🏷️|⏳)\s*)?(Mensaje|Pregunta|IA Action|IA|Etiqueta|Tag|Condición|Pipeline|Asignación|Espera):\s*/iu,
           '',
         )
         .trim();
@@ -383,7 +449,15 @@ export class WhatsappService {
           lead.name || 'Cliente',
         );
         messageToSend = messageToSend.replace(/{{phone}}/gi, lead.phone || '');
-        // Add more variables here if needed
+        // Dynamic variable replacement from session variables
+        if (session.variables) {
+          Object.entries(session.variables).forEach(([key, value]) => {
+            if (key !== '_waiting_for_input') {
+              const regex = new RegExp(`{{${key}}}`, 'gi');
+              messageToSend = messageToSend.replace(regex, String(value));
+            }
+          });
+        }
       }
 
       // Special handling for trigger nodes to avoid sending technical text
@@ -751,6 +825,47 @@ export class WhatsappService {
         return;
       }
 
+      // Check if node is "Tag" (Tagging Action)
+      const isTagAction =
+        currentNode.type === 'Tag' ||
+        currentNode.data?.type === 'Tag' ||
+        (currentNode.data?.label &&
+          currentNode.data.label.toLowerCase().includes('🏷️ etiqueta:'));
+
+      if (isTagAction) {
+        this.logger.log(`Executing Tag Node for lead ${session.lead_id}`);
+
+        // Determine tag from node label
+        const label = (currentNode.data?.label as string) || '';
+        const tag = label.split('\n')[1]?.toLowerCase().trim() || 'lead frio';
+
+        // Update lead note or specific field with tag
+        await this.leadsService.addNote({
+          leadId: session.lead_id,
+          content: `ETIQUETA ASIGNADA: ${tag.toUpperCase()}`,
+          type: 'SYSTEM_TAG',
+        });
+
+        this.logger.log(`Lead ${session.lead_id} tagged as ${tag}`);
+
+        // Move to next node immediately
+        const edge = edges.find((e) => e.source === currentNodeId);
+        if (edge) {
+          const nextNodeId = edge.target;
+          await this.flowsService.updateSessionNode(session.id, nextNodeId);
+          const updatedSession = await this.flowsService.findOneSession(
+            session.id,
+          );
+          if (updatedSession) {
+            updatedSession.flow = flow;
+            await this.executeFlowStep(updatedSession, '', from);
+          }
+        } else {
+          await this.flowsService.completeSession(session.id);
+        }
+        return;
+      }
+
       const mediaUrl = currentNode.data?.mediaUrl as string | undefined;
       const mediaType = (currentNode.data?.mediaType || 'image') as
         | 'image'
@@ -791,11 +906,18 @@ export class WhatsappService {
 
           await this.sendWhatsappMessage(from, payload);
 
-          // Stop execution and wait for user interaction (button click)
-          await this.flowsService.updateSessionVariables(session.id, {
-            _waiting_for_input: true,
-          });
-          return;
+          // If autoContinue is enabled, we don't stop here
+          if (currentNode.data?.autoContinue) {
+            this.logger.log(
+              `Auto-continue enabled for node ${currentNodeId}. Proceeding...`,
+            );
+          } else {
+            // Stop execution and wait for user interaction (button click)
+            await this.flowsService.updateSessionVariables(session.id, {
+              _waiting_for_input: true,
+            });
+            return;
+          }
         } else if (mediaUrl) {
           // Media Only (with Caption)
           const payload: WhatsAppPayload = {
@@ -864,11 +986,19 @@ export class WhatsappService {
 
     // If no button matched or no buttons, check for default edge
     if (!nextNodeId) {
-      // Default edge usually has sourceHandle null or undefined
+      // 1. Check for auto-continue handle
+      const autoEdge = edges.find(
+        (e) => e.source === currentNodeId && e.sourceHandle === 'auto',
+      );
+
+      // 2. Check for default edge (null/undefined sourceHandle)
       const defaultEdge = edges.find(
         (e) => e.source === currentNodeId && !e.sourceHandle,
       );
-      if (defaultEdge) {
+
+      if (autoEdge) {
+        nextNodeId = autoEdge.target;
+      } else if (defaultEdge) {
         nextNodeId = defaultEdge.target;
       }
     }

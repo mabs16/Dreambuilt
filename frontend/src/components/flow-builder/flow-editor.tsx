@@ -39,7 +39,8 @@ import {
   ChevronLeft,
   Menu,
   Download,
-  FileJson
+  FileJson,
+  Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomNode from './custom-node';
@@ -182,7 +183,37 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
     (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     [],
   );
-  const onConnect = useCallback(
+  // List of predefined system variables
+  const PREDEFINED_VARS = ['name', 'email', 'budget', 'phone'];
+
+  // List of system prefixes to handle in the editor
+  const SYSTEM_PREFIXES = [
+    "💬 Enviar Mensaje:\n",
+    "❓ Pregunta:\n",
+    "⚡ Condición:\n",
+    "🤖 Acción IA:\n",
+    "🏷️ Etiqueta:\n",
+    "📊 Pipeline:\n",
+    "👤 Asignación:\n",
+    "👤 Solicitar Nombre:\n",
+    "📧 Solicitar Email:\n",
+    "⏳ Espera:\n"
+  ];
+
+  // Get all custom variables defined in the current flow
+  const getFlowVariables = () => {
+        const vars = new Set<string>();
+        nodes.forEach(node => {
+            if (node.data?.variable && typeof node.data.variable === 'string') {
+                if (!PREDEFINED_VARS.includes(node.data.variable)) {
+                    vars.add(node.data.variable);
+                }
+            }
+        });
+        return Array.from(vars);
+    };
+
+    const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge({ ...params, type: 'removable', animated: true, style: { stroke: '#10b981', strokeWidth: 2 } }, eds)),
     [],
   );
@@ -195,18 +226,34 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
     setSelectedNodeId(null);
   }, []);
 
-  const updateNodeLabel = (label: string) => {
+  const updateNodeLabel = (newContent: string) => {
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === selectedNodeId) {
-          // If it's a capture node, we only want to update the text part, not the prefix
+          const currentLabel = (node.data.label as string) || "";
+          
+          // Especial para nodos de captura que tienen lógica propia
           if (node.data.type === 'CapturaNombre' || node.data.type === 'CapturaEmail') {
             const prefix = node.data.type === 'CapturaNombre' ? "👤 Solicitar Nombre:\n" : "📧 Solicitar Email:\n";
-            // If the label doesn't start with the prefix (user might have deleted it), we re-add it
-            const newLabel = label.startsWith(prefix) ? label : prefix + label;
-            return { ...node, data: { ...node.data, label: newLabel } };
+            // Si el nuevo contenido ya tiene el prefijo (por error o copia), no lo duplicamos
+            const cleanContent = newContent.startsWith(prefix) ? newContent.replace(prefix, "") : newContent;
+            return { ...node, data: { ...node.data, label: prefix + cleanContent } };
           }
-          return { ...node, data: { ...node.data, label } };
+
+          // Buscar si el label actual tiene un prefijo de sistema
+          const foundPrefix = SYSTEM_PREFIXES.find(p => currentLabel.startsWith(p));
+          
+          if (foundPrefix) {
+            // Si el nuevo contenido ya empieza con el prefijo, lo usamos tal cual (para botones de Condición/Asignación)
+            if (newContent.startsWith(foundPrefix)) {
+              return { ...node, data: { ...node.data, label: newContent } };
+            }
+            // Si no, lo preservamos y solo actualizamos el contenido
+            return { ...node, data: { ...node.data, label: foundPrefix + newContent } };
+          }
+
+          // Si no hay prefijo (o el usuario lo borró), actualizamos todo el campo
+          return { ...node, data: { ...node.data, label: newContent } };
         }
         return node;
       })
@@ -329,7 +376,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
             style.border = 'none';
             break;
         case 'Tag':
-            label = "🏷️ Etiqueta:\nAsignar etiqueta 'Interesado'";
+            label = "🏷️ Etiqueta:\nlead frio";
             style.background = '#ec4899';
             style.border = 'none';
             break;
@@ -353,6 +400,11 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
             style.background = '#06b6d4'; // Cyan-500
             style.border = 'none';
             break;
+        case 'Espera':
+            label = "⏳ Espera:\n5 segundos";
+            style.background = '#4b5563'; // Gray-600
+            style.border = 'none';
+            break;
         default:
             label = `Nuevo ${type}`;
     }
@@ -365,7 +417,8 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
         label, 
         type,
         ...(type === 'CapturaNombre' ? { variable: 'name' } : {}),
-        ...(type === 'CapturaEmail' ? { variable: 'email' } : {})
+        ...(type === 'CapturaEmail' ? { variable: 'email' } : {}),
+        ...(type === 'Espera' ? { waitTime: 5, waitUnit: 'seconds' } : {})
       }, // Store logical type in data
       style
     };
@@ -507,6 +560,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
               <ToolButton icon={Tag} label="Etiqueta" onClick={() => addNode('Tag')} color="bg-pink-500" />
               <ToolButton icon={BarChart3} label="Pipeline" onClick={() => addNode('Pipeline')} color="bg-emerald-600" />
               <ToolButton icon={UserPlus} label="Asignación" onClick={() => addNode('Asignación')} color="bg-amber-600" />
+              <ToolButton icon={Clock} label="Espera" onClick={() => addNode('Espera')} color="bg-gray-600" />
               <div className="h-px bg-white/5 mx-2 my-1" />
               <ToolButton icon={User} label="Captura Nombre" onClick={() => addNode('CapturaNombre')} color="bg-indigo-500" />
               <ToolButton icon={Mail} label="Captura Email" onClick={() => addNode('CapturaEmail')} color="bg-cyan-500" />
@@ -620,8 +674,8 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                              <p className="text-[10px] text-white/40 mb-1">Personaliza la pregunta para el lead:</p>
                              <textarea 
                                 value={(() => {
-                                    const label = selectedNode.data.label as string;
-                                    const prefix = (selectedNode.data.type === 'CapturaNombre' || label.startsWith('👤')) 
+                                    const label = (selectedNode.data.label as string) || "";
+                                    const prefix = (selectedNode.data.type === 'CapturaNombre' || label.startsWith('👤 Solicitar Nombre')) 
                                         ? "👤 Solicitar Nombre:\n" 
                                         : "📧 Solicitar Email:\n";
                                     return label.startsWith(prefix) ? label.replace(prefix, "") : label;
@@ -640,6 +694,68 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                              </div>
                              <p className="text-[10px] text-primary/80 bg-primary/10 p-2 rounded-lg border border-primary/20 mt-2">
                                  Tip: El flujo se detendrá aquí hasta que el lead responda. La respuesta se guardará automáticamente en la variable indicada arriba.
+                             </p>
+                         </div>
+                    ) : (selectedNode.data.label as string)?.startsWith('⏳') ? (
+                         <div className="flex flex-col gap-3">
+                             <p className="text-[10px] text-white/40 mb-1">Configura el tiempo de espera:</p>
+                             <div className="flex gap-2">
+                                 <input 
+                                     type="number"
+                                     min="1"
+                                     className="w-20 bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50"
+                                     value={(selectedNode.data.waitTime as number) || 5}
+                                     onChange={(e) => {
+                                         const time = parseInt(e.target.value);
+                                         const unit = (selectedNode.data.waitUnit as string) || 'seconds';
+                                         setNodes((nds) => nds.map(n => n.id === selectedNodeId ? {
+                                             ...n,
+                                             data: { ...n.data, waitTime: time, label: `⏳ Espera:\n${time} ${unit === 'seconds' ? 'segundos' : 'minutos'}` }
+                                         } : n));
+                                     }}
+                                 />
+                                 <select 
+                                     className="flex-1 bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50"
+                                     value={(selectedNode.data.waitUnit as string) || 'seconds'}
+                                     onChange={(e) => {
+                                         const unit = e.target.value;
+                                         const time = (selectedNode.data.waitTime as number) || 5;
+                                         setNodes((nds) => nds.map(n => n.id === selectedNodeId ? {
+                                             ...n,
+                                             data: { ...n.data, waitUnit: unit, label: `⏳ Espera:\n${time} ${unit === 'seconds' ? 'segundos' : 'minutos'}` }
+                                         } : n));
+                                     }}
+                                 >
+                                     <option value="seconds">Segundos</option>
+                                     <option value="minutes">Minutos</option>
+                                 </select>
+                             </div>
+                             <p className="text-[10px] text-white/40 italic bg-white/5 p-2 rounded-lg">
+                                 Tip: Este nodo detiene el flujo por el tiempo indicado antes de pasar al siguiente mensaje.
+                             </p>
+                         </div>
+                    ) : (selectedNode.data.label as string)?.startsWith('🏷️') ? (
+                         <div className="flex flex-col gap-2">
+                             <p className="text-[10px] text-white/40 mb-1">Selecciona la etiqueta del Lead:</p>
+                             <div className="grid grid-cols-1 gap-2">
+                                 {['lead frio', 'lead tibio', 'lead caliente'].map((tag) => (
+                                     <button
+                                         key={tag}
+                                         onClick={() => updateNodeLabel(`🏷️ Etiqueta:\n${tag}`)}
+                                         className={cn(
+                                             "py-2 px-3 rounded-lg text-xs font-bold border transition-all text-left flex items-center justify-between",
+                                             (selectedNode.data.label as string).includes(tag)
+                                                 ? "bg-pink-600 border-pink-500 text-white shadow-[0_0_10px_rgba(236,72,153,0.5)]"
+                                                 : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
+                                         )}
+                                     >
+                                         <span className="capitalize">{tag}</span>
+                                         {(selectedNode.data.label as string).includes(tag) && <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />}
+                                     </button>
+                                 ))}
+                             </div>
+                             <p className="text-[10px] text-pink-500/80 bg-pink-500/10 p-2 rounded-lg border border-pink-500/20 mt-2 italic">
+                                 Nota: Esta etiqueta se asigna internamente al lead y no es visible para él.
                              </p>
                          </div>
                     ) : (selectedNode.data.label as string)?.startsWith('📊') ? (
@@ -784,79 +900,124 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                                 </div>
                             )}
                         </div>
+                    ) : (selectedNode.data.label as string)?.startsWith('🏷️') ? (
+                        null
                     ) : (
                         <textarea 
-                            value={selectedNode.data.label as string}
+                            value={(() => {
+                                const label = (selectedNode.data.label as string) || "";
+                                const foundPrefix = SYSTEM_PREFIXES.find(p => label.startsWith(p));
+                                return foundPrefix ? label.replace(foundPrefix, "") : label;
+                            })()}
                             onChange={(e) => updateNodeLabel(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50 h-32 resize-none"
                             placeholder={(selectedNode.data.label as string)?.startsWith('🤖') ? "Escribe aquí las instrucciones para la IA (ej. 'Analiza el interés del cliente...')" : "Contenido del nodo"}
                         />
                     )}
 
-                    {/* Variable Selection for Question and Capture Nodes */}
-                    {((selectedNode.data?.type === 'Pregunta') || 
-                      (selectedNode.type === 'Pregunta') || 
-                      (selectedNode.data?.type === 'CapturaNombre') || 
-                      (selectedNode.data?.type === 'CapturaEmail') || 
+                    {/* Variable Management Section - Shared for Message, Question, and Capture nodes */}
+                    {((selectedNode.data?.type === 'Mensaje' || selectedNode.data?.type === 'Pregunta' || selectedNode.data?.type === 'CapturaNombre' || selectedNode.data?.type === 'CapturaEmail') || 
+                      (selectedNode.type === 'Mensaje' || selectedNode.type === 'Pregunta') ||
+                      (selectedNode.data?.label as string)?.startsWith('💬') ||
                       (selectedNode.data?.label as string)?.startsWith('❓') ||
                       (selectedNode.data?.label as string)?.startsWith('👤') ||
                       (selectedNode.data?.label as string)?.startsWith('📧')
                     ) && (
-                        <div className="mt-2 bg-white/5 p-2 rounded-lg border border-white/10">
-                            <p className="text-[10px] text-white/60 mb-1 font-bold">Guardar respuesta en:</p>
-                            <div className="flex gap-2">
-                                <select 
-                                    className="flex-1 bg-black/50 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-primary/50"
-                                    value={(() => {
-                                        const val = selectedNode.data?.variable as string || "";
-                                        const predefined = ['name', 'email', 'budget', ''];
-                                        return predefined.includes(val) ? val : "custom";
-                                    })()}
-                                    onChange={(e) => {
-                                        const variable = e.target.value;
-                                        setNodes((nds) =>
-                                            nds.map((node) => {
-                                                if (node.id === selectedNodeId) {
-                                                    return { ...node, data: { ...node.data, variable } };
-                                                }
-                                                return node;
-                                            })
-                                        );
-                                    }}
-                                >
-                                    <option value="">-- Seleccionar variable --</option>
-                                    <option value="name">Nombre del Cliente (Sincronizado)</option>
-                                    <option value="email">Correo Electrónico</option>
-                                    <option value="budget">Presupuesto</option>
-                                    <option value="custom">Otra variable...</option>
-                                </select>
+                        <div className="space-y-3">
+                            {/* Available Variables (Buttons) */}
+                            <div className="bg-white/5 p-2 rounded-lg border border-white/10">
+                                <p className="text-[10px] text-white/60 mb-1 font-bold">Variables disponibles:</p>
+                                <div className="flex flex-wrap gap-1">
+                                    {[...PREDEFINED_VARS, ...getFlowVariables()].map(v => (
+                                        <button 
+                                            key={v}
+                                            onClick={() => {
+                                                const label = (selectedNode.data.label as string) || "";
+                                                const foundPrefix = SYSTEM_PREFIXES.find(p => label.startsWith(p));
+                                                const content = foundPrefix ? label.replace(foundPrefix, "") : label;
+                                                updateNodeLabel(content + (content ? ' ' : '') + `{{${v}}}`);
+                                            }}
+                                            className="text-[9px] bg-white/10 hover:bg-white/20 text-white/70 px-1.5 py-0.5 rounded border border-white/5 transition-colors"
+                                        >
+                                            {`{{${v}}}`}
+                                        </button>
+                                    ))}
+                                    <p className="text-[8px] text-white/30 mt-1 w-full italic">Haz clic para insertar en el texto</p>
+                                </div>
                             </div>
-                            {(() => {
-                                const val = selectedNode.data?.variable as string || "";
-                                const isCustom = val === "custom" || (val !== "" && !['name', 'email', 'budget'].includes(val));
-                                if (!isCustom) return null;
 
-                                return (
-                                    <input 
-                                        type="text"
-                                        placeholder="Nombre de variable (ej: interes)"
-                                        className="w-full mt-2 bg-black/50 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-primary/50"
-                                        value={val === 'custom' ? '' : val}
+                            {/* Save Answer In (Selector) */}
+                            <div className="bg-white/5 p-2 rounded-lg border border-white/10">
+                                <p className="text-[10px] text-white/60 mb-1 font-bold">Guardar respuesta del usuario en:</p>
+                                <div className="flex gap-2">
+                                    <select 
+                                        className="flex-1 bg-black/50 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-primary/50"
+                                        value={(() => {
+                                            const val = selectedNode.data?.variable as string || "";
+                                            return PREDEFINED_VARS.includes(val) || getFlowVariables().includes(val) ? val : (val === "" ? "" : "custom");
+                                        })()}
                                         onChange={(e) => {
                                             const variable = e.target.value;
                                             setNodes((nds) =>
                                                 nds.map((node) => {
                                                     if (node.id === selectedNodeId) {
-                                                        return { ...node, data: { ...node.data, variable } };
+                                                        return { ...node, data: { ...node.data, variable: variable === 'custom' ? '' : variable } };
                                                     }
                                                     return node;
                                                 })
                                             );
                                         }}
-                                        autoFocus={val === 'custom'}
-                                    />
-                                );
-                            })()}
+                                    >
+                                        <option value="">-- No guardar respuesta --</option>
+                                        <optgroup label="Sistema (Sincronizado)">
+                                            <option value="name">Nombre del Cliente</option>
+                                            <option value="email">Correo Electrónico</option>
+                                            <option value="phone">Teléfono</option>
+                                            <option value="budget">Presupuesto</option>
+                                        </optgroup>
+                                        
+                                        {getFlowVariables().length > 0 && (
+                                            <optgroup label="Creadas en este flujo">
+                                                {getFlowVariables().map(v => (
+                                                    <option key={v} value={v}>{v}</option>
+                                                ))}
+                                            </optgroup>
+                                        )}
+
+                                        <optgroup label="Acciones">
+                                            <option value="custom">+ Nueva variable personalizada...</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+                                {(() => {
+                                    const val = selectedNode.data?.variable as string || "";
+                                    const isPredefined = PREDEFINED_VARS.includes(val);
+                                    const isExistingCustom = getFlowVariables().includes(val);
+                                    
+                                    if (isPredefined || (isExistingCustom && val !== "")) return null;
+
+                                    return (
+                                        <input 
+                                            type="text"
+                                            placeholder="Nombre de la nueva variable"
+                                            className="w-full mt-2 bg-black/50 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-primary/50"
+                                            value={val}
+                                            onChange={(e) => {
+                                                const variable = e.target.value.toLowerCase().replace(/\s+/g, '_');
+                                                setNodes((nds) =>
+                                                    nds.map((node) => {
+                                                        if (node.id === selectedNodeId) {
+                                                            return { ...node, data: { ...node.data, variable } };
+                                                        }
+                                                        return node;
+                                                    })
+                                                );
+                                            }}
+                                            autoFocus
+                                        />
+                                    );
+                                })()}
+                            </div>
                         </div>
                     )}
 
@@ -866,14 +1027,17 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                             <p className="text-[10px] text-white/40 mb-1">El historial de conversación se analiza automáticamente.</p>
                             <p className="text-[10px] text-white/40">Variables disponibles:</p>
                             <div className="flex flex-wrap gap-1 mt-1">
-                                {['{{name}}', '{{phone}}', '{{status}}'].map(v => (
-                                    <code key={v} className="text-[10px] bg-primary/20 text-primary px-1 rounded cursor-pointer hover:bg-primary/30" onClick={() => updateNodeLabel((selectedNode.data.label as string) + " " + v)}>{v}</code>
+                                {[...PREDEFINED_VARS, ...getFlowVariables(), 'status'].map(v => (
+                                    <code key={v} className="text-[10px] bg-primary/20 text-primary px-1 rounded cursor-pointer hover:bg-primary/30" onClick={() => {
+                                        const label = (selectedNode.data.label as string) || "";
+                                        const foundPrefix = SYSTEM_PREFIXES.find(p => label.startsWith(p));
+                                        const content = foundPrefix ? label.replace(foundPrefix, "") : label;
+                                        updateNodeLabel(content + (content ? ' ' : '') + `{{${v}}}`);
+                                    }}>{`{{${v}}}`}</code>
                                 ))}
                             </div>
                          </div>
-                    ) : !(selectedNode.data.label as string)?.startsWith('📊') && !(selectedNode.data.label as string)?.startsWith('👤') && (
-                        <p className="text-[10px] text-white/30 mt-1">Usa <code className="text-primary">{'{{name}}'}</code> para el nombre del cliente.</p>
-                    )}
+                    ) : null}
                 </div>
 
                 {/* Media Upload Section */}
