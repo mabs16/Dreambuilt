@@ -99,6 +99,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
   const [triggerKeywords, setTriggerKeywords] = useState<string>(initialData?.trigger_keywords?.join(', ') || "hola");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [advisors, setAdvisors] = useState<Array<{id: number, name: string}>>([]);
+  const [availableFlows, setAvailableFlows] = useState<Array<{id: number, name: string}>>([]);
   const [isNodesPanelOpen, setIsNodesPanelOpen] = useState(true);
 
   // Initialize panel state based on screen size
@@ -109,22 +110,35 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
     }
   }, []);
 
-  // Fetch advisors when component mounts
+  // Fetch advisors and flows when component mounts
   useEffect(() => {
-    const fetchAdvisors = async () => {
+    const fetchData = async () => {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-        const res = await fetch(`${apiUrl}/api/advisors`);
-        if (res.ok) {
-            const data = await res.json();
+        
+        // Fetch Advisors
+        const resAdvisors = await fetch(`${apiUrl}/api/advisors`);
+        if (resAdvisors.ok) {
+            const data = await resAdvisors.json();
             setAdvisors(data);
         }
+
+        // Fetch Flows
+        const resFlows = await fetch(`${apiUrl}/api/flows`);
+        if (resFlows.ok) {
+            const data: Array<{id: number, name: string}> = await resFlows.json();
+            // Filter out current flow if editing
+            const filteredFlows = initialData?.id 
+              ? data.filter((f) => f.id !== initialData.id)
+              : data;
+            setAvailableFlows(filteredFlows);
+        }
       } catch (err) {
-        console.error("Error fetching advisors:", err);
+        console.error("Error fetching data:", err);
       }
     };
-    fetchAdvisors();
-  }, []);
+    fetchData();
+  }, [initialData?.id]);
 
   const deleteSelectedNode = () => {
     if (!selectedNodeId) return;
@@ -197,7 +211,8 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
     "👤 Asignación:\n",
     "👤 Solicitar Nombre:\n",
     "📧 Solicitar Email:\n",
-    "⏳ Espera:\n"
+    "⏳ Espera:\n",
+    "🔗 Conectar Flujo:\n"
   ];
 
   // Get all custom variables defined in the current flow
@@ -230,25 +245,32 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === selectedNodeId) {
-          const currentLabel = (node.data.label as string) || "";
+          const nodeType = node.data.type as string;
           
           // Especial para nodos de captura que tienen lógica propia
-          if (node.data.type === 'CapturaNombre' || node.data.type === 'CapturaEmail') {
-            const prefix = node.data.type === 'CapturaNombre' ? "👤 Solicitar Nombre:\n" : "📧 Solicitar Email:\n";
+          if (nodeType === 'CapturaNombre' || nodeType === 'CapturaEmail') {
+            const prefix = nodeType === 'CapturaNombre' ? "👤 Solicitar Nombre:\n" : "📧 Solicitar Email:\n";
             // Si el nuevo contenido ya tiene el prefijo (por error o copia), no lo duplicamos
             const cleanContent = newContent.startsWith(prefix) ? newContent.replace(prefix, "") : newContent;
             return { ...node, data: { ...node.data, label: prefix + cleanContent } };
           }
 
-          // Buscar si el label actual tiene un prefijo de sistema
+          // Para nodos de Mensaje y Pregunta, ya NO forzamos el prefijo en el label
+          // Esto evita que se envíe al lead por error y que el usuario vea texto duplicado
+          if (nodeType === 'Mensaje' || nodeType === 'Pregunta') {
+            return { ...node, data: { ...node.data, label: newContent } };
+          }
+
+          // Para otros tipos de nodos técnicos, mantenemos el prefijo si existe para identificación visual
+          const currentLabel = (node.data.label as string) || "";
           const foundPrefix = SYSTEM_PREFIXES.find(p => currentLabel.startsWith(p));
           
           if (foundPrefix) {
-            // Si el nuevo contenido ya empieza con el prefijo, lo usamos tal cual (para botones de Condición/Asignación)
+            // Si el nuevo contenido ya empieza con el prefijo, lo usamos tal cual
             if (newContent.startsWith(foundPrefix)) {
               return { ...node, data: { ...node.data, label: newContent } };
             }
-            // Si no, lo preservamos y solo actualizamos el contenido
+            // Si no, lo preservamos
             return { ...node, data: { ...node.data, label: foundPrefix + newContent } };
           }
 
@@ -347,16 +369,16 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
     
     switch(type) {
         case 'Mensaje':
-            label = "💬 Enviar Mensaje:\nEscribe aquí tu respuesta...";
+            label = "💬 Enviar Mensaje:\n";
             style.background = '#1f2937';
             break;
         case 'Pregunta':
-            label = "❓ Pregunta:\n¿Cuál es tu correo?";
+            label = "❓ Pregunta:\n";
             style.background = '#3b82f6';
             style.border = 'none';
             break;
         case 'Condición':
-            label = "⚡ Condición:\nSi el mensaje contiene...";
+            label = "⚡ Condición:\n";
             style.background = '#f59e0b';
             style.border = 'none';
             // Automatically add a "No cumple" button for the false path
@@ -371,39 +393,52 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
             setNodes((nds) => nds.concat(newNodeCond));
             return;
         case 'IA':
-            label = "🤖 Acción IA:\nAnalizar sentimiento...";
+            label = "🤖 Acción IA:\n";
+            type = 'IA Action'; // Explicitly set technical type
             style.background = '#8b5cf6';
             style.border = 'none';
             break;
         case 'Tag':
-            label = "🏷️ Etiqueta:\nlead frio";
+            label = "🏷️ Etiqueta:\n";
+            type = 'Tag'; // Explicitly set technical type
             style.background = '#ec4899';
             style.border = 'none';
             break;
         case 'Pipeline':
-            label = "📊 Pipeline:\nActualizar Status (Precalificado)";
+            label = "📊 Pipeline:\n";
+            type = 'Pipeline'; // Explicitly set technical type
             style.background = '#059669'; // Emerald-600
             style.border = 'none';
             break;
         case 'Asignación':
             label = "👤 Asignación:\nRound Robin / Asesor";
+            type = 'Asignación';
             style.background = '#d97706'; // Amber-600
             style.border = 'none';
             break;
         case 'CapturaNombre':
             label = "👤 Solicitar Nombre:\n¿Cómo te llamas?";
+            type = 'CapturaNombre';
             style.background = '#6366f1'; // Indigo-500
             style.border = 'none';
             break;
         case 'CapturaEmail':
             label = "📧 Solicitar Email:\n¿Cuál es tu correo electrónico?";
+            type = 'CapturaEmail';
             style.background = '#06b6d4'; // Cyan-500
             style.border = 'none';
             break;
         case 'Espera':
             label = "⏳ Espera:\n5 segundos";
+            type = 'Espera';
             style.background = '#4b5563'; // Gray-600
             style.border = 'none';
+            break;
+        case 'ConectarFlujo':
+            label = "🔗 Conectar Flujo:\nSeleccionar...";
+            type = 'ConectarFlujo';
+            style.background = '#000000';
+            style.border = '1px solid #ffffff30';
             break;
         default:
             label = `Nuevo ${type}`;
@@ -561,6 +596,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
               <ToolButton icon={BarChart3} label="Pipeline" onClick={() => addNode('Pipeline')} color="bg-emerald-600" />
               <ToolButton icon={UserPlus} label="Asignación" onClick={() => addNode('Asignación')} color="bg-amber-600" />
               <ToolButton icon={Clock} label="Espera" onClick={() => addNode('Espera')} color="bg-gray-600" />
+              <ToolButton icon={PlusCircle} label="Conectar Flujo" onClick={() => addNode('ConectarFlujo')} color="bg-black border border-white/20" />
               <div className="h-px bg-white/5 mx-2 my-1" />
               <ToolButton icon={User} label="Captura Nombre" onClick={() => addNode('CapturaNombre')} color="bg-indigo-500" />
               <ToolButton icon={Mail} label="Captura Email" onClick={() => addNode('CapturaEmail')} color="bg-cyan-500" />
@@ -841,6 +877,43 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                                 Tip: Las condiciones generan dos salidas automáticas: <br/>
                                 🟢 <b>Abajo:</b> Si cumple (True) <br/>
                                 🔴 <b>Botón lateral:</b> Si no cumple (False)
+                            </p>
+                        </div>
+                    ) : (selectedNode.data.label as string)?.startsWith('🔗') ? (
+                        <div className="flex flex-col gap-2">
+                            <p className="text-[10px] text-white/40 mb-1">Seleccionar Flujo Destino:</p>
+                            <select 
+                                className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-primary/50"
+                                onChange={(e) => {
+                                    const flowId = e.target.value;
+                                    const flow = availableFlows.find(f => f.id.toString() === flowId);
+                                    if (flow) {
+                                        setNodes((nds) =>
+                                            nds.map((node) => {
+                                                if (node.id === selectedNodeId) {
+                                                    return { 
+                                                        ...node, 
+                                                        data: { 
+                                                            ...node.data, 
+                                                            targetFlowId: flowId,
+                                                            label: `🔗 Conectar Flujo:\n${flow.name}`
+                                                        } 
+                                                    };
+                                                }
+                                                return node;
+                                            })
+                                        );
+                                    }
+                                }}
+                                value={selectedNode.data?.targetFlowId as string || ""}
+                            >
+                                <option value="">Selecciona un flujo...</option>
+                                {availableFlows.map(flow => (
+                                    <option key={flow.id} value={flow.id}>{flow.name}</option>
+                                ))}
+                            </select>
+                            <p className="text-[10px] text-white/40 mt-1 italic">
+                                Al llegar a este nodo, el usuario saltará automáticamente al inicio del flujo seleccionado.
                             </p>
                         </div>
                     ) : (selectedNode.data.label as string)?.startsWith('👤') ? (

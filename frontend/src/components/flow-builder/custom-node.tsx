@@ -11,11 +11,55 @@ import {
 
   const CustomNode = ({ id, data, selected }: NodeProps) => {
   const buttons = (data.buttons as Array<{ id: string; text: string }>) || [];
-  const label = (data.label as string) || '';
+  const rawLabel = (data.label as string) || '';
+  const nodeType = data.type as string || '';
   const mediaUrl = data.mediaUrl as string | undefined;
   const mediaType = data.mediaType as 'image' | 'document' | undefined;
   const autoContinue = data.autoContinue as boolean | undefined;
-  const isIA = data.type === 'IA' || label.startsWith('🤖');
+  
+  // List of system prefixes to clean from the label for display
+  const SYSTEM_PREFIXES = [
+    "💬 Enviar Mensaje:\n",
+    "❓ Pregunta:\n",
+    "⚡ Condición:\n",
+    "🤖 Acción IA:\n",
+    "🏷️ Etiqueta:\n",
+    "📊 Pipeline:\n",
+    "👤 Asignación:\n",
+    "👤 Solicitar Nombre:\n",
+    "📧 Solicitar Email:\n",
+    "⏳ Espera:\n"
+  ];
+
+  // Clean label for display
+  let displayLabel = rawLabel;
+  const foundPrefix = SYSTEM_PREFIXES.find(p => rawLabel.startsWith(p));
+  if (foundPrefix) {
+    displayLabel = rawLabel.replace(foundPrefix, "");
+  }
+
+  const isIA = nodeType === 'IA' || nodeType === 'IA Action' || rawLabel.startsWith('🤖');
+
+  // Determine header icon and text based on type
+  const getHeader = () => {
+    switch(nodeType) {
+      case 'Mensaje': return { icon: '💬', text: 'Mensaje' };
+      case 'Pregunta': return { icon: '❓', text: 'Pregunta' };
+      case 'Condición': return { icon: '⚡', text: 'Condición' };
+      case 'IA':
+      case 'IA Action': return { icon: '🤖', text: 'IA Action' };
+      case 'Tag': return { icon: '🏷️', text: 'Etiqueta' };
+      case 'Pipeline': return { icon: '📊', text: 'Pipeline' };
+      case 'Asignación': return { icon: '👤', text: 'Asignación' };
+      case 'CapturaNombre': return { icon: '👤', text: 'Nombre' };
+      case 'CapturaEmail': return { icon: '📧', text: 'Email' };
+      case 'Espera': return { icon: '⏳', text: 'Espera' };
+      case 'ConectarFlujo': return { icon: '🔗', text: 'Saltar a Flujo' };
+      default: return null;
+    }
+  };
+
+  const header = getHeader();
 
   const onDuplicate = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -87,18 +131,29 @@ import {
         </div>
       )}
 
+      {/* Header */}
+      {header && (
+        <div className="flex items-center gap-1.5 mb-2 pb-1.5 border-b border-white/5 opacity-60">
+          <span className="text-[10px]">{header.icon}</span>
+          <span className="text-[9px] font-bold uppercase tracking-wider">{header.text}</span>
+        </div>
+      )}
+
       {/* Node Content */}
       <div 
         className={cn(
           "node-content text-[11px] leading-relaxed",
-          "max-h-[160px] overflow-hidden relative"
+          "max-h-[160px] overflow-hidden relative",
+          !displayLabel && "italic opacity-40"
         )}
       >
-         {label.split('\n').map((line, i) => (
+         {displayLabel ? displayLabel.split('\n').map((line, i) => (
             <div key={i} style={{ minHeight: '1.2em' }}>{line}</div>
-         ))}
+         )) : (
+           <div className="text-center py-2">Sin contenido</div>
+         )}
          
-         {label.length > 150 && (
+         {displayLabel.length > 150 && (
            <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-black/80 to-transparent pointer-events-none flex items-end justify-center pb-1">
              <div className="text-[9px] text-white/40 font-bold uppercase tracking-wider">
                {isIA ? '⚡ Prompt IA Completo en Editor' : 'Ver más en Editor'}
@@ -151,14 +206,14 @@ import {
           - For Condition nodes: ALWAYS (as the "True" path)
           - For Auto-Continue: ALWAYS (as the automatic path)
       */}
-      {(buttons.length === 0 || label.startsWith('⚡') || autoContinue) && (
+      {(buttons.length === 0 || nodeType === 'Condición' || rawLabel.startsWith('⚡') || autoContinue) && (
         <Handle 
             type="source" 
             position={Position.Bottom} 
             id="main"
             className="w-3 h-3 border-2 border-white shadow-sm"
             style={{ 
-                background: label.startsWith('⚡') ? '#10b981' : (autoContinue ? '#3b82f6' : '#fff'),
+                background: (nodeType === 'Condición' || rawLabel.startsWith('⚡')) ? '#10b981' : (autoContinue ? '#3b82f6' : '#fff'),
                 bottom: '-6px',
                 zIndex: 50
             }} 

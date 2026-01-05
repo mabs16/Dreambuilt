@@ -92,10 +92,14 @@ export class FlowsService {
     sessionId: string,
     nextNodeId: string,
     variables?: Record<string, any>,
+    flowId?: number,
   ) {
     const updateData: Partial<FlowSession> = { current_node_id: nextNodeId };
     if (variables) {
       updateData.variables = variables;
+    }
+    if (flowId) {
+      updateData.flow_id = flowId;
     }
     await this.sessionRepository.update(sessionId, updateData);
   }

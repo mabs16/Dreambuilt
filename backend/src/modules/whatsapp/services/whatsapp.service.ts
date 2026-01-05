@@ -258,6 +258,58 @@ export class WhatsappService {
       `Executing node ${currentNodeId} [${currentNode.type || 'no-type'}] (data.type: ${currentNode.data?.type || 'no-data-type'}) for lead ${session.lead_id}`,
     );
 
+    // 0. Check if node is "ConectarFlujo" (Jump to Flow)
+    const isJumpNode =
+      currentNode.type === 'ConectarFlujo' ||
+      currentNode.data?.type === 'ConectarFlujo' ||
+      (currentNode.data?.label &&
+        currentNode.data.label.includes('Conectar Flujo:'));
+
+    if (isJumpNode) {
+      const targetFlowId = currentNode.data?.targetFlowId;
+      if (targetFlowId) {
+        this.logger.log(
+          `🔗 Jump Node detected: Redirecting lead ${session.lead_id} to flow ${targetFlowId}`,
+        );
+
+        const targetFlow = await this.flowsService.findOne(
+          Number(targetFlowId),
+        );
+        if (targetFlow) {
+          const targetNodes = targetFlow.nodes as unknown as FlowNode[];
+          const startNode =
+            targetNodes.find(
+              (n) => n.type === 'input' || n.type === 'trigger',
+            ) || targetNodes[0];
+
+          if (startNode) {
+            // Update current session to the new flow and its start node
+            await this.flowsService.updateSessionNode(
+              session.id,
+              startNode.id,
+              undefined,
+              targetFlow.id,
+            );
+
+            // Re-fetch to get updated session with new flow
+            const updatedSession = await this.flowsService.findOneSession(
+              session.id,
+            );
+            if (updatedSession) {
+              updatedSession.flow = targetFlow;
+              // Recursive call to start the new flow
+              return await this.executeFlowStep(updatedSession, '', from);
+            }
+          }
+        }
+      }
+      this.logger.warn(
+        `Jump node ${currentNodeId} failed to redirect. Completing session.`,
+      );
+      await this.flowsService.completeSession(session.id);
+      return;
+    }
+
     // 1. Process User Input (if we are waiting for an answer)
     const isWaiting = session.variables?._waiting_for_input === true;
 
@@ -361,9 +413,10 @@ export class WhatsappService {
       // 1. Remove prefixes including emojis if present
       messageToSend = messageToSend
         .replace(
-          /^((💬|❓|⚡|🤖|🏷️|⏳)\s*)?(Mensaje|Pregunta|IA Action|IA|Etiqueta|Tag|Condición|Pipeline|Asignación|Espera):\s*/iu,
+          /^\s*((💬|❓|⚡|🤖|🏷️|⏳|📊|👤|📧)\s*)?(Enviar Mensaje|Mensaje|Pregunta|IA Action|IA|Etiqueta|Tag|Condición|Pipeline|Asignación|Espera|Solicitar Nombre|Solicitar Email|Acción IA):\s*[\r\n]*/iu,
           '',
         )
+        .replace(/^\s*(💬|❓|⚡|🤖|🏷️|⏳|📊|👤|📧)\s*/iu, '') // Remove leftover emojis at start
         .trim();
 
       // 2. Variable Substitution (e.g., {{name}})
