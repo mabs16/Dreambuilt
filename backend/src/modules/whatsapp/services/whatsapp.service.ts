@@ -610,12 +610,12 @@ export class WhatsappService {
           );
           nextNodeId = edge?.target || null;
         } else {
-          // Use the "False" handle (the first button handle)
+          // Use the "False" handle (button or explicit false handle)
           const edge = edges.find(
             (e) =>
               e.source === currentNodeId &&
               e.sourceHandle &&
-              e.sourceHandle.startsWith('btn-'),
+              (e.sourceHandle.startsWith('btn-') || e.sourceHandle === 'false'),
           );
           nextNodeId = edge?.target || null;
         }
@@ -1108,6 +1108,17 @@ export class WhatsappService {
           }
 
           await this.sendWhatsappMessage(from, payload);
+
+          // AUTOMATICALLY SET brochure_enviado = true when a document is sent
+          // This fixes the logic where the system forgets the brochure was sent
+          if (mediaType === 'document') {
+            await this.flowsService.updateSessionVariables(session.id, {
+              brochure_enviado: true,
+            });
+            this.logger.log(
+              `Marked brochure_enviado = true for session ${session.id}`,
+            );
+          }
 
           // If autoContinue is enabled, we don't stop here
           if (currentNode.data?.autoContinue) {
