@@ -41,7 +41,8 @@ import {
   Menu,
   Download,
   FileJson,
-  Clock
+  Clock,
+  MoreVertical
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomNode from './custom-node';
@@ -102,6 +103,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
   const [advisors, setAdvisors] = useState<Array<{id: number, name: string}>>([]);
   const [availableFlows, setAvailableFlows] = useState<Array<{id: number, name: string}>>([]);
   const [isNodesPanelOpen, setIsNodesPanelOpen] = useState(true);
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
 
   // Initialize panel state based on screen size
   useEffect(() => {
@@ -580,17 +582,30 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
   return (
     <div className="h-screen w-full bg-black overflow-hidden relative no-scrollbar">
       {/* Retractable Nodes Panel */}
-      <div className="absolute top-24 left-6 z-10 flex flex-col items-start gap-2">
-        <button
-          onClick={() => setIsNodesPanelOpen(!isNodesPanelOpen)}
-          className={cn(
-            "p-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl text-white/70 hover:text-white transition-all shadow-2xl",
-            isNodesPanelOpen && "rounded-b-none border-b-0"
-          )}
-          title={isNodesPanelOpen ? "Contraer Nodos" : "Expandir Nodos"}
-        >
-          {isNodesPanelOpen ? <ChevronLeft className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+      <div className="absolute top-4 left-4 z-10 flex flex-col items-start gap-2">
+        <div className="relative">
+            <button
+            onClick={() => setIsNodesPanelOpen(!isNodesPanelOpen)}
+            className={cn(
+                "p-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl text-white/70 hover:text-white transition-all shadow-2xl",
+                isNodesPanelOpen && "rounded-b-none border-b-0"
+            )}
+            title={isNodesPanelOpen ? "Contraer Nodos" : "Expandir Nodos"}
+            >
+            {isNodesPanelOpen ? <ChevronLeft className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+
+            {/* Mobile Flow Name Input - Left Aligned */}
+            <div className="md:hidden absolute left-[calc(100%+12px)] top-1/2 -translate-y-1/2 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2 shadow-2xl flex items-center h-[46px]">
+                 <input 
+                     type="text" 
+                     placeholder="Nombre del flujo"
+                     value={flowName}
+                     onChange={(e) => setFlowName(e.target.value)}
+                     className="bg-transparent border-none text-sm text-white focus:outline-none w-32 font-bold placeholder:text-white/20"
+                 />
+            </div>
+        </div>
 
         <AnimatePresence>
           {isNodesPanelOpen && (
@@ -619,8 +634,8 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
         </AnimatePresence>
       </div>
 
-      <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
-        <div className="flex gap-2">
+      <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2 pointer-events-none">
+        <div className="flex flex-col md:flex-row gap-2 pointer-events-auto items-end">
             {onBack && (
                 <div className="flex items-end pb-0.5">
                     <button 
@@ -632,60 +647,104 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                     </button>
                 </div>
             )}
-            <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-white/40 uppercase font-bold px-1">Nombre del Flujo</label>
-                <input 
-                    type="text" 
-                    placeholder="Nombre del flujo"
-                    value={flowName}
-                    onChange={(e) => setFlowName(e.target.value)}
-                    className="bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50 w-64"
-                />
-            </div>
-            <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-white/40 uppercase font-bold px-1">Palabras Clave (sep. por coma)</label>
-                <input 
-                    type="text" 
-                    placeholder="hola, info, precio"
-                    value={triggerKeywords}
-                    onChange={(e) => setTriggerKeywords(e.target.value)}
-                    className="bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50 w-64"
-                />
-            </div>
-            <div className="flex items-end pb-0.5">
-                <label 
-                    className="flex items-center gap-2 bg-white/5 text-white/80 px-4 py-2 rounded-xl font-bold text-sm border border-white/10 hover:bg-white/10 transition-all h-[38px] cursor-pointer"
-                    title="Importar flujo desde JSON"
-                >
-                    <FileJson className="h-4 w-4" />
-                    Importar JSON
+            
+            <div className="flex flex-col md:flex-row gap-2">
+                <div className="hidden md:flex flex-col gap-1">
+                    <label className="text-[10px] text-white/40 uppercase font-bold px-1">Nombre del Flujo</label>
                     <input 
-                        type="file" 
-                        accept=".json" 
-                        onChange={importFromJson} 
-                        className="hidden" 
+                        type="text" 
+                        placeholder="Nombre del flujo"
+                        value={flowName}
+                        onChange={(e) => setFlowName(e.target.value)}
+                        className="bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50 w-64"
                     />
-                </label>
+                </div>
+                <div className="flex flex-col gap-1">
+                    <label className="text-[10px] text-white/40 uppercase font-bold px-1">Palabras Clave (sep. por coma)</label>
+                    <input 
+                        type="text" 
+                        placeholder="hola, info, precio"
+                        value={triggerKeywords}
+                        onChange={(e) => setTriggerKeywords(e.target.value)}
+                        className="bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50 w-64"
+                    />
+                </div>
             </div>
-            <div className="flex items-end pb-0.5">
-                <button 
-                    onClick={exportToJson}
-                    className="flex items-center gap-2 bg-white/5 text-white/80 px-4 py-2 rounded-xl font-bold text-sm border border-white/10 hover:bg-white/10 transition-all h-[38px]"
-                    title="Exportar flujo a JSON"
-                >
-                    <Download className="h-4 w-4" />
-                    Exportar JSON
-                </button>
+
+            {/* Desktop Actions */}
+            <div className="hidden md:flex gap-2 items-end">
+                <div className="flex items-end pb-0.5">
+                    <label 
+                        className="flex items-center gap-2 bg-white/5 text-white/80 px-4 py-2 rounded-xl font-bold text-sm border border-white/10 hover:bg-white/10 transition-all h-[38px] cursor-pointer"
+                        title="Importar flujo desde JSON"
+                    >
+                        <FileJson className="h-4 w-4" />
+                        Importar JSON
+                        <input 
+                            type="file" 
+                            accept=".json" 
+                            onChange={importFromJson} 
+                            className="hidden" 
+                        />
+                    </label>
+                </div>
+                <div className="flex items-end pb-0.5">
+                    <button 
+                        onClick={exportToJson}
+                        className="flex items-center gap-2 bg-white/5 text-white/80 px-4 py-2 rounded-xl font-bold text-sm border border-white/10 hover:bg-white/10 transition-all h-[38px]"
+                        title="Exportar flujo a JSON"
+                    >
+                        <Download className="h-4 w-4" />
+                        Exportar JSON
+                    </button>
+                </div>
+                <div className="flex items-end pb-0.5">
+                    <button 
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50 h-[38px]"
+                    >
+                        <Save className="h-4 w-4" />
+                        {isSaving ? 'Guardando...' : 'Guardar Flujo'}
+                    </button>
+                </div>
             </div>
-            <div className="flex items-end pb-0.5">
+
+            {/* Mobile Actions Menu */}
+            <div className="md:hidden relative flex items-end pb-0.5">
                 <button 
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50 h-[38px]"
+                    onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
+                    className="flex items-center justify-center bg-white/5 text-white/80 w-[38px] h-[38px] rounded-xl border border-white/10 hover:bg-white/10 transition-all"
                 >
-                  <Save className="h-4 w-4" />
-                  {isSaving ? 'Guardando...' : 'Guardar Flujo'}
+                    <MoreVertical className="h-5 w-5" />
                 </button>
+
+                <AnimatePresence>
+                    {isActionsMenuOpen && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                            className="absolute top-full right-0 mt-2 bg-black/90 backdrop-blur-xl border border-white/10 rounded-xl p-2 shadow-2xl flex flex-col gap-2 min-w-[200px]"
+                        >
+                            <label className="flex items-center gap-2 text-white/80 px-4 py-3 rounded-lg hover:bg-white/10 transition-all cursor-pointer text-sm font-bold">
+                                <FileJson className="h-4 w-4" />
+                                Importar JSON
+                                <input type="file" accept=".json" onChange={importFromJson} className="hidden" />
+                            </label>
+
+                            <button onClick={exportToJson} className="flex items-center gap-2 text-white/80 px-4 py-3 rounded-lg hover:bg-white/10 transition-all text-left text-sm font-bold">
+                                <Download className="h-4 w-4" />
+                                Exportar JSON
+                            </button>
+
+                            <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 text-primary-foreground bg-primary px-4 py-3 rounded-lg hover:brightness-110 transition-all text-left text-sm font-bold justify-center mt-1">
+                                <Save className="h-4 w-4" />
+                                {isSaving ? 'Guardando...' : 'Guardar Flujo'}
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
       </div>
