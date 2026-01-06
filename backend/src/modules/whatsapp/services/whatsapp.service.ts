@@ -588,33 +588,15 @@ export class WhatsappService {
           this.logger.log(
             `Condition "Contains '${keyword}'" check: ${conditionMet}`,
           );
-        } else {
-          // Generic Variable Check (e.g., "{{brochure_enviado}}")
-          const varMatch = label.match(/{{([^}]+)}}/);
-          if (varMatch) {
-            const varName = varMatch[1].trim();
-            const varValue = session.variables?.[varName];
-
-            // Check for explicit comparison: "es 'valor'" or "== 'valor'"
-            const valueMatch =
-              label.match(/es\s+'([^']+)'/i) || label.match(/==\s*'([^']+)'/);
-
-            if (valueMatch) {
-              const expectedValue = valueMatch[1].toLowerCase();
-              const actualValue = String(varValue || '').toLowerCase();
-              conditionMet = actualValue === expectedValue;
-            } else {
-              // Truthy check
-              conditionMet =
-                !!varValue &&
-                String(varValue).toLowerCase() !== 'false' &&
-                String(varValue).toLowerCase() !== 'no' &&
-                String(varValue).toLowerCase() !== '0';
-            }
-            this.logger.log(
-              `Condition Variable "${varName}" check: ${conditionMet} (Value: ${varValue})`,
-            );
-          }
+        } else if (label.includes('{{brochure_enviado}}')) {
+          // Check if brochure_enviado variable is true
+          const isSent =
+            session.variables?.['brochure_enviado'] === true ||
+            session.variables?.['brochure_enviado'] === 'true';
+          conditionMet = isSent;
+          this.logger.log(
+            `Condition "Brochure Enviado" check: ${conditionMet} (Value: ${session.variables?.['brochure_enviado']})`,
+          );
         }
 
         // Routing logic for Condition
