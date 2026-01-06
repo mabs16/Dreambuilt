@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { BullModule } from '@nestjs/bullmq';
+// import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
 import configuration from './config/configuration';
 
@@ -39,27 +39,27 @@ import { StorageModule } from './modules/storage/storage.module';
     }),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
-    BullModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        connection: {
-          host: configService.get<string>('redis.host'),
-          port: configService.get<number>('redis.port'),
-          password: configService.get<string>('redis.password'),
-          tls: configService.get('redis.tls'),
-        },
-        defaultJobOptions: {
-          removeOnComplete: 100, // Limpia jobs completados para no llenar Redis
-          removeOnFail: 500, // Limpia jobs fallidos
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 1000,
-          },
-        },
-      }),
-      inject: [ConfigService],
-    }),
+    // BullModule.forRootAsync({
+    //   imports: [ConfigModule],
+    //   useFactory: (configService: ConfigService) => ({
+    //     connection: {
+    //       host: configService.get<string>('redis.host'),
+    //       port: configService.get<number>('redis.port'),
+    //       password: configService.get<string>('redis.password'),
+    //       tls: configService.get('redis.tls'),
+    //     },
+    //     defaultJobOptions: {
+    //       removeOnComplete: 100, // Limpia jobs completados para no llenar Redis
+    //       removeOnFail: 500, // Limpia jobs fallidos
+    //       attempts: 3,
+    //       backoff: {
+    //         type: 'exponential',
+    //         delay: 1000,
+    //       },
+    //     },
+    //   }),
+    //   inject: [ConfigService],
+    // }),
     LeadsModule,
     AdvisorsModule,
     WhatsappModule,

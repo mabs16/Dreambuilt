@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -12,7 +12,7 @@ export class SlaService {
   constructor(
     @InjectRepository(SlaJob)
     private readonly slaRepository: Repository<SlaJob>,
-    @InjectQueue('sla-queue') private slaQueue: Queue,
+    @Optional() @InjectQueue('sla-queue') private slaQueue: Queue,
   ) {}
 
   async createSla(
@@ -34,11 +34,17 @@ export class SlaService {
     const savedJob = await this.slaRepository.save(slaJob);
 
     // Add to BullMQ with delay
-    await this.slaQueue.add(
-      'check-sla',
-      { slaJobId: savedJob.id, leadId, advisorId },
-      { delay: 15 * 60 * 1000, jobId: `sla-${savedJob.id}` },
-    );
+    if (this.slaQueue) {
+      await this.slaQueue.add(
+        'check-sla',
+        { slaJobId: savedJob.id, leadId, advisorId },
+        { delay: 15 * 60 * 1000, jobId: `sla-${savedJob.id}` },
+      );
+    } else {
+      this.logger.warn(
+        'SLA Queue not available. SLA job check will be skipped.',
+      );
+    }
 
     this.logger.log(
       `SLA created for lead ${leadId} assigned to advisor ${advisorId}`,
@@ -56,8 +62,10 @@ export class SlaService {
       await this.slaRepository.save(pendingJob);
 
       // Remove from BullMQ queue if possible
-      const job = await this.slaQueue.getJob(`sla-${pendingJob.id}`);
-      if (job) await job.remove();
+      if (this.slaQueue) {
+        const job = await this.slaQueue.getJob(`sla-${pendingJob.id}`);
+        if (job) await job.remove();
+      }
 
       this.logger.log(`SLA completed for lead ${leadId}`);
     }
@@ -71,8 +79,10 @@ export class SlaService {
     if (pendingJob) {
       pendingJob.status = SlaStatus.COMPLETED; // Using COMPLETED as "don't process"
       await this.slaRepository.save(pendingJob);
-      const job = await this.slaQueue.getJob(`sla-${pendingJob.id}`);
-      if (job) await job.remove();
+      if (this.slaQueue) {
+        const job = await this.slaQueue.getJob(`sla-${pendingJob.id}`);
+        if (job) await job.remove();
+      }
     }
   }
 }

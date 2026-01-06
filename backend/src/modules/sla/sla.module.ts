@@ -1,6 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { BullModule } from '@nestjs/bullmq';
+// import { BullModule } from '@nestjs/bullmq';
 import { SlaJob } from './entities/sla-job.entity';
 import { SlaService } from './services/sla.service';
 import { SlaProcessor } from './processors/sla.processor';
@@ -13,9 +13,9 @@ import { AdvisorsModule } from '../advisors/advisors.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([SlaJob]),
-    BullModule.registerQueue({
-      name: 'sla-queue',
-    }),
+    // BullModule.registerQueue({
+    //   name: 'sla-queue',
+    // }),
     forwardRef(() => LeadsModule),
     AssignmentsModule,
     forwardRef(() => ScoresModule),
