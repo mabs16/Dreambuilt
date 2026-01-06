@@ -26,14 +26,26 @@ export class AdvisorsService {
     private readonly eventEmitter: EventEmitter2,
   ) {
     const redisConfig = this.configService.get<RedisConfig>('redis');
-    if (!redisConfig) {
-      throw new Error('Redis configuration not found');
+
+    if (!redisConfig || !redisConfig.host) {
+      this.logger.error(
+        '❌ Redis configuration not found or incomplete in AdvisorsService',
+      );
     }
+
     this.redis = new Redis({
-      host: redisConfig.host,
-      port: redisConfig.port,
-      password: redisConfig.password,
-      tls: redisConfig.tls,
+      host: redisConfig?.host || 'localhost',
+      port: redisConfig?.port || 6379,
+      password: redisConfig?.password,
+      tls: redisConfig?.tls,
+      retryStrategy: (times) => Math.min(times * 50, 2000),
+    });
+
+    this.redis.on('error', (err) => {
+      // Suppress connection errors to avoid noise if Redis is intentionally missing
+      this.logger.warn(
+        `Redis connection warning in AdvisorsService: ${err.message}`,
+      );
     });
   }
 

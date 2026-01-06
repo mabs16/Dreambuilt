@@ -99,14 +99,37 @@ export class WhatsappService {
       password?: string;
       tls?: ConnectionOptions;
     };
-    if (!redisConfig) {
-      throw new Error('Redis configuration is missing');
+
+    if (!redisConfig || !redisConfig.host) {
+      this.logger.error(
+        '❌ Redis configuration is missing or incomplete (host not defined). Scheduled messages and state persistence will NOT work.',
+      );
+      // We initialize with empty object which defaults to localhost, but we log the error.
+      // In production this might be fatal, but for debugging we want the app to start.
+    } else {
+      this.logger.log(
+        `✅ Redis configuration found: ${redisConfig.host}:${redisConfig.port}`,
+      );
     }
+
     this.redis = new Redis({
-      host: redisConfig.host,
-      port: redisConfig.port,
-      password: redisConfig.password,
-      tls: redisConfig.tls,
+      host: redisConfig?.host || 'localhost',
+      port: redisConfig?.port || 6379,
+      password: redisConfig?.password,
+      tls: redisConfig?.tls,
+      maxRetriesPerRequest: null, // Recommended for BullMQ/some use cases
+      retryStrategy: (times) => {
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+      },
+    });
+
+    this.redis.on('error', (err) => {
+      this.logger.error(`Redis connection error: ${err.message}`);
+    });
+
+    this.redis.on('connect', () => {
+      this.logger.log('Successfully connected to Redis');
     });
   }
 

@@ -3,7 +3,20 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   console.log('--- [DEBUG] INICIANDO BOOTSTRAP DEL BACKEND ---');
+
+  // Debug Environment Variables (Keys only for security)
+  const envKeys = Object.keys(process.env).sort();
+  console.log('--- [DEBUG] AVAILABLE ENV VARS:', envKeys.join(', '));
   console.log('--- [DEBUG] PORT ENV:', process.env.PORT);
+  console.log(
+    '--- [DEBUG] REDIS_HOST ENV:',
+    process.env.REDIS_HOST ? 'Set' : 'Not Set',
+  );
+  console.log(
+    '--- [DEBUG] DB_HOST ENV:',
+    process.env.DB_HOST ? 'Set' : 'Not Set',
+  );
+
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
 
