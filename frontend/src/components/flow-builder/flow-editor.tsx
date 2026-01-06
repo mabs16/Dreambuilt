@@ -14,7 +14,8 @@ import {
   EdgeChange,
   NodeChange,
   BackgroundVariant,
-  Panel
+  Panel,
+  SelectionMode
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { cn } from "@/lib/utils";
@@ -216,7 +217,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
   ];
 
   // Get all custom variables defined in the current flow
-  const getFlowVariables = () => {
+    const getFlowVariables = () => {
         const vars = new Set<string>();
         nodes.forEach(node => {
             if (node.data?.variable && typeof node.data.variable === 'string') {
@@ -226,6 +227,19 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
             }
         });
         return Array.from(vars);
+    };
+
+    // Get all custom tags defined in the current flow
+    const getFlowTags = () => {
+        const tags = new Set<string>();
+        nodes.forEach(node => {
+            const label = (node.data?.label as string) || "";
+            if (label.startsWith('🏷️ Etiqueta:')) {
+                const tag = label.replace(/^🏷️ Etiqueta:\s*[\r\n]*/iu, '').trim();
+                if (tag) tags.add(tag);
+            }
+        });
+        return Array.from(tags);
     };
 
     const onConnect = useCallback(
@@ -734,40 +748,116 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                          </div>
                     ) : (selectedNode.data.label as string)?.startsWith('⏳') ? (
                          <div className="flex flex-col gap-3">
-                             <p className="text-[10px] text-white/40 mb-1">Configura el tiempo de espera:</p>
-                             <div className="flex gap-2">
-                                 <input 
-                                     type="number"
-                                     min="1"
-                                     className="w-20 bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50"
-                                     value={(selectedNode.data.waitTime as number) || 5}
-                                     onChange={(e) => {
-                                         const time = parseInt(e.target.value);
-                                         const unit = (selectedNode.data.waitUnit as string) || 'seconds';
-                                         setNodes((nds) => nds.map(n => n.id === selectedNodeId ? {
-                                             ...n,
-                                             data: { ...n.data, waitTime: time, label: `⏳ Espera:\n${time} ${unit === 'seconds' ? 'segundos' : 'minutos'}` }
-                                         } : n));
-                                     }}
-                                 />
-                                 <select 
-                                     className="flex-1 bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50"
-                                     value={(selectedNode.data.waitUnit as string) || 'seconds'}
-                                     onChange={(e) => {
-                                         const unit = e.target.value;
-                                         const time = (selectedNode.data.waitTime as number) || 5;
-                                         setNodes((nds) => nds.map(n => n.id === selectedNodeId ? {
-                                             ...n,
-                                             data: { ...n.data, waitUnit: unit, label: `⏳ Espera:\n${time} ${unit === 'seconds' ? 'segundos' : 'minutos'}` }
-                                         } : n));
-                                     }}
-                                 >
-                                     <option value="seconds">Segundos</option>
-                                     <option value="minutes">Minutos</option>
-                                 </select>
+                             <p className="text-[10px] text-white/40 mb-1">Configura el tipo de espera:</p>
+                             
+                             {/* Selector de Modo */}
+                             <div className="flex gap-2 mb-2">
+                                <button
+                                    onClick={() => {
+                                        setNodes((nds) => nds.map(n => n.id === selectedNodeId ? {
+                                            ...n,
+                                            data: { 
+                                                ...n.data, 
+                                                scheduledMode: false,
+                                                waitTime: 5,
+                                                waitUnit: 'seconds',
+                                                label: `⏳ Espera:\n5 segundos` 
+                                            }
+                                        } : n));
+                                    }}
+                                    className={cn(
+                                        "flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all",
+                                        !(selectedNode.data.scheduledMode)
+                                            ? "bg-amber-600 border-amber-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                                            : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
+                                    )}
+                                >
+                                    Relativo (Tiempo)
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setNodes((nds) => nds.map(n => n.id === selectedNodeId ? {
+                                            ...n,
+                                            data: { 
+                                                ...n.data, 
+                                                scheduledMode: true,
+                                                waitDays: 1,
+                                                label: `⏳ Espera:\n1 día (9:00 AM)` 
+                                            }
+                                        } : n));
+                                    }}
+                                    className={cn(
+                                        "flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all",
+                                        (selectedNode.data.scheduledMode)
+                                            ? "bg-amber-600 border-amber-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                                            : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
+                                    )}
+                                >
+                                    Agendado (Días)
+                                </button>
                              </div>
+
+                             {!(selectedNode.data.scheduledMode) ? (
+                                 <div className="flex gap-2">
+                                     <input 
+                                         type="number"
+                                         min="1"
+                                         className="w-20 bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50"
+                                         value={(selectedNode.data.waitTime as number) || 5}
+                                         onChange={(e) => {
+                                             const time = parseInt(e.target.value);
+                                             const unit = (selectedNode.data.waitUnit as string) || 'seconds';
+                                             setNodes((nds) => nds.map(n => n.id === selectedNodeId ? {
+                                                 ...n,
+                                                 data: { ...n.data, waitTime: time, label: `⏳ Espera:\n${time} ${unit === 'seconds' ? 'segundos' : 'minutos'}` }
+                                             } : n));
+                                         }}
+                                     />
+                                     <select 
+                                         className="flex-1 bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50"
+                                         value={(selectedNode.data.waitUnit as string) || 'seconds'}
+                                         onChange={(e) => {
+                                             const unit = e.target.value;
+                                             const time = (selectedNode.data.waitTime as number) || 5;
+                                             setNodes((nds) => nds.map(n => n.id === selectedNodeId ? {
+                                                 ...n,
+                                                 data: { ...n.data, waitUnit: unit, label: `⏳ Espera:\n${time} ${unit === 'seconds' ? 'segundos' : 'minutos'}` }
+                                             } : n));
+                                         }}
+                                     >
+                                         <option value="seconds">Segundos</option>
+                                         <option value="minutes">Minutos</option>
+                                     </select>
+                                 </div>
+                             ) : (
+                                 <div className="flex flex-col gap-2">
+                                     <div className="flex items-center gap-2">
+                                         <span className="text-xs text-white/70">Esperar</span>
+                                         <input 
+                                             type="number"
+                                             min="1"
+                                             className="w-20 bg-white/5 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50"
+                                             value={(selectedNode.data.waitDays as number) || 1}
+                                             onChange={(e) => {
+                                                 const days = parseInt(e.target.value);
+                                                 setNodes((nds) => nds.map(n => n.id === selectedNodeId ? {
+                                                     ...n,
+                                                     data: { ...n.data, waitDays: days, label: `⏳ Espera:\n${days} ${days === 1 ? 'día' : 'días'} (9:00 AM)` }
+                                                 } : n));
+                                             }}
+                                         />
+                                         <span className="text-xs text-white/70">días</span>
+                                     </div>
+                                     <p className="text-[10px] text-amber-500/80 mt-1">
+                                         * El mensaje se enviará a las 9:00 AM después de {((selectedNode.data.waitDays as number) || 1)} día(s).
+                                     </p>
+                                 </div>
+                             )}
+
                              <p className="text-[10px] text-white/40 italic bg-white/5 p-2 rounded-lg">
-                                 Tip: Este nodo detiene el flujo por el tiempo indicado antes de pasar al siguiente mensaje.
+                                 Tip: {!(selectedNode.data.scheduledMode) 
+                                     ? "Este nodo detiene el flujo por el tiempo indicado antes de pasar al siguiente mensaje." 
+                                     : "Este modo es ideal para fases de nutrición a largo plazo."}
                              </p>
                          </div>
                     ) : (selectedNode.data.label as string)?.startsWith('🏷️') ? (
@@ -851,6 +941,17 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                                      )}
                                  >
                                      Asignado
+                                 </button>
+                                 <button
+                                     onClick={() => updateNodeLabel("📊 Pipeline:\nActualizar Status (Nutricion)")}
+                                     className={cn(
+                                         "flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all",
+                                         (selectedNode.data.label as string).includes("Nutricion")
+                                             ? "bg-purple-600 border-purple-500 text-white shadow-[0_0_10px_rgba(147,51,234,0.5)]"
+                                             : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
+                                     )}
+                                 >
+                                     Nutrición
                                  </button>
                              </div>
                          </div>
@@ -1006,7 +1107,65 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                             )}
                         </div>
                     ) : (selectedNode.data.label as string)?.startsWith('🏷️') ? (
-                        null
+                        <div className="flex flex-col gap-3">
+                            <p className="text-[10px] text-white/40 mb-1">Configuración de Etiqueta:</p>
+                            
+                            {/* Selector de etiquetas existentes en el flujo */}
+                            {getFlowTags().length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-[9px] text-white/30 uppercase font-bold">Etiquetas en este flujo:</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {getFlowTags().map(tag => (
+                                            <button
+                                                key={tag}
+                                                onClick={() => updateNodeLabel(`🏷️ Etiqueta:\n${tag}`)}
+                                                className={cn(
+                                                    "px-3 py-1.5 rounded-full text-[10px] font-medium border transition-all",
+                                                    (selectedNode.data.label as string).includes(tag)
+                                                        ? "bg-pink-600 border-pink-500 text-white shadow-[0_0_10px_rgba(236,72,153,0.3)]"
+                                                        : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"
+                                                )}
+                                            >
+                                                {tag}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="space-y-2 mt-2">
+                                <p className="text-[9px] text-white/30 uppercase font-bold">Nueva etiqueta personalizada:</p>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="text"
+                                        placeholder="Ej: interesado_preventa..."
+                                        className="flex-1 bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-pink-500/50"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                const val = (e.target as HTMLInputElement).value.trim();
+                                                if (val) {
+                                                    updateNodeLabel(`🏷️ Etiqueta:\n${val.toLowerCase()}`);
+                                                    (e.target as HTMLInputElement).value = '';
+                                                }
+                                            }
+                                        }}
+                                    />
+                                    <button 
+                                        onClick={(e) => {
+                                            const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                                            const val = input.value.trim();
+                                            if (val) {
+                                                updateNodeLabel(`🏷️ Etiqueta:\n${val.toLowerCase()}`);
+                                                input.value = '';
+                                            }
+                                        }}
+                                        className="bg-pink-600 hover:bg-pink-500 text-white p-2 rounded-lg transition-colors"
+                                    >
+                                        <PlusCircle className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     ) : (
                         <textarea 
                             value={(() => {
@@ -1322,6 +1481,10 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
         deleteKeyCode={["Backspace", "Delete"]}
         multiSelectionKeyCode={["Control", "Shift"]}
         selectionKeyCode={["s"]}
+        selectionOnDrag={true}
+        selectionMode={SelectionMode.Partial}
+        panOnDrag={[1, 2]}
+        panOnScroll={true}
         onEdgeContextMenu={(e, edge) => {
           e.preventDefault();
           setEdges((eds) => eds.filter((eb) => eb.id !== edge.id));

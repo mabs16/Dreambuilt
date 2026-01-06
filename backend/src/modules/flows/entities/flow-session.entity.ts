@@ -40,6 +40,9 @@ export class FlowSession {
   @CreateDateColumn()
   last_interaction: Date;
 
+  @Column({ type: 'timestamp', nullable: true })
+  scheduled_for: Date | null;
+
   @CreateDateColumn()
   created_at: Date;
 }

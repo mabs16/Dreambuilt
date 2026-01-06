@@ -9,6 +9,7 @@ import {
 export enum LeadStatus {
   NUEVO = 'NUEVO',
   PRECALIFICADO = 'PRECALIFICADO',
+  NUTRICION = 'NUTRICION',
   ASIGNADO = 'ASIGNADO',
   ASESOR_INFORMADO = 'ASESOR_INFORMADO',
   CONTACTADO = 'CONTACTADO',
@@ -41,6 +42,9 @@ export class Lead {
 
   @Column({ nullable: true })
   avatar_url: string;
+
+  @Column({ nullable: true })
+  email: string;
 
   @Column({ type: 'jsonb', default: [] })
   tags: string[];

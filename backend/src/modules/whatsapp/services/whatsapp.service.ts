@@ -2,9 +2,10 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, LessThanOrEqual } from 'typeorm';
 import axios from 'axios';
 import Redis from 'ioredis';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConnectionOptions } from 'tls';
 import {
   CommandParser,
@@ -89,6 +90,8 @@ export class WhatsappService {
     private readonly automationsService: AutomationsService,
     private readonly geminiService: GeminiService,
     private readonly flowsService: FlowsService,
+    @InjectRepository(FlowSession)
+    private readonly flowSessionsRepository: Repository<FlowSession>,
   ) {
     const redisConfig = this.configService.get('redis') as {
       host: string;
@@ -105,6 +108,79 @@ export class WhatsappService {
       password: redisConfig.password,
       tls: redisConfig.tls,
     });
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_9AM)
+  async handleScheduledMessages() {
+    this.logger.log('⏰ Running daily scheduled messages check at 9 AM...');
+
+    // Find sessions scheduled for today or earlier (in case of missed runs)
+    const now = new Date();
+    const scheduledSessions = await this.flowSessionsRepository.find({
+      where: {
+        status: 'ACTIVE',
+        scheduled_for: LessThanOrEqual(now),
+      },
+      relations: ['flow', 'lead'],
+    });
+
+    if (scheduledSessions.length === 0) {
+      this.logger.log('No scheduled messages found for today.');
+      return;
+    }
+
+    this.logger.log(`Found ${scheduledSessions.length} sessions to resume.`);
+
+    for (const session of scheduledSessions) {
+      try {
+        this.logger.log(
+          `Resuming session ${session.id} for lead ${session.lead_id}`,
+        );
+
+        // Clear schedule to avoid double processing
+        session.scheduled_for = null;
+        await this.flowSessionsRepository.save(session);
+
+        // Resume flow execution
+        // We need to find the next node after the wait node
+        const flow = session.flow;
+        if (!flow || !flow.nodes || !flow.edges) {
+          this.logger.warn(`Flow data missing for session ${session.id}`);
+          continue;
+        }
+
+        const currentNodeId = session.current_node_id;
+        // Find edge from current wait node
+        const edge = flow.edges.find((e: any) => e.source === currentNodeId);
+
+        if (edge) {
+          const nextNodeId = String(edge.target);
+          await this.flowsService.updateSessionNode(session.id, nextNodeId);
+
+          // Refresh session with updated data
+          const updatedSession = await this.flowsService.findOneSession(
+            session.id,
+          );
+          if (updatedSession) {
+            updatedSession.flow = flow; // Re-attach flow data
+            await this.executeFlowStep(
+              updatedSession,
+              '',
+              String(session.lead.phone),
+            );
+          }
+        } else {
+          this.logger.log(
+            `No next node found for session ${session.id}, completing.`,
+          );
+          await this.flowsService.completeSession(session.id);
+        }
+      } catch (error) {
+        this.logger.error(
+          `Error resuming session ${session.id}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
   }
 
   @OnEvent('advisor.otp_requested')
@@ -332,6 +408,20 @@ export class WhatsappService {
           }
         }
 
+        // SPECIAL CASE: If variable is 'email', update the lead email in database
+        if (varName === 'email') {
+          try {
+            await this.leadsService.updateEmail(session.lead_id, userMessage);
+            this.logger.log(
+              `Updated lead ${session.lead_id} email to: ${userMessage}`,
+            );
+          } catch (error) {
+            this.logger.error(
+              `Failed to update lead email: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          }
+        }
+
         await this.flowsService.updateSessionVariables(session.id, {
           [varName]: userMessage,
           _waiting_for_input: false,
@@ -355,6 +445,30 @@ export class WhatsappService {
             currentNode.data.label.includes('⏳')));
 
       if (isWaitNode) {
+        // NEW: Check for Scheduled Wait Mode (Days + 9 AM)
+        const isScheduled = currentNode.data?.scheduledMode === true;
+
+        if (isScheduled) {
+          const daysToWait = (currentNode.data?.waitDays as number) || 1;
+
+          // Calculate target date
+          const targetDate = new Date();
+          targetDate.setDate(targetDate.getDate() + daysToWait);
+          // Set time to 9:00 AM
+          targetDate.setHours(9, 0, 0, 0);
+
+          this.logger.log(
+            `📅 Scheduled Wait Node detected for lead ${session.lead_id}. Waiting ${daysToWait} days until ${targetDate.toISOString()}`,
+          );
+
+          // Save scheduled date to session and stop execution
+          session.scheduled_for = targetDate;
+          await this.flowSessionsRepository.save(session);
+
+          return; // STOP EXECUTION HERE. Cron job will pick it up later.
+        }
+
+        // Standard Delay Mode (existing logic)
         const waitTime = (currentNode.data?.waitTime as number) || 5;
         const waitUnit = (currentNode.data?.waitUnit as string) || 'seconds';
         const delayMs =
@@ -584,9 +698,13 @@ export class WhatsappService {
 
         // Determine status from node label
         const label = (currentNode.data?.label as string) || '';
-        const targetStatus = label.toLowerCase().includes('asignado')
-          ? LeadStatus.ASIGNADO
-          : LeadStatus.PRECALIFICADO;
+        let targetStatus = LeadStatus.PRECALIFICADO;
+
+        if (label.toLowerCase().includes('asignado')) {
+          targetStatus = LeadStatus.ASIGNADO;
+        } else if (label.toLowerCase().includes('nutricion')) {
+          targetStatus = LeadStatus.NUTRICION;
+        }
 
         // 1. Update Status
         await this.leadsService.updateStatus(session.lead_id, targetStatus);

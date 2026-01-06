@@ -70,6 +70,13 @@ export class LeadsService {
     return this.leadsRepository.save(lead);
   }
 
+  async updateEmail(id: number, email: string): Promise<Lead> {
+    const lead = await this.findById(id);
+    lead.email = email;
+    lead.updated_at = new Date();
+    return this.leadsRepository.save(lead);
+  }
+
   async freezeForManualReview(): Promise<void> {
     // In v1, "frozen" might just be an event and a special property or just staying in ASIGNADO
     // but marked in the UI. For now, let's update a metadata field (payload) in the lead if we had it,

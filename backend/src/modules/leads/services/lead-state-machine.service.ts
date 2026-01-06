@@ -5,7 +5,8 @@ import { LeadStatus } from '../entities/lead.entity';
 export class LeadStateMachine {
   private readonly transitions: Record<LeadStatus, LeadStatus[]> = {
     [LeadStatus.NUEVO]: [LeadStatus.PRECALIFICADO],
-    [LeadStatus.PRECALIFICADO]: [LeadStatus.ASIGNADO],
+    [LeadStatus.PRECALIFICADO]: [LeadStatus.NUTRICION, LeadStatus.ASIGNADO],
+    [LeadStatus.NUTRICION]: [LeadStatus.ASIGNADO],
     [LeadStatus.ASIGNADO]: [
       LeadStatus.ASESOR_INFORMADO,
       LeadStatus.CONTACTADO,
