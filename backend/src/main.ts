@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
+console.log('--- [DEBUG] MAIN.TS FILE LOADED ---');
+
 async function bootstrap() {
   try {
     console.log('--- [DEBUG] INICIANDO BOOTSTRAP DEL BACKEND ---');
@@ -8,7 +10,18 @@ async function bootstrap() {
     // Debug Environment Variables (Keys only for security)
     const envKeys = Object.keys(process.env).sort();
     console.log('--- [DEBUG] AVAILABLE ENV VARS:', envKeys.join(', '));
-    console.log('--- [DEBUG] PORT ENV:', process.env.PORT);
+    console.log('--- [DEBUG] PORT ENV RAW:', process.env.PORT);
+
+    // Force PORT logic
+    let port = 8080;
+    if (process.env.PORT) {
+      const parsedPort = parseInt(process.env.PORT, 10);
+      if (!isNaN(parsedPort)) {
+        port = parsedPort;
+      }
+    }
+    console.log(`--- [DEBUG] USING PORT: ${port}`);
+
     console.log(
       '--- [DEBUG] REDIS_HOST ENV:',
       process.env.REDIS_HOST ? 'Set' : 'Not Set',
@@ -55,7 +68,6 @@ async function bootstrap() {
       optionsSuccessStatus: 204,
     });
 
-    const port = process.env.PORT || 8080;
     console.log(`Intentando iniciar servidor en puerto ${port}...`);
     await app.listen(port, '0.0.0.0');
     console.log(`🚀 Backend desplegado con éxito en el puerto ${port}`);

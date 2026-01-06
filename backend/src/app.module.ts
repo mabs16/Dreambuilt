@@ -71,4 +71,8 @@ import { StorageModule } from './modules/storage/storage.module';
     StorageModule,
   ],
 })
-export class AppModule {}
+export class AppModule {
+  constructor() {
+    console.log('--- [DEBUG] APP MODULE INITIALIZED ---');
+  }
+}
