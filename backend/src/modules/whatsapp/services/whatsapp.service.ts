@@ -1130,13 +1130,20 @@ export class WhatsappService {
         }
       }
 
-      // If it's a 'Pregunta' node, wait for input
-      if (
+      // If it's a 'Pregunta' or 'Captura' node, wait for input
+      const isQuestionNode =
         currentNode.type === 'Pregunta' ||
         currentNode.data?.type === 'Pregunta' || // Check explicit type from data
         (currentNode.data?.label &&
-          currentNode.data.label.toLowerCase().includes('pregunta:'))
-      ) {
+          currentNode.data.label.toLowerCase().includes('pregunta:'));
+
+      const isCaptureNode =
+        currentNode.type === 'CapturaNombre' ||
+        currentNode.data?.type === 'CapturaNombre' ||
+        currentNode.type === 'CapturaEmail' ||
+        currentNode.data?.type === 'CapturaEmail';
+
+      if (isQuestionNode || isCaptureNode) {
         await this.flowsService.updateSessionVariables(session.id, {
           _waiting_for_input: true,
         });
