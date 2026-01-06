@@ -1,5 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { Client } from 'pg';
+import * as http from 'http';
 
 console.log('--- [DEBUG] MAIN.TS FILE LOADED ---');
 
@@ -9,22 +11,83 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 async function bootstrap() {
+  // Force PORT logic early
+  let port = 8080;
+  if (process.env.PORT) {
+    const parsedPort = parseInt(process.env.PORT, 10);
+    if (!isNaN(parsedPort)) {
+      port = parsedPort;
+    }
+  }
+
+  console.log(`--- [DEBUG] PREPARING TO START ON PORT: ${port}`);
+
+  // 1. DIAGNOSTIC STEP: Check DB Connection manually
+  // This prevents the app from crashing silently if DB is unreachable
+  console.log('--- [DEBUG] TESTEANDO CONEXION DB DIRECTA ---');
   try {
-    console.log('--- [DEBUG] INICIANDO BOOTSTRAP DEL BACKEND ---');
+    const dbClient = new Client({
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      user: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 5000, // 5s timeout
+    });
+
+    await dbClient.connect();
+    console.log('--- [DEBUG] CONEXION DB EXITOSA ---');
+    await dbClient.end();
+  } catch (dbError: any) {
+    console.error('--- [CRITICAL] FALLO CONEXION DB ---', dbError);
+
+    // 2. EMERGENCY MODE: Start a simple HTTP server to report the error
+    // This keeps Cloud Run happy (port is open) and lets us see the error in browser
+    console.log('--- [INFO] INICIANDO SERVIDOR DE EMERGENCIA ---');
+    const server = http.createServer((req, res) => {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify(
+          {
+            status: 'error',
+            message:
+              'Database connection failed. Backend started in emergency mode.',
+            error: dbError.message || dbError,
+            details: JSON.stringify(
+              dbError,
+              Object.getOwnPropertyNames(dbError),
+            ),
+            env_check: {
+              host: process.env.DB_HOST,
+              port: process.env.DB_PORT,
+              user: process.env.DB_USERNAME ? '***' : 'Unset',
+              db: process.env.DB_NAME,
+            },
+          },
+          null,
+          2,
+        ),
+      );
+    });
+
+    server.listen(port, '0.0.0.0', () => {
+      console.log(`⚠️  EMERGENCY SERVER LISTENING ON PORT ${port}`);
+      console.log(
+        '⚠️  Application is in maintenance mode due to DB connection failure.',
+      );
+    });
+    return; // Stop normal bootstrap
+  }
+
+  try {
+    console.log('--- [DEBUG] INICIANDO BOOTSTRAP DEL BACKEND (NORMAL) ---');
 
     // Debug Environment Variables (Keys only for security)
     const envKeys = Object.keys(process.env).sort();
     console.log('--- [DEBUG] AVAILABLE ENV VARS:', envKeys.join(', '));
-    console.log('--- [DEBUG] PORT ENV RAW:', process.env.PORT);
 
-    // Force PORT logic
-    let port = 8080;
-    if (process.env.PORT) {
-      const parsedPort = parseInt(process.env.PORT, 10);
-      if (!isNaN(parsedPort)) {
-        port = parsedPort;
-      }
-    }
+    // Port logic already handled above
     console.log(`--- [DEBUG] USING PORT: ${port}`);
 
     console.log(
