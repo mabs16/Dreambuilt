@@ -101,7 +101,7 @@ async function bootstrap() {
     );
 
     const app = await NestFactory.create(AppModule);
-    
+
     // Exclude root path from global prefix to allow health checks on /
     app.setGlobalPrefix('api', {
       exclude: [{ path: '/', method: RequestMethod.GET }],

@@ -11,11 +11,12 @@ import { LeadsModule } from '../leads/leads.module';
 import { FlowsModule } from '../flows/flows.module';
 import { Message } from './entities/message.entity';
 import { Automation } from './entities/automation.entity';
+import { FlowSession } from '../flows/entities/flow-session.entity';
 import { AutomationsController } from './controllers/automations.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Message, Automation]),
+    TypeOrmModule.forFeature([Message, Automation, FlowSession]),
     AdvisorsModule,
     AssignmentsModule,
     forwardRef(() => LeadsModule),
