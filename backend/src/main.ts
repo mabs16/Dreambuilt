@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Client } from 'pg';
 import * as http from 'http';
+import { RequestMethod } from '@nestjs/common';
 
 console.log('--- [DEBUG] MAIN.TS FILE LOADED ---');
 
@@ -100,7 +101,11 @@ async function bootstrap() {
     );
 
     const app = await NestFactory.create(AppModule);
-    app.setGlobalPrefix('api');
+    
+    // Exclude root path from global prefix to allow health checks on /
+    app.setGlobalPrefix('api', {
+      exclude: [{ path: '/', method: RequestMethod.GET }],
+    });
 
     // Log para verificar rutas registradas de forma segura
     try {
