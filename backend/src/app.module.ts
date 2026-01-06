@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -34,6 +34,7 @@ import { StorageModule } from './modules/storage/storage.module';
         autoLoadEntities: true,
         synchronize: true, // Use migrations for production
         ssl: { rejectUnauthorized: false },
+        connectTimeoutMS: 10000, // Fail fast if DB is unreachable
       }),
       inject: [ConfigService],
     }),
@@ -71,8 +72,12 @@ import { StorageModule } from './modules/storage/storage.module';
     StorageModule,
   ],
 })
-export class AppModule {
+export class AppModule implements OnModuleInit {
   constructor() {
-    console.log('--- [DEBUG] APP MODULE INITIALIZED ---');
+    console.log('--- [DEBUG] APP MODULE CONSTRUCTOR ---');
+  }
+
+  onModuleInit() {
+    console.log('--- [DEBUG] APP MODULE ON MODULE INIT ---');
   }
 }

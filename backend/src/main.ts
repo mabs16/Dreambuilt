@@ -3,6 +3,11 @@ import { AppModule } from './app.module';
 
 console.log('--- [DEBUG] MAIN.TS FILE LOADED ---');
 
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Log critical error but don't exit immediately to allow logs to flush
+});
+
 async function bootstrap() {
   try {
     console.log('--- [DEBUG] INICIANDO BOOTSTRAP DEL BACKEND ---');
