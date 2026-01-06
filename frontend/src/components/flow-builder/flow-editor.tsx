@@ -1176,7 +1176,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                                             <span className="mt-0.5">⚠️</span>
                                             <div>
                                                 <p className="font-bold">Sin asesores</p>
-                                                <p className="opacity-80 text-[10px]">No se encontraron asesores registrados. Ve a la sección "Equipo" para añadir uno.</p>
+                                                <p className="opacity-80 text-[10px]">No se encontraron asesores registrados. Ve a la sección &quot;Equipo&quot; para añadir uno.</p>
                                             </div>
                                         </div>
                                     ) : (
