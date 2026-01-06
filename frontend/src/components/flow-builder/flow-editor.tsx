@@ -114,17 +114,26 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
   }, []);
 
   // Fetch advisors and flows when component mounts
+  const fetchAdvisorsData = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const resAdvisors = await fetch(`${apiUrl}/api/advisors`);
+        if (resAdvisors.ok) {
+            const data = await resAdvisors.json();
+            setAdvisors(data);
+        }
+      } catch (err) {
+        console.error("Error fetching advisors:", err);
+      }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
         
         // Fetch Advisors
-        const resAdvisors = await fetch(`${apiUrl}/api/advisors`);
-        if (resAdvisors.ok) {
-            const data = await resAdvisors.json();
-            setAdvisors(data);
-        }
+        await fetchAdvisorsData();
 
         // Fetch Flows
         const resFlows = await fetch(`${apiUrl}/api/flows`);
@@ -1121,7 +1130,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                                 Al llegar a este nodo, el usuario saltará automáticamente al inicio del flujo seleccionado.
                             </p>
                         </div>
-                    ) : (selectedNode.data.label as string)?.startsWith('👤') ? (
+                    ) : (selectedNode.data.label as string)?.startsWith('👤 Asignación:') ? (
                         <div className="flex flex-col gap-2">
                             <p className="text-[10px] text-white/40 mb-1">Tipo de Asignación:</p>
                             <div className="flex gap-2 mb-2">
@@ -1150,31 +1159,51 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                             </div>
                             
                             {(selectedNode.data.label as string).includes("Manual") && (
-                                <div className="mt-2">
-                                    <p className="text-[10px] text-white/40 mb-1">Seleccionar Asesor:</p>
-                                    <select 
-                                        className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500"
-                                        onChange={(e) => {
-                                            const selectedId = parseInt(e.target.value);
-                                            const selectedAdvisor = advisors.find(a => a.id === selectedId);
-                                            if (selectedAdvisor) {
-                                                updateNodeLabel(`👤 Asignación:\nManual: ${selectedAdvisor.name} (ID: ${selectedAdvisor.id})`);
-                                            }
-                                        }}
-                                        value={(() => {
-                                            const label = selectedNode.data.label as string;
-                                            const idMatch = label.match(/\(ID:\s*(\d+)\)/);
-                                            if (idMatch) return idMatch[1];
-                                            const namePart = label.split('Manual: ')[1]?.trim();
-                                            const foundByName = advisors.find(a => a.name === namePart);
-                                            return foundByName ? foundByName.id : "";
-                                        })()}
-                                    >
-                                        <option value="">Selecciona un asesor...</option>
-                                        {advisors.map(advisor => (
-                                            <option key={advisor.id} value={advisor.id}>{advisor.name}</option>
-                                        ))}
-                                    </select>
+                                <div className="mt-2 space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <p className="text-[10px] text-white/40">Seleccionar Asesor:</p>
+                                        <button 
+                                            onClick={fetchAdvisorsData}
+                                            className="text-[10px] text-amber-500 hover:text-amber-400 flex items-center gap-1 transition-colors"
+                                            title="Recargar lista de asesores"
+                                        >
+                                            🔄 Actualizar
+                                        </button>
+                                    </div>
+                                    
+                                    {advisors.length === 0 ? (
+                                        <div className="text-xs text-rose-300 bg-rose-900/20 p-2.5 rounded-lg border border-rose-500/20 flex gap-2 items-start">
+                                            <span className="mt-0.5">⚠️</span>
+                                            <div>
+                                                <p className="font-bold">Sin asesores</p>
+                                                <p className="opacity-80 text-[10px]">No se encontraron asesores registrados. Ve a la sección "Equipo" para añadir uno.</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <select 
+                                            className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                                            onChange={(e) => {
+                                                const selectedId = parseInt(e.target.value);
+                                                const selectedAdvisor = advisors.find(a => a.id === selectedId);
+                                                if (selectedAdvisor) {
+                                                    updateNodeLabel(`👤 Asignación:\nManual: ${selectedAdvisor.name} (ID: ${selectedAdvisor.id})`);
+                                                }
+                                            }}
+                                            value={(() => {
+                                                const label = selectedNode.data.label as string;
+                                                const idMatch = label.match(/\(ID:\s*(\d+)\)/);
+                                                if (idMatch) return idMatch[1];
+                                                const namePart = label.split('Manual: ')[1]?.trim();
+                                                const foundByName = advisors.find(a => a.name === namePart);
+                                                return foundByName ? foundByName.id : "";
+                                            })()}
+                                        >
+                                            <option value="">Selecciona un asesor...</option>
+                                            {advisors.map(advisor => (
+                                                <option key={advisor.id} value={advisor.id}>{advisor.name}</option>
+                                            ))}
+                                        </select>
+                                    )}
                                 </div>
                             )}
                         </div>
