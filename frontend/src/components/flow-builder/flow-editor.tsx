@@ -984,6 +984,19 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                                     <span>Validar Nombre del Lead</span>
                                     {(selectedNode.data.label as string).includes("¿Tiene nombre") && <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />}
                                 </button>
+
+                                <button
+                                    onClick={() => updateNodeLabel("⚡ Condición:\n{{brochure_enviado}}")}
+                                    className={cn(
+                                        "w-full py-2 px-3 rounded-lg text-xs font-bold border transition-all text-left flex items-center justify-between",
+                                        (selectedNode.data.label as string).includes("brochure_enviado")
+                                            ? "bg-amber-600 border-amber-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                                            : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
+                                    )}
+                                >
+                                    <span>Validar Brochure Enviado</span>
+                                    {(selectedNode.data.label as string).includes("brochure_enviado") && <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />}
+                                </button>
                             </div>
 
                             {(selectedNode.data.label as string).includes("contiene") && (
