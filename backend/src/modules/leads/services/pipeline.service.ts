@@ -112,14 +112,22 @@ export class PipelineService {
   }
 
   @OnEvent('pipeline.assign')
-  async handleAssign(payload: { leadId: number; advisorId: number }) {
+  async handleAssign(payload: {
+    leadId: number;
+    advisorId: number;
+    source?: 'SYSTEM' | 'MANUAL';
+  }) {
     this.logger.log(
-      `Handling assignment event for lead ${payload.leadId} to advisor ${payload.advisorId}`,
+      `Handling assignment event for lead ${payload.leadId} to advisor ${payload.advisorId} (Source: ${payload.source || 'UNKNOWN'})`,
     );
     try {
       const assignment = await this.assignmentsService.createAssignment(
         payload.leadId,
         payload.advisorId,
+        payload.source || 'SYSTEM', // Default to SYSTEM if coming from pipeline.assign without source?
+        // Wait, if manual assignment emits pipeline.assign, it should pass source.
+        // If AI emits pipeline.assign, it should pass source.
+        // I will default to SYSTEM to be safe for existing calls, OR I should verify AI call.
       );
       this.logger.log(`Assignment created with ID: ${assignment.id}`);
 

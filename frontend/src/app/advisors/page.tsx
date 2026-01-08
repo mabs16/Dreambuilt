@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import {
     Trophy,
     User as UserIcon,
     Plus,
     Trash2,
-    X
+    X,
+    Users,
+    Settings2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import AdvisorConfigPanel from "@/components/advisors/advisor-config-panel";
 
 interface Advisor {
     id: string | number;
@@ -22,6 +25,7 @@ interface Advisor {
 
 export default function AdvisorsPage() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const [activeTab, setActiveTab] = useState<'directory' | 'config'>('directory');
     const [advisors, setAdvisors] = useState<Advisor[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -40,32 +44,36 @@ export default function AdvisorsPage() {
         { code: "51", label: "🇵🇪 +51", name: "Perú" },
     ];
 
-    async function fetchAdvisors() {
+    const fetchAdvisors = useCallback(async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('advisors')
-            .select('*')
-            .order('score', { ascending: false });
-
-        if (error) console.error('Error fetching advisors:', error);
-        else setAdvisors(data || []);
+        try {
+            const res = await fetch(`${apiUrl}/api/advisors`);
+            if (res.ok) {
+                const data = await res.json();
+                setAdvisors(data);
+            }
+        } catch (error) {
+            console.error('Error fetching advisors:', error);
+        }
         setLoading(false);
-    }
+    }, [apiUrl]);
 
     useEffect(() => {
-        fetchAdvisors();
+        if (activeTab === 'directory') {
+            fetchAdvisors();
+        }
 
         const channel = supabase
             .channel('public:advisors')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'advisors' }, () => {
-                fetchAdvisors();
+                if (activeTab === 'directory') fetchAdvisors();
             })
             .subscribe();
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, []);
+    }, [activeTab, fetchAdvisors]);
 
     const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean, id: string | number | null, name: string }>({
         isOpen: false,
@@ -150,92 +158,126 @@ export default function AdvisorsPage() {
         }
     };
 
-    if (loading) {
+    if (loading && activeTab === 'directory') {
         return <div className="flex h-full items-center justify-center">Cargando ranking...</div>;
     }
 
     return (
         <div className="space-y-8">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight font-outfit">Ranking de Asesores</h1>
-                    <p className="text-muted-foreground">Rendimiento basado en el sistema de puntuación Dreambuilt OS.</p>
+                    <h1 className="text-3xl font-bold tracking-tight font-outfit">Gestión de Equipo</h1>
+                    <p className="text-muted-foreground">Administra tus asesores y sus reglas de operación.</p>
                 </div>
-                <button
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="bg-primary text-primary-foreground px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20"
-                >
-                    <Plus className="h-4 w-4" /> Añadir Asesor
-                </button>
+                
+                <div className="flex p-1.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl">
+                    <button
+                        onClick={() => setActiveTab('directory')}
+                        className={cn(
+                            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300",
+                            activeTab === 'directory' 
+                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                                : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                        )}
+                    >
+                        <Users className="h-4 w-4" />
+                        Directorio
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('config')}
+                        className={cn(
+                            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300",
+                            activeTab === 'config' 
+                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                                : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                        )}
+                    >
+                        <Settings2 className="h-4 w-4" />
+                        Configuración Operativa
+                    </button>
+                </div>
+
+                {activeTab === 'directory' && (
+                    <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="bg-primary text-primary-foreground px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+                    >
+                        <Plus className="h-4 w-4" /> Añadir Asesor
+                    </button>
+                )}
             </div>
 
-            <div className="grid gap-6 md:grid-cols-3">
-                <div className="col-span-2 space-y-4">
-                    {advisors.length === 0 ? (
-                        <div className="p-12 text-center rounded-xl border border-dashed border-border bg-card/20">
-                            <p className="text-muted-foreground mb-4">No hay asesores registrados aún.</p>
-                        </div>
-                    ) : (
-                        advisors.map((advisor, index) => (
-                            <div
-                                key={advisor.id}
-                                className="flex items-center justify-between p-6 rounded-xl border border-border bg-card/30 glass group hover:border-primary/50 transition-all"
-                            >
-                                <div className="flex items-center gap-6">
-                                    <div className="relative">
-                                        <div className={cn(
-                                            "h-12 w-12 rounded-full flex items-center justify-center font-bold text-lg",
-                                            index === 0 ? "bg-amber-500/20 text-amber-500" :
-                                                index === 1 ? "bg-slate-300/20 text-slate-300" :
-                                                    index === 2 ? "bg-orange-600/20 text-orange-600" : "bg-white/5 text-muted-foreground"
-                                        )}>
-                                            {index === 0 ? <Trophy className="h-6 w-6" /> : index + 1}
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <h3 className="font-bold text-lg">{advisor.name}</h3>
-                                        <div className="flex items-center gap-4 mt-1">
-                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                <UserIcon className="h-3 w-3" /> +{advisor.phone}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-4">
-                                    <div className="text-right">
-                                        <div className="text-2xl font-black tracking-tighter text-primary">
-                                            {advisor.score} <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest ml-1">pts</span>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => setDeleteModal({ isOpen: true, id: advisor.id, name: advisor.name })}
-                                        className="p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
-                                        title="Eliminar Asesor"
-                                    >
-                                        <Trash2 className="h-5 w-5" />
-                                    </button>
-                                </div>
+            {activeTab === 'config' ? (
+                <AdvisorConfigPanel />
+            ) : (
+                <div className="grid gap-6 md:grid-cols-3">
+                    <div className="col-span-2 space-y-4">
+                        {advisors.length === 0 ? (
+                            <div className="p-12 text-center rounded-xl border border-dashed border-border bg-card/20">
+                                <p className="text-muted-foreground mb-4">No hay asesores registrados aún.</p>
                             </div>
-                        ))
-                    )}
-                </div>
+                        ) : (
+                            advisors.map((advisor, index) => (
+                                <div
+                                    key={advisor.id}
+                                    className="flex items-center justify-between p-6 rounded-xl border border-border bg-card/30 glass group hover:border-primary/50 transition-all"
+                                >
+                                    <div className="flex items-center gap-6">
+                                        <div className="relative">
+                                            <div className={cn(
+                                                "h-12 w-12 rounded-full flex items-center justify-center font-bold text-lg",
+                                                index === 0 ? "bg-amber-500/20 text-amber-500" :
+                                                    index === 1 ? "bg-slate-300/20 text-slate-300" :
+                                                        index === 2 ? "bg-orange-600/20 text-orange-600" : "bg-white/5 text-muted-foreground"
+                                            )}>
+                                                {index === 0 ? <Trophy className="h-6 w-6" /> : index + 1}
+                                            </div>
+                                        </div>
 
-                <div className="space-y-6">
-                    <div className="rounded-xl border border-border bg-card/30 p-6 glass">
-                        <h2 className="text-xl font-bold font-outfit mb-6">Reglas de Puntos</h2>
-                        <div className="space-y-4">
-                            <RuleItem label="Cierre de Venta" points="+10" color="text-emerald-500" />
-                            <RuleItem label="Cita Agendada" points="+5" color="text-emerald-400" />
-                            <RuleItem label="Contacto < 15m" points="+2" color="text-emerald-300" />
-                            <RuleItem label="SLA Fallido (Sin Intento)" points="-5" color="text-rose-500" />
-                            <RuleItem label="SLA Fallido (Con Intento)" points="-2" color="text-rose-400" />
-                            <RuleItem label="Reasignación Forzada" points="-10" color="text-rose-600" />
+                                        <div>
+                                            <h3 className="font-bold text-lg">{advisor.name}</h3>
+                                            <div className="flex items-center gap-4 mt-1">
+                                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                    <UserIcon className="h-3 w-3" /> +{advisor.phone}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-right">
+                                            <div className="text-2xl font-black tracking-tighter text-primary">
+                                                {advisor.score} <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest ml-1">pts</span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => setDeleteModal({ isOpen: true, id: advisor.id, name: advisor.name })}
+                                            className="p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                                            title="Eliminar Asesor"
+                                        >
+                                            <Trash2 className="h-5 w-5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="rounded-xl border border-border bg-card/30 p-6 glass">
+                            <h2 className="text-xl font-bold font-outfit mb-6">Reglas de Puntos</h2>
+                            <div className="space-y-4">
+                                <RuleItem label="Cierre de Venta" points="+10" color="text-emerald-500" />
+                                <RuleItem label="Cita Agendada" points="+5" color="text-emerald-400" />
+                                <RuleItem label="Contacto a Tiempo (SLA)" points="+2" color="text-emerald-300" />
+                                <RuleItem label="SLA Fallido (Sin Intento)" points="-5" color="text-rose-500" />
+                                <RuleItem label="SLA Fallido (Con Intento)" points="-2" color="text-rose-400" />
+                                <RuleItem label="Reasignación Forzada" points="-10" color="text-rose-600" />
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Modal de Añadir Asesor */}
             {isAddModalOpen && (

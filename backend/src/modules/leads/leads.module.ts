@@ -9,6 +9,8 @@ import { ScoresModule } from '../scores/scores.module';
 import { SlaModule } from '../sla/sla.module';
 import { AssignmentsModule } from '../assignments/assignments.module';
 
+import { LeadsController } from './leads.controller';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([Lead, LeadNote]),
@@ -16,6 +18,7 @@ import { AssignmentsModule } from '../assignments/assignments.module';
     forwardRef(() => SlaModule),
     AssignmentsModule,
   ],
+  controllers: [LeadsController],
   providers: [LeadsService, LeadStateMachine, PipelineService],
   exports: [LeadsService, LeadStateMachine, PipelineService],
 })

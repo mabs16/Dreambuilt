@@ -3,6 +3,8 @@ import {
   Post,
   Body,
   Get,
+  Delete,
+  Param,
   BadRequestException,
 } from '@nestjs/common';
 import { AdvisorsService } from '../services/advisors.service';
@@ -37,5 +39,10 @@ export class AdvisorsController {
   @Get()
   async findAll(): Promise<Advisor[]> {
     return await this.advisorsService.findAll();
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string): Promise<void> {
+    return await this.advisorsService.remove(+id);
   }
 }

@@ -10,11 +10,13 @@ export enum CommandType {
   INTENTO_CONTACTO = 'INTENTO',
   NOTAS = 'NOTAS',
   INFO = 'INFO',
+  REJECT = 'REJECT',
+  SIGUIENTE = 'SIGUIENTE',
 }
 
 export interface ParsedCommand {
   type: CommandType;
-  leadId: number;
+  leadId?: number;
   value?: string;
 }
 
@@ -22,10 +24,17 @@ export interface ParsedCommand {
 export class CommandParser {
   // Matches: [COMMAND] [ID] [OPTIONAL_VALUE] or [ID] [COMMAND] [OPTIONAL_VALUE]
   private readonly commandRegex =
-    /^(?:(ACTIVAR|CONTACTADO|CITA|SEGUIMIENTO|PERDIDO|CIERRE|INTENTO|NOTAS|INFO)\s+(\d+)|(\d+)\s+(ACTIVAR|CONTACTADO|CITA|SEGUIMIENTO|PERDIDO|CIERRE|INTENTO|NOTAS|INFO))(?:\s+(.*))?$/i;
+    /^(?:(ACTIVAR|CONTACTADO|CITA|SEGUIMIENTO|PERDIDO|CIERRE|INTENTO|NOTAS|INFO|REJECT)\s+(\d+)|(\d+)\s+(ACTIVAR|CONTACTADO|CITA|SEGUIMIENTO|PERDIDO|CIERRE|INTENTO|NOTAS|INFO|REJECT))(?:\s+(.*))?$/i;
 
   parse(message: string): ParsedCommand {
-    const match = message.trim().match(this.commandRegex);
+    const trimmed = message.trim();
+
+    // Check for global commands (no ID required)
+    if (trimmed.toUpperCase() === 'SIGUIENTE') {
+      return { type: CommandType.SIGUIENTE };
+    }
+
+    const match = trimmed.match(this.commandRegex);
 
     if (!match) {
       throw new BadRequestException(

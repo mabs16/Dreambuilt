@@ -13,6 +13,13 @@ export class LeadsService {
     private readonly notesRepository: Repository<LeadNote>,
   ) {}
 
+  async findOldestPendingDistributionLead(): Promise<Lead | null> {
+    return this.leadsRepository.findOne({
+      where: { status: LeadStatus.PENDING_DISTRIBUTION },
+      order: { created_at: 'ASC' },
+    });
+  }
+
   async findById(id: number): Promise<Lead> {
     const lead = await this.leadsRepository.findOne({ where: { id } });
     if (!lead) throw new NotFoundException(`Lead with ID ${id} not found`);

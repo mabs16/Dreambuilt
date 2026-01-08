@@ -15,13 +15,17 @@ import {
     Zap,
     Sparkles,
     LayoutGrid,
-    List as ListIcon
+    List as ListIcon,
+    Plus,
+    Upload
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import Image from "next/image";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { ManualLeadModal } from "./components/ManualLeadModal";
+import { MassiveLeadModal } from "./components/MassiveLeadModal";
 
 const STATUS_COLORS: Record<string, string> = {
     "NUEVO": "bg-blue-500/10 text-blue-500 border-blue-500/20",
@@ -59,6 +63,8 @@ export default function LeadsPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+    const [showManualModal, setShowManualModal] = useState(false);
+    const [showMassiveModal, setShowMassiveModal] = useState(false);
 
     // Detectar si es móvil para cambiar la vista por defecto
     useEffect(() => {
@@ -169,7 +175,26 @@ export default function LeadsPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
-                    <div className="relative flex-1 md:flex-none min-w-[280px]">
+                    {/* Botones de Ingesta */}
+                    <div className="flex items-center gap-2 mr-2">
+                        <button 
+                            onClick={() => setShowMassiveModal(true)}
+                            className="hidden md:flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-bold text-white/80"
+                        >
+                            <Upload className="h-4 w-4" />
+                            <span>Importar</span>
+                        </button>
+                        <button 
+                            onClick={() => setShowManualModal(true)}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all text-sm font-black shadow-lg shadow-primary/20"
+                        >
+                            <Plus className="h-4 w-4" />
+                            <span className="hidden sm:inline">Nuevo Lead</span>
+                            <span className="sm:hidden">Nuevo</span>
+                        </button>
+                    </div>
+
+                    <div className="relative flex-1 md:flex-none min-w-[200px] md:min-w-[280px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <input
                             type="text"
@@ -414,6 +439,17 @@ export default function LeadsPage() {
                     </AnimatePresence>
                 )}
             </div>
+            
+            <ManualLeadModal 
+                open={showManualModal} 
+                onClose={() => setShowManualModal(false)} 
+                onSuccess={fetchLeads} 
+            />
+            <MassiveLeadModal 
+                open={showMassiveModal} 
+                onClose={() => setShowMassiveModal(false)} 
+                onSuccess={fetchLeads} 
+            />
         </div>
     );
 }

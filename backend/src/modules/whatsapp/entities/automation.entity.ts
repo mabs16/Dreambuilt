@@ -6,6 +6,17 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export interface ButtonConfig {
+  action: string; // 'INFO', 'CONTACTADO', etc.
+  label: string;
+  enabled: boolean;
+}
+
+export interface MessageConfig {
+  message: string;
+  buttons: ButtonConfig[];
+}
+
 export interface AdvisorAutomationConfig {
   responseTimeLimitMinutes: number;
   reminderEnabled: boolean;
@@ -13,9 +24,28 @@ export interface AdvisorAutomationConfig {
   useAiSummary: boolean;
   aiSummaryPrompt?: string;
   enableInteractiveButtons: boolean;
-  // Mensajes personalizables
+
+  // Legacy Communication (Deprecated)
   assignmentMessage?: string;
+
+  // New Granular Communication
+  systemAssignment?: MessageConfig;
+  systemAssignmentAction?: MessageConfig; // Fase 2: Acción de Contacto
+
+  manualAssignment?: MessageConfig;
+  manualAssignmentAction?: MessageConfig; // Fase 2: Acción de Contacto
+
+  reassignment?: MessageConfig;
+  reassignmentAction?: MessageConfig; // Fase 2: Acción de Contacto
+
+  followUpInstructions?: string;
   slaWarningMessage?: string;
+
+  // Roll Call (Pase de Lista)
+  rollCallEnabled?: boolean;
+  rollCallSchedules?: string[]; // ["09:00", "14:00"]
+  rollCallMessage?: string;
+
   notesPromptMessage?: string;
   successNoteMessage?: string;
 }

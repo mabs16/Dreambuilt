@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { Assignment } from '../entities/assignment.entity';
+import { AdvisorsService } from '../../advisors/services/advisors.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class AssignmentsService {
@@ -10,6 +12,8 @@ export class AssignmentsService {
   constructor(
     @InjectRepository(Assignment)
     private readonly assignmentsRepository: Repository<Assignment>,
+    private readonly advisorsService: AdvisorsService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async findActiveAssignment(leadId: number): Promise<Assignment | null> {
@@ -33,31 +37,65 @@ export class AssignmentsService {
     this.logger.log(
       `Reassigning lead ${leadId} from ${oldAdvisorId} (attempt ${count})`,
     );
-    // 2. Assign to a new advisor (Logic for picking the best advisor can be added here)
-    // For now, let's assume we have a way to pick the next one or it goes back to pool
-    // In v1, reassignment might be back to "PRECALIFICADO" for manual intervention
-    // or picking another one from the advisors list.
 
-    // As per requirement: "Lead changes to internal NO_ATENDIDO state, reassigned automatically"
-    // I'll emit an event so a "Matchmaker" service can pick a new advisor.
+    // 2. Find new advisor (excluding the old one)
+    const allAdvisors = await this.advisorsService.findAll();
+    const candidates = allAdvisors.filter(
+      (a) => Number(a.id) !== Number(oldAdvisorId),
+    );
+
+    if (candidates.length === 0) {
+      this.logger.warn(
+        `No other advisors available to reassign lead ${leadId}. Leaving unassigned.`,
+      );
+      return;
+    }
+
+    // Simple strategy: Pick the first available candidate
+    // In future: Implement Round Robin or Load Balancing
+    const newAdvisor = candidates[0];
+
+    // 3. Create new assignment
+    await this.createAssignment(leadId, newAdvisor.id, 'REASSIGNMENT');
+
+    this.logger.log(
+      `Lead ${leadId} reassigned to Advisor ${newAdvisor.id} (${newAdvisor.name})`,
+    );
+
+    // 4. Emit Reassignment Event for Notifications
+    this.eventEmitter.emit('assignment.reassigned', {
+      leadId,
+      advisorId: newAdvisor.id,
+      oldAdvisorId,
+      advisorName: newAdvisor.name,
+      advisorPhone: newAdvisor.phone,
+    });
   }
 
   async createAssignment(
     leadId: number,
     advisorId: number,
+    source: 'SYSTEM' | 'MANUAL' | 'REASSIGNMENT' | 'PULL' = 'MANUAL',
   ): Promise<Assignment> {
     this.logger.log(
-      `Creating assignment for lead ${leadId} -> advisor ${advisorId}`,
+      `Creating assignment for lead ${leadId} -> advisor ${advisorId} (Source: ${source})`,
     );
     try {
       const assignment = this.assignmentsRepository.create({
         lead_id: leadId,
         advisor_id: advisorId,
+        source: source,
       });
       const saved = await this.assignmentsRepository.save(assignment);
       this.logger.log(
         `Assignment saved successfully: ${JSON.stringify(saved)}`,
       );
+
+      this.eventEmitter.emit('assignment.created', {
+        assignment: saved,
+        source,
+      });
+
       return saved;
     } catch (error) {
       this.logger.error(`Failed to create assignment: ${error}`);

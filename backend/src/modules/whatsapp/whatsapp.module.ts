@@ -5,6 +5,7 @@ import { WhatsappService } from './services/whatsapp.service';
 import { CommandParser } from './services/command-parser.service';
 import { AutomationsService } from './services/automations.service';
 import { GeminiService } from './services/gemini.service';
+import { RollCallService } from './services/roll-call.service';
 import { AdvisorsModule } from '../advisors/advisors.module';
 import { AssignmentsModule } from '../assignments/assignments.module';
 import { LeadsModule } from '../leads/leads.module';
@@ -28,6 +29,7 @@ import { AutomationsController } from './controllers/automations.controller';
     CommandParser,
     AutomationsService,
     GeminiService,
+    RollCallService,
   ],
   exports: [WhatsappService, AutomationsService],
 })

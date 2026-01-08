@@ -8,6 +8,7 @@ import {
 
 export enum LeadStatus {
   NUEVO = 'NUEVO',
+  PENDING_DISTRIBUTION = 'PENDING_DISTRIBUTION', // Para leads masivos
   PRECALIFICADO = 'PRECALIFICADO',
   NUTRICION = 'NUTRICION',
   ASIGNADO = 'ASIGNADO',

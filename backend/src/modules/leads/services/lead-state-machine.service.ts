@@ -4,7 +4,11 @@ import { LeadStatus } from '../entities/lead.entity';
 @Injectable()
 export class LeadStateMachine {
   private readonly transitions: Record<LeadStatus, LeadStatus[]> = {
-    [LeadStatus.NUEVO]: [LeadStatus.PRECALIFICADO],
+    [LeadStatus.NUEVO]: [
+      LeadStatus.PRECALIFICADO,
+      LeadStatus.PENDING_DISTRIBUTION,
+    ],
+    [LeadStatus.PENDING_DISTRIBUTION]: [LeadStatus.ASIGNADO, LeadStatus.NUEVO],
     [LeadStatus.PRECALIFICADO]: [LeadStatus.NUTRICION, LeadStatus.ASIGNADO],
     [LeadStatus.NUTRICION]: [LeadStatus.ASIGNADO],
     [LeadStatus.ASIGNADO]: [

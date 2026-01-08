@@ -14,6 +14,7 @@ import {
 } from './command-parser.service';
 import { AdvisorsService } from '../../advisors/services/advisors.service';
 import { Advisor } from '../../advisors/entities/advisor.entity';
+import { Assignment } from '../../assignments/entities/assignment.entity';
 import { AssignmentsService } from '../../assignments/services/assignments.service';
 import { LeadsService } from '../../leads/services/leads.service';
 import { Message, MessageDirection } from '../entities/message.entity';
@@ -25,6 +26,7 @@ import { FlowSession } from '../../flows/entities/flow-session.entity';
 import {
   LeadQualificationConfig,
   AdvisorAutomationConfig,
+  MessageConfig,
 } from '../entities/automation.entity';
 
 // Interfaces for Flow Engine
@@ -215,6 +217,195 @@ export class WhatsappService {
     this.logger.log(`Evento OTP recibido para ${payload.phone}`);
     const message = `¡Hola ${payload.name}! Tu código de verificación para Dreambuilt OS es: ${payload.pin}. Expira en 5 minutos.`;
     await this.sendWhatsappMessage(payload.phone, message);
+  }
+
+  @OnEvent('assignment.reassigned')
+  async handleReassignment(payload: {
+    leadId: number;
+    advisorId: number;
+    oldAdvisorId: number;
+    advisorName: string;
+    advisorPhone: string;
+  }) {
+    this.logger.log(
+      `Handling reassignment notification for lead ${payload.leadId} to advisor ${payload.advisorName}`,
+    );
+
+    try {
+      const lead = await this.leadsService.findById(payload.leadId);
+
+      // Get Automation Config
+      const automation =
+        await this.automationsService.getConfig('advisor_automation');
+      const config = automation?.config as AdvisorAutomationConfig;
+
+      let message =
+        '⚠️ *LEAD REASIGNADO*\n\nEl lead {{lead_name}} te ha sido reasignado.';
+      let buttonsConfig = [
+        { action: 'INFO', label: 'ℹ️ VER INFO', enabled: true },
+        { action: 'REJECT', label: '⛔ NO PUEDO ATENDER', enabled: true },
+      ];
+
+      // Use Reassignment Config
+      if (config?.reassignment) {
+        message = config.reassignment.message;
+        if (
+          config.reassignment.buttons &&
+          config.reassignment.buttons.length > 0
+        ) {
+          buttonsConfig = config.reassignment.buttons;
+        }
+      }
+
+      // Replace variables
+      message = message
+        .replace(/\{\{lead_id\}\}/g, String(lead.id))
+        .replace(/\{\{lead_name\}\}/g, lead.name)
+        .replace(/\{\{phone\}\}/g, lead.phone);
+
+      // Prepare Buttons
+      const buttons = buttonsConfig
+        .filter((b) => b.enabled)
+        .map((b) => ({
+          type: 'reply',
+          reply: {
+            id: `${lead.id} ${b.action}`,
+            title: b.label.substring(0, 20), // WhatsApp limit
+          },
+        }));
+
+      // Send Message
+      if (config?.enableInteractiveButtons !== false && buttons.length > 0) {
+        const payloadMsg: WhatsAppPayload = {
+          type: 'interactive',
+          interactive: {
+            type: 'button',
+            body: { text: message },
+            action: { buttons: buttons as any },
+          },
+        };
+        await this.sendWhatsappMessage(payload.advisorPhone, payloadMsg);
+      } else {
+        await this.sendWhatsappMessage(payload.advisorPhone, message);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error sending reassignment message: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  @OnEvent('assignment.created')
+  async handleAssignmentCreated(payload: {
+    assignment: Assignment;
+    source: 'SYSTEM' | 'MANUAL' | 'REASSIGNMENT';
+  }) {
+    // Ignore REASSIGNMENT as it is handled by handleReassignment to avoid double notification
+    if (payload.source === 'REASSIGNMENT') {
+      return;
+    }
+
+    const { lead_id: leadId, advisor_id: advisorId } = payload.assignment;
+    this.logger.log(
+      `Handling assignment notification (Source: ${payload.source}) for lead ${leadId} to advisor ${advisorId}`,
+    );
+
+    try {
+      const lead = await this.leadsService.findById(leadId);
+      const advisor = await this.advisorsService.findById(advisorId);
+
+      if (!advisor || !advisor.phone) {
+        this.logger.warn(`Advisor ${advisorId} not found or has no phone`);
+        return;
+      }
+
+      // Get Automation Config
+      const automation =
+        await this.automationsService.getConfig('advisor_automation');
+      const config = automation?.config as AdvisorAutomationConfig;
+      const responseLimit = config?.responseTimeLimitMinutes || 15;
+
+      // Get Summary if available (last system summary note)
+      const notes = await this.leadsService.getNotes(leadId);
+      const summaryNote = notes.find((n) => n.type === 'SYSTEM_SUMMARY');
+      const summary = summaryNote ? summaryNote.content : 'Sin resumen previo.';
+
+      let message = '';
+      let buttonsConfig = [
+        { action: 'INFO', label: 'ℹ️ VER INFO', enabled: true },
+        { action: 'REJECT', label: '⛔ NO PUEDO ATENDER', enabled: true },
+      ];
+
+      if (payload.source === 'SYSTEM') {
+        message = `🔔 *NUEVO LEAD ASIGNADO*\n\nℹ️ Presiona el botón de ver info para obtener detalles.\n\n⚠️ *URGENCIA:* Debes responder en menos de ${responseLimit} min. o será reasignado.`;
+        if (config?.systemAssignment) {
+          message = config.systemAssignment.message;
+          if (
+            config.systemAssignment.buttons &&
+            config.systemAssignment.buttons.length > 0
+          ) {
+            buttonsConfig = config.systemAssignment.buttons;
+          }
+        }
+      } else {
+        // MANUAL
+        message =
+          '👤 *TE HAN ASIGNADO UN LEAD MANUALMENTE*\n\nHola, se te ha asignado el lead {{lead_name}} ({{phone}}) manualmente.';
+        if (config?.manualAssignment) {
+          message = config.manualAssignment.message;
+          if (
+            config.manualAssignment.buttons &&
+            config.manualAssignment.buttons.length > 0
+          ) {
+            buttonsConfig = config.manualAssignment.buttons;
+          }
+        }
+      }
+
+      // Replace variables
+      message = message
+        .replace(/\{\{lead_id\}\}/g, String(lead.id))
+        .replace(/\{\{lead_name\}\}/g, lead.name)
+        .replace(/\{\{phone\}\}/g, lead.phone)
+        .replace(/\{\{summary\}\}/g, summary)
+        .replace(/\{\{response_limit\}\}/g, String(responseLimit));
+
+      // Prepare Buttons
+      const buttons = buttonsConfig
+        .filter((b) => b.enabled)
+        .map((b) => ({
+          type: 'reply',
+          reply: {
+            id: `${lead.id} ${b.action}`,
+            title: b.label.substring(0, 20), // WhatsApp limit
+          },
+        }));
+
+      // Send Message
+      if (config?.enableInteractiveButtons !== false && buttons.length > 0) {
+        const payloadMsg: WhatsAppPayload = {
+          type: 'interactive',
+          interactive: {
+            type: 'button',
+            body: { text: message },
+            action: { buttons: buttons as any },
+          },
+        };
+        await this.sendWhatsappMessage(advisor.phone, payloadMsg);
+      } else {
+        await this.sendWhatsappMessage(
+          advisor.phone,
+          `${message}\n\nEscribe \`${lead.id} INFO\` para ver detalles.`,
+        );
+      }
+      this.logger.log(
+        `Assignment notification sent to advisor ${advisor.phone} via ${payload.source} flow`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to handle assignment creation notification: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   async processIncomingMessage(
@@ -877,32 +1068,67 @@ export class WhatsappService {
 
               const responseLimit = advConfig?.responseTimeLimitMinutes || 15;
 
-              // MENSAJE 1: ALERTA INICIAL
-              const alertMsg = `🔔 *NUEVO LEAD ASIGNADO*\n\nℹ️ Presiona el botón de ver info para obtener detalles.\n\n⚠️ *URGENCIA:* Debes responder en menos de ${responseLimit} min. o será reasignado.`;
+              // MENSAJE 1: ALERTA INICIAL (SYSTEM ASSIGNMENT)
+              let alertMsg = `🔔 *NUEVO LEAD ASIGNADO*\n\nℹ️ Presiona el botón de ver info para obtener detalles.\n\n⚠️ *URGENCIA:* Debes responder en menos de ${responseLimit} min. o será reasignado.`;
+              let buttonsConfig = [
+                { action: 'INFO', label: 'ℹ️ VER INFO LEAD', enabled: true },
+              ];
+
+              // 1. Try New Config (System Assignment)
+              if (advConfig?.systemAssignment) {
+                alertMsg = advConfig.systemAssignment.message
+                  .replace(/\{\{lead_id\}\}/g, String(lead.id))
+                  .replace(/\{\{lead_name\}\}/g, lead.name)
+                  .replace(/\{\{phone\}\}/g, from)
+                  .replace(/\{\{summary\}\}/g, aiSummary)
+                  .replace(/\{\{response_limit\}\}/g, String(responseLimit));
+
+                if (
+                  advConfig.systemAssignment.buttons &&
+                  advConfig.systemAssignment.buttons.length > 0
+                ) {
+                  buttonsConfig = advConfig.systemAssignment.buttons;
+                }
+              }
+              // 2. Fallback to Legacy Config
+              else if (advConfig?.assignmentMessage) {
+                alertMsg = advConfig.assignmentMessage
+                  .replace(/\{\{lead_id\}\}/g, String(lead.id))
+                  .replace(/\{\{lead_name\}\}/g, lead.name)
+                  .replace(/\{\{phone\}\}/g, from)
+                  .replace(/\{\{summary\}\}/g, aiSummary)
+                  .replace(/\{\{response_limit\}\}/g, String(responseLimit));
+              }
 
               this.logger.debug(
                 `Sending message to advisor ${advisor.phone}...`,
               );
               if (advConfig?.enableInteractiveButtons !== false) {
-                const payload: WhatsAppPayload = {
-                  type: 'interactive',
-                  interactive: {
-                    type: 'button',
-                    body: { text: alertMsg },
-                    action: {
-                      buttons: [
-                        {
-                          type: 'reply',
-                          reply: {
-                            id: `${lead.id} INFO`,
-                            title: 'ℹ️ VER INFO LEAD',
-                          },
-                        },
-                      ],
+                const buttons = buttonsConfig
+                  .filter((b) => b.enabled)
+                  .map((b) => ({
+                    type: 'reply',
+                    reply: {
+                      id: `${lead.id} ${b.action}`,
+                      title: b.label.substring(0, 20), // WhatsApp limit
                     },
-                  },
-                };
-                await this.sendWhatsappMessage(advisor.phone, payload);
+                  }));
+
+                // Ensure at least one button if enabled, otherwise fallback to text?
+                // Or just don't send buttons if all disabled? Assuming at least one enabled.
+                if (buttons.length > 0) {
+                  const payload: WhatsAppPayload = {
+                    type: 'interactive',
+                    interactive: {
+                      type: 'button',
+                      body: { text: alertMsg },
+                      action: { buttons: buttons as any },
+                    },
+                  };
+                  await this.sendWhatsappMessage(advisor.phone, payload);
+                } else {
+                  await this.sendWhatsappMessage(advisor.phone, alertMsg);
+                }
               } else {
                 await this.sendWhatsappMessage(
                   advisor.phone,
@@ -1358,6 +1584,30 @@ export class WhatsappService {
     }
 
     if (!parsed) {
+      // Check for Roll Call Response
+      if (
+        body.toLowerCase().trim() === 'presente' ||
+        body.toLowerCase().includes('ubicación')
+      ) {
+        this.logger.log(
+          `✅ Asistencia registrada para advisor ${advisor.name} (${advisor.id})`,
+        );
+
+        // Emite evento de asistencia para que otros módulos puedan consumirlo (ej. Dashboard)
+        this.eventEmitter.emit('advisor.attendance', {
+          advisorId: advisor.id,
+          timestamp: new Date(),
+          type:
+            body.toLowerCase().trim() === 'presente' ? 'MESSAGE' : 'LOCATION',
+        });
+
+        await this.sendWhatsappMessage(
+          from,
+          '✅ Asistencia registrada correctamente. ¡Excelente jornada! 🚀',
+        );
+        return;
+      }
+
       // If it looks like a number followed by text, maybe it was meant as a command
       if (/^\d+\s+.*/.test(body)) {
         await this.sendWhatsappMessage(
@@ -1372,7 +1622,45 @@ export class WhatsappService {
       return;
     }
 
-    // 3. Validate Ownership
+    // 3. Handle Global Commands (PULL Mechanism)
+    if (parsed.type === CommandType.SIGUIENTE) {
+      const lead = await this.leadsService.findOldestPendingDistributionLead();
+
+      if (!lead) {
+        await this.sendWhatsappMessage(
+          from,
+          '🚫 No hay leads pendientes de distribución en este momento.',
+        );
+        return;
+      }
+
+      // Assign Lead to Advisor
+      await this.assignmentsService.createAssignment(
+        lead.id,
+        advisor.id,
+        'PULL',
+      );
+      await this.leadsService.updateStatus(lead.id, LeadStatus.ASIGNADO);
+
+      this.logger.log(
+        `Lead ${lead.id} pulled by advisor ${advisor.id} (${advisor.name})`,
+      );
+
+      // Send Info/Details
+      await this.handleInfo(lead.id, from);
+      return;
+    }
+
+    // Ensure leadId is present for other commands
+    if (!parsed.leadId) {
+      await this.sendWhatsappMessage(
+        from,
+        '❌ Comando incompleto. Falta el ID del Lead.',
+      );
+      return;
+    }
+
+    // 4. Validate Ownership
     const activeAssignment = await this.assignmentsService.findActiveAssignment(
       parsed.leadId,
     );
@@ -1399,6 +1687,15 @@ export class WhatsappService {
       case CommandType.ACTIVAR:
       case CommandType.INFO:
         await this.handleInfo(parsed.leadId, from);
+        break;
+
+      case CommandType.REJECT:
+        this.logger.log(`Advisor ${advisor.id} rejected lead ${parsed.leadId}`);
+        await this.assignmentsService.reassign(parsed.leadId, advisor.id, 1);
+        await this.sendWhatsappMessage(
+          from,
+          `🚫 Lead #${parsed.leadId} rechazado. Buscando otro asesor...`,
+        );
         break;
 
       case CommandType.CONTACTADO: {
@@ -1435,7 +1732,12 @@ export class WhatsappService {
           advisorId: advisor.id,
         });
 
-        const seguimientoMsg = `🔄 Lead #${parsed.leadId} ahora está en SEGUIMIENTO. ¿Qué avances hubo hoy? Escribe una breve nota:`;
+        const seguimientoMsg = advConfig?.notesPromptMessage
+          ? advConfig.notesPromptMessage.replace(
+              /\{\{lead_id\}\}/g,
+              String(parsed.leadId),
+            )
+          : `🔄 Lead #${parsed.leadId} ahora está en SEGUIMIENTO. ¿Qué avances hubo hoy? Escribe una breve nota:`;
 
         await this.sendWhatsappMessage(from, seguimientoMsg);
         await this.redis.set(
@@ -1774,16 +2076,9 @@ export class WhatsappService {
       try {
         const advisor = await this.advisorsService.findFirstAvailable();
         if (advisor) {
-          await this.assignmentsService.createAssignment(lead.id, advisor.id);
           this.logger.log(
             `Lead ${from} assigned to advisor ${advisor.name} (${advisor.phone})`,
           );
-
-          // Emit event to start SLA and other pipeline logic
-          this.eventEmitter.emit('pipeline.assign', {
-            leadId: lead.id,
-            advisorId: advisor.id,
-          });
 
           // Get Advisor Automation Config
           const advAuto =
@@ -1791,15 +2086,17 @@ export class WhatsappService {
           const advConfig = advAuto?.config as AdvisorAutomationConfig;
           this.logger.debug(`Advisor automation config found: ${!!advConfig}`);
 
-          // Notify Advisor
+          // Generate Summary and Save Note for Assignment Notification (Before Assignment)
           const historyRaw = await this.redis.get(historyKey);
           this.logger.debug(`History raw found: ${!!historyRaw}`);
-          let summary = 'No hay historial.';
+
           if (historyRaw) {
             const history = JSON.parse(historyRaw) as Array<{
               role: 'user' | 'model';
               content: string;
             }>;
+
+            let summary = 'No hay historial.';
             if (advConfig?.useAiSummary) {
               this.logger.debug('Generating AI summary for advisor...');
               summary = await this.geminiService.summarizeLeadConversation(
@@ -1812,68 +2109,21 @@ export class WhatsappService {
                 .map((h) => `${h.role === 'user' ? '👤' : '🤖'}: ${h.content}`)
                 .join('\n');
             }
+
+            await this.leadsService.addNote({
+              leadId: lead.id,
+              advisorId: advisor.id,
+              content: `RESUMEN IA INICIAL:\n${summary}`,
+              type: 'SYSTEM_SUMMARY',
+            });
           }
 
-          const responseLimit = advConfig?.responseTimeLimitMinutes || 15;
-          let advisorMsg = `🔔 *NUEVO LEAD ASIGNADO*\n\n👤 *Prospecto:* ${lead.name}\n📱 *Teléfono:* ${from}\n\n*RESUMEN DE PRECALIFICACIÓN:*\n${summary}\n\n⚠️ *URGENCIA:* Debes responder en menos de ${responseLimit} min.\n\nAcción rápida:`;
-
-          if (advConfig?.assignmentMessage) {
-            advisorMsg = advConfig.assignmentMessage
-              .replace(/\{\{lead_id\}\}/g, String(lead.id))
-              .replace(/\{\{lead_name\}\}/g, lead.name)
-              .replace(/\{\{phone\}\}/g, from)
-              .replace(/\{\{summary\}\}/g, summary)
-              .replace(/\{\{response_limit\}\}/g, String(responseLimit));
-          }
-
-          this.logger.debug(`Sending message to advisor ${advisor.phone}...`);
-          try {
-            if (advConfig?.enableInteractiveButtons !== false) {
-              const payload: WhatsAppPayload = {
-                type: 'interactive',
-                interactive: {
-                  type: 'button',
-                  body: { text: advisorMsg.substring(0, 1024) },
-                  action: {
-                    buttons: [
-                      {
-                        type: 'reply',
-                        reply: {
-                          id: `${lead.id} CONTACTADO`,
-                          title: '✅ CONTACTADO',
-                        },
-                      },
-                      {
-                        type: 'reply',
-                        reply: {
-                          id: `${lead.id} INFO`,
-                          title: 'ℹ️ VER INFO',
-                        },
-                      },
-                    ],
-                  },
-                },
-              };
-              this.logger.debug(
-                `Payload interactive: ${JSON.stringify(payload)}`,
-              );
-              await this.sendWhatsappMessage(advisor.phone, payload);
-            } else {
-              this.logger.debug(`Payload text: ${advisorMsg}`);
-              await this.sendWhatsappMessage(
-                advisor.phone,
-                `${advisorMsg}\n\nEscribe \`${lead.id} CONTACTADO\` para empezar.`,
-              );
-            }
-            this.logger.log(
-              `Assignment notification sent to advisor ${advisor.phone}`,
-            );
-          } catch (notifyError: unknown) {
-            const err = notifyError as Error;
-            this.logger.error(
-              `Failed to notify advisor ${advisor.phone}: ${err.message}`,
-            );
-          }
+          // Emit event to start SLA and other pipeline logic (Triggers Assignment Creation & Notification)
+          this.eventEmitter.emit('pipeline.assign', {
+            leadId: lead.id,
+            advisorId: advisor.id,
+            source: 'SYSTEM',
+          });
 
           // Cleanup lead state from Redis after assignment
           await this.redis.del(historyKey);
@@ -1946,34 +2196,66 @@ export class WhatsappService {
 *RESUMEN DE PRECALIFICACIÓN:*
 ${summary}`;
 
-    // MENSAJE 3: ACCIÓN DE CONTACTO (BOTÓN INTERACTIVO)
-    const actionMsg = `⚠️ *URGENCIA:* El lead debe de ser contactado desde el momento que se te asignó en menos de ${responseLimit} min. o será reasignado.
+    // MENSAJE 3: ACCIÓN DE CONTACTO (Fase 2)
+    // 1. Determinar Origen
+    const assignment =
+      await this.assignmentsService.findActiveAssignment(leadId);
+    const source = assignment?.source || 'SYSTEM';
 
-✅ Presiona el botón de contactado después de tu primer mensaje con el lead.`;
+    // 2. Configuración por defecto (Fallback)
+    let actionMsg = `⚠️ *URGENCIA:* El lead debe de ser contactado desde el momento que se te asignó en menos de ${responseLimit} min. o será reasignado.\n\n✅ Presiona el botón de contactado después de tu primer mensaje con el lead.`;
+    let actionButtons = [
+      { action: 'CONTACTED', label: '✅ LEAD CONTACTADO', enabled: true },
+    ];
+
+    // 3. Cargar configuración específica según origen
+    let targetConfig: MessageConfig | undefined;
+    if (source === 'MANUAL') targetConfig = advConfig?.manualAssignmentAction;
+    else if (source === 'REASSIGNMENT')
+      targetConfig = advConfig?.reassignmentAction;
+    else targetConfig = advConfig?.systemAssignmentAction; // SYSTEM default
+
+    if (targetConfig) {
+      actionMsg = targetConfig.message
+        .replace(/\{\{lead_name\}\}/g, lead.name)
+        .replace(/\{\{response_limit\}\}/g, String(responseLimit));
+
+      if (targetConfig.buttons && targetConfig.buttons.length > 0) {
+        actionButtons = targetConfig.buttons.filter((b) => b.enabled);
+      }
+    }
 
     // Enviar detalles primero como texto plano
     await this.sendWhatsappMessage(from, detailMsg);
 
     if (advConfig?.enableInteractiveButtons !== false) {
-      const payload: WhatsAppPayload = {
-        type: 'interactive',
-        interactive: {
-          type: 'button',
-          body: { text: actionMsg },
-          action: {
-            buttons: [
-              {
-                type: 'reply',
-                reply: {
-                  id: `${lead.id} CONTACTADO`,
-                  title: '✅ LEAD CONTACTADO',
-                },
-              },
-            ],
-          },
+      const whatsappButtons = actionButtons.map((btn) => ({
+        type: 'reply',
+        reply: {
+          id: `${lead.id} ${btn.action}`, // Ej: "123 CONTACTED"
+          title: btn.label.substring(0, 20), // WhatsApp limit 20 chars
         },
-      };
-      await this.sendWhatsappMessage(from, payload);
+      }));
+
+      // WhatsApp permite max 3 botones
+      const validButtons = whatsappButtons.slice(0, 3);
+
+      if (validButtons.length > 0) {
+        const payload: WhatsAppPayload = {
+          type: 'interactive',
+          interactive: {
+            type: 'button',
+            body: { text: actionMsg },
+            action: {
+              buttons: validButtons,
+            },
+          },
+        };
+        await this.sendWhatsappMessage(from, payload);
+      } else {
+        // Fallback si no hay botones válidos habilitados
+        await this.sendWhatsappMessage(from, actionMsg);
+      }
     } else {
       await this.sendWhatsappMessage(
         from,

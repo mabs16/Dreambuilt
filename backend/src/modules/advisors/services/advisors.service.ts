@@ -59,7 +59,7 @@ export class AdvisorsService {
 
   async findAll(): Promise<Advisor[]> {
     return this.advisorsRepository.find({
-      order: { name: 'ASC' },
+      order: { score: 'DESC' },
     });
   }
 
@@ -70,6 +70,11 @@ export class AdvisorsService {
       take: 1,
     });
     return advisors.length > 0 ? advisors[0] : null;
+  }
+
+  async remove(id: number): Promise<void> {
+    await this.advisorsRepository.delete(id);
+    this.logger.log(`Advisor ${id} deleted`);
   }
 
   async requestOtp(name: string, phone: string): Promise<{ message: string }> {

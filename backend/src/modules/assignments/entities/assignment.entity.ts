@@ -33,4 +33,7 @@ export class Assignment {
 
   @Column({ type: 'timestamptz', nullable: true })
   ended_at: Date;
+
+  @Column({ type: 'varchar', nullable: true, default: 'SYSTEM' })
+  source: string;
 }
