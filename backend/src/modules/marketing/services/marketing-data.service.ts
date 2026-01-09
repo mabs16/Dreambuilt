@@ -173,15 +173,31 @@ export class MarketingDataService implements OnModuleInit {
       .select('AVG(campaign.ctr_all)', 'avg')
       .getRawOne();
 
+    const { sum: totalImpressions } = await this.campaignRepo
+      .createQueryBuilder('campaign')
+      .select('SUM(campaign.impressions)', 'sum')
+      .getRawOne();
+
+    const { sum: totalClicks } = await this.campaignRepo
+      .createQueryBuilder('campaign')
+      .select('SUM(campaign.clicks_all)', 'sum')
+      .getRawOne();
+
     const spend = parseFloat((totalSpend as string) || '0');
     const leads = parseFloat((totalLeads as string) || '0');
     const ctr = parseFloat((avgCtr as string) || '0');
+    const impressions = parseFloat((totalImpressions as string) || '0');
+    const clicks = parseFloat((totalClicks as string) || '0');
 
     return {
       totalSpend: spend,
       totalLeads: leads,
       costPerLead: leads > 0 ? spend / leads : 0,
       avgCtr: ctr,
+      totalImpressions: impressions,
+      totalClicks: clicks,
+      cpc: clicks > 0 ? spend / clicks : 0,
+      cpm: impressions > 0 ? (spend / impressions) * 1000 : 0,
     };
   }
 

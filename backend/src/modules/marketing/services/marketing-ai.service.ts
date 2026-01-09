@@ -37,8 +37,10 @@ export class MarketingAiService {
   }
 
   async getAnalysis() {
+    // Fallback to heuristic analysis if AI is not configured
     if (!this.model) {
-      return { error: 'AI not configured' };
+      this.logger.log('AI not configured, running heuristic analysis...');
+      return this.runHeuristicAnalysis();
     }
 
     try {
@@ -96,21 +98,81 @@ TU RESPUESTA DEBE SEGUIR ESTE FORMATO JSON:
 NO incluyas markdown, solo el JSON puro.`;
 
       const result = await this.model.generateContent(prompt);
-      const responseText = result.response.text();
-
-      // Clean markdown if present
-      const cleanJson = responseText
+      const responseText = result.response
+        .text()
         .replace(/```json/g, '')
         .replace(/```/g, '')
         .trim();
-      return JSON.parse(cleanJson);
+      return JSON.parse(responseText);
     } catch (error) {
-      this.logger.error('Error generating AI analysis', error);
-      return {
-        summary: 'No se pudo generar el análisis en este momento.',
-        recommendations: [],
-        error: error.message,
-      };
+      this.logger.error(
+        'AI Analysis failed, falling back to heuristics',
+        error,
+      );
+      return this.runHeuristicAnalysis();
     }
+  }
+
+  private async runHeuristicAnalysis() {
+    const campaigns = await this.campaignRepo.find({
+      order: { spend: 'DESC' },
+      take: 5,
+    });
+
+    const highCplCampaigns = campaigns.filter(
+      (c) => Number(c.cost_per_result) > 400,
+    ); // Umbral ejemplo
+    const lowCtrCampaigns = campaigns.filter((c) => Number(c.ctr_all) < 1.0);
+    const zeroLeadCampaigns = campaigns.filter(
+      (c) => Number(c.spend) > 500 && Number(c.results) === 0,
+    );
+
+    const recommendations: Array<{
+      title: string;
+      description: string;
+      impact: string;
+    }> = [];
+    let alert = '';
+
+    if (zeroLeadCampaigns.length > 0) {
+      alert = `Hay ${zeroLeadCampaigns.length} campañas gastando presupuesto sin generar leads.`;
+      recommendations.push({
+        title: 'Pausar campañas ineficientes',
+        description: `Las campañas como "${zeroLeadCampaigns[0].name}" no han generado resultados. Revísalas urgente.`,
+        impact: 'Alto',
+      });
+    }
+
+    if (highCplCampaigns.length > 0) {
+      recommendations.push({
+        title: 'Optimizar Costo por Lead',
+        description: `El costo por lead en "${highCplCampaigns[0].name}" es elevado. Revisa la segmentación.`,
+        impact: 'Medio',
+      });
+    }
+
+    if (lowCtrCampaigns.length > 0) {
+      recommendations.push({
+        title: 'Mejorar Creativos (CTR Bajo)',
+        description: `El CTR en "${lowCtrCampaigns[0].name}" es menor al 1%. Prueba nuevos anuncios/imágenes.`,
+        impact: 'Medio',
+      });
+    }
+
+    if (recommendations.length === 0) {
+      recommendations.push({
+        title: 'Escalar Campañas Exitosas',
+        description:
+          'El rendimiento parece estable. Considera aumentar presupuesto en las campañas con mejor retorno.',
+        impact: 'Alto',
+      });
+    }
+
+    return {
+      summary:
+        'Análisis basado en reglas heurísticas (IA no disponible). Se han detectado oportunidades de optimización basándose en umbrales estándar.',
+      recommendations: recommendations.slice(0, 3),
+      alert,
+    };
   }
 }
