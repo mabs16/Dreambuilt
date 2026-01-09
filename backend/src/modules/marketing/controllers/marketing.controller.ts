@@ -130,7 +130,6 @@ export class MarketingController {
 
       const files = fs.readdirSync(this.DATA_PATH);
 
-
       const campaignFile = files.find(
         (f) => f.includes('Campaigns') && f.endsWith('.xlsx'),
       );
