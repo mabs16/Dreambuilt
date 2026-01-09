@@ -519,8 +519,10 @@ export default function AdvisorConfigPanel() {
 
                 <ConfigSection title="Reglas de Puntos" icon={Trophy}>
                     <div className="grid sm:grid-cols-2 gap-4">
-                        <RuleItem label="Cierre de Venta" points="+10" color="text-emerald-500" />
-                        <RuleItem label="Cita Agendada" points="+5" color="text-emerald-400" />
+                        <RuleItem label="Cierre de Venta" points="+200" color="text-emerald-500" />
+                        <RuleItem label="Cita Agendada" points="+25" color="text-emerald-400" />
+                        <RuleItem label="Recorrido" points="+50" color="text-emerald-400" />
+                        <RuleItem label="Nota de Calidad" points="+2" color="text-emerald-300/80" />
                         
                         <div className="col-span-full h-px bg-white/5 my-2" />
                         
@@ -534,8 +536,7 @@ export default function AdvisorConfigPanel() {
                         
                         <div className="col-span-full h-px bg-white/5 my-2" />
 
-                        <RuleItem label="SLA Fallido (Sin Intento)" points="-5" color="text-rose-500" />
-                        <RuleItem label="SLA Fallido (Con Intento)" points="-2" color="text-rose-400" />
+                        <RuleItem label="SLA Fallido" points="-30" color="text-rose-500" />
                         <RuleItem label="Reasignación Forzada" points="-10" color="text-rose-600" />
                         <RuleItem label="Abandono (72h sin gestión)" points="-20" color="text-rose-700 font-black" />
                     </div>

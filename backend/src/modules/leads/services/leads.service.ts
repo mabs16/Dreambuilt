@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Lead, LeadStatus } from '../entities/lead.entity';
 import { LeadNote } from '../entities/lead-note.entity';
 
@@ -11,6 +12,7 @@ export class LeadsService {
     private readonly leadsRepository: Repository<Lead>,
     @InjectRepository(LeadNote)
     private readonly notesRepository: Repository<LeadNote>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async findOldestPendingDistributionLead(): Promise<Lead | null> {
@@ -112,7 +114,17 @@ export class LeadsService {
       content: data.content,
       type: data.type || 'MANUAL',
     });
-    return this.notesRepository.save(note);
+    const savedNote = await this.notesRepository.save(note);
+
+    if (data.advisorId) {
+      this.eventEmitter.emit('lead.note_added', {
+        leadId: data.leadId,
+        advisorId: data.advisorId,
+        noteId: savedNote.id,
+      });
+    }
+
+    return savedNote;
   }
 
   async getNotes(leadId: number): Promise<LeadNote[]> {

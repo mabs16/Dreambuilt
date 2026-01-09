@@ -89,7 +89,10 @@ export class SlaProcessor extends WorkerHost {
           'event.validate_attempts',
           { leadId, advisorId },
         )) as boolean[];
-        const penalty = hasAttempts && hasAttempts[0] ? -2 : -5;
+
+        // Penalty is -30 regardless of attempts per new rules (or maybe -30 for no attempt)
+        // User said: "💀 SLA Fallido -30 Perder el lead por no atender"
+        const penalty = -30;
 
         // Apply Penalty Score
         await this.scoresService.addScore(

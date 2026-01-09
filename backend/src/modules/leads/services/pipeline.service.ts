@@ -33,8 +33,8 @@ export class PipelineService {
     // Complete SLA
     await this.slaService.completeSla(payload.leadId);
 
-    // Scoring (+2 if within SLA, +1 if outside)
-    // For v1 simulation, check if there's a failed SLA event
+    // Scoring is handled by SlaService (Speed Bonus) to avoid double counting
+    /*
     const status = await this.eventEmitter.emitAsync(
       'sla.check_status',
       payload.leadId,
@@ -46,6 +46,7 @@ export class PipelineService {
       points,
       'CONTACTADO',
     );
+    */
   }
 
   @OnEvent('command.cita')
@@ -58,8 +59,23 @@ export class PipelineService {
     await this.scoresService.addScore(
       payload.advisorId,
       payload.leadId,
-      5,
+      25,
       'CITA',
+    );
+  }
+
+  @OnEvent('command.recorrido')
+  async handleRecorrido(payload: { leadId: number; advisorId: number }) {
+    await this.transitionLead(
+      payload.leadId,
+      payload.advisorId,
+      LeadStatus.RECORRIDO,
+    );
+    await this.scoresService.addScore(
+      payload.advisorId,
+      payload.leadId,
+      50,
+      'RECORRIDO',
     );
   }
 
@@ -73,7 +89,7 @@ export class PipelineService {
     await this.scoresService.addScore(
       payload.advisorId,
       payload.leadId,
-      10,
+      200,
       'CIERRE',
     );
   }
@@ -113,6 +129,29 @@ export class PipelineService {
       advisorId: payload.advisorId,
       reason: payload.reason,
     });
+  }
+
+  @OnEvent('lead.note_added')
+  async handleNoteAdded(payload: {
+    leadId: number;
+    advisorId: number;
+    noteId: number;
+  }) {
+    // Check monthly limit for Quality Notes
+    // We use 'NOTA_CALIDAD' to match ScoresService logic
+    const currentPoints = await this.scoresService.getMonthlyScoreByReason(
+      payload.advisorId,
+      'NOTA_CALIDAD',
+    );
+
+    if (currentPoints < 100) {
+      await this.scoresService.addScore(
+        payload.advisorId,
+        payload.leadId,
+        2,
+        'NOTA_CALIDAD',
+      );
+    }
   }
 
   @OnEvent('command.intento_contacto')
