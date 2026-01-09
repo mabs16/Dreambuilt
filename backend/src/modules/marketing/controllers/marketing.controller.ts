@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Logger,
+  UseInterceptors,
+  UploadedFiles,
+} from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { MarketingDataService } from '../services/marketing-data.service';
 import { MarketingAiService } from '../services/marketing-ai.service';
 import * as path from 'path';
@@ -8,14 +16,96 @@ import * as fs from 'fs';
 export class MarketingController {
   private readonly logger = new Logger(MarketingController.name);
 
-  // Hardcoded path as per user requirement for this environment
-  private readonly DATA_PATH =
-    'C:\\Users\\User\\Documents\\WINDSURF\\Mabo_OS\\Data_Meta';
+  // Dynamic path based on environment
+  private readonly DATA_PATH = path.join(process.cwd(), 'Data_Meta');
 
   constructor(
     private readonly ingestService: MarketingDataService,
     private readonly aiService: MarketingAiService,
-  ) {}
+  ) {
+    // Ensure data directory exists
+    if (!fs.existsSync(this.DATA_PATH)) {
+      fs.mkdirSync(this.DATA_PATH, { recursive: true });
+    }
+  }
+
+  @Post('upload')
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'campaigns', maxCount: 1 },
+      { name: 'adsets', maxCount: 1 },
+      { name: 'ads', maxCount: 1 },
+    ]),
+  )
+  async uploadFiles(
+    @UploadedFiles()
+    files: {
+      campaigns?: Express.Multer.File[];
+      adsets?: Express.Multer.File[];
+      ads?: Express.Multer.File[];
+    },
+  ) {
+    this.logger.log('Uploading and processing Meta data files...');
+
+    if (!files.campaigns || !files.adsets || !files.ads) {
+      return {
+        success: false,
+        error: 'Missing required files (campaigns, adsets, ads)',
+      };
+    }
+
+    try {
+      // Save files
+      const campaignPath = await this.saveFile(files.campaigns[0], 'Campaigns');
+      const adsetPath = await this.saveFile(files.adsets[0], 'AdSets');
+      const adPath = await this.saveFile(files.ads[0], 'Ads');
+
+      const results = {
+        campaigns: false,
+        adsets: false,
+        ads: false,
+        errors: [] as string[],
+      };
+
+      try {
+        await this.ingestService.ingestFile(campaignPath, 'campaign');
+        results.campaigns = true;
+      } catch (e) {
+        results.errors.push(`Campaign ingest error: ${e.message}`);
+      }
+
+      try {
+        await this.ingestService.ingestFile(adsetPath, 'adset');
+        results.adsets = true;
+      } catch (e) {
+        results.errors.push(`AdSet ingest error: ${e.message}`);
+      }
+
+      try {
+        await this.ingestService.ingestFile(adPath, 'ad');
+        results.ads = true;
+      } catch (e) {
+        results.errors.push(`Ad ingest error: ${e.message}`);
+      }
+
+      return { success: true, results };
+    } catch (error) {
+      this.logger.error('Upload/Process failed', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  private async saveFile(
+    file: Express.Multer.File,
+    suffix: string,
+  ): Promise<string> {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `Meta_${suffix}_${timestamp}.xlsx`;
+    const filePath = path.join(this.DATA_PATH, filename);
+
+    await fs.promises.writeFile(filePath, file.buffer);
+    return filePath;
+  }
 
   @Post('sync')
   async syncData() {
@@ -34,24 +124,22 @@ export class MarketingController {
     };
 
     try {
-      // Find files dynamically or use specific names?
-      // User provided specific names but let's try to match patterns to be more robust
-      // Dream-uilt-2022-Campañas-1-ene-2025---8-ene-2026.xlsx
-      // Modified to match the standardized names from upload
+      if (!fs.existsSync(this.DATA_PATH)) {
+        return { success: false, error: 'Data directory not found' };
+      }
 
       const files = fs.readdirSync(this.DATA_PATH);
 
+
       const campaignFile = files.find(
-        (f) => f.includes('Campañas') && f.endsWith('.xlsx'),
+        (f) => f.includes('Campaigns') && f.endsWith('.xlsx'),
       );
       const adSetFile = files.find(
-        (f) => f.includes('Conjuntos-de-anuncios') && f.endsWith('.xlsx'),
+        (f) => f.includes('AdSets') && f.endsWith('.xlsx'),
       );
       const adFile = files.find(
         (f) =>
-          f.includes('Anuncios') &&
-          f.endsWith('.xlsx') &&
-          !f.includes('Conjuntos'),
+          f.includes('Ads') && f.endsWith('.xlsx') && !f.includes('AdSets'),
       );
 
       if (campaignFile) {
