@@ -12,6 +12,9 @@ export class MarketingAd {
   adset_name: string; // Linking by name for now
 
   @Column({ nullable: true })
+  campaign_name: string;
+
+  @Column({ nullable: true })
   status: string;
 
   @Column({ nullable: true })
