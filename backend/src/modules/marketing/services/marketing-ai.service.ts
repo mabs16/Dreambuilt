@@ -113,6 +113,43 @@ NO incluyas markdown, solo el JSON puro.`;
     }
   }
 
+  async chatWithData(question: string, contextData: any) {
+    if (!this.model) {
+      return {
+        answer:
+          'La IA no está configurada. Por favor revisa la variable GEMINI_API_KEY.',
+      };
+    }
+
+    try {
+      const prompt = `
+        Actúa como un Consultor Senior de Marketing Digital especializado en Meta Ads.
+        Tienes acceso a los siguientes datos resumidos de las campañas del usuario:
+        ${JSON.stringify(contextData, null, 2)}
+
+        El usuario te hace la siguiente pregunta sobre sus datos o estrategia:
+        "${question}"
+
+        Instrucciones:
+        1. Responde de manera directa y concisa.
+        2. Usa los datos proporcionados para respaldar tus respuestas.
+        3. Si la pregunta no se puede responder con los datos, explícalo amablemente y ofrece consejos generales.
+        4. Mantén un tono profesional pero accesible.
+        5. Habla siempre en Español.
+      `;
+
+      const result = await this.model.generateContent(prompt);
+      const response = result.response.text();
+      return { answer: response };
+    } catch (error) {
+      this.logger.error('Error in chatWithData', error);
+      return {
+        answer:
+          'Lo siento, hubo un error al procesar tu pregunta. Intenta de nuevo más tarde.',
+      };
+    }
+  }
+
   private async runHeuristicAnalysis() {
     const campaigns = await this.campaignRepo.find({
       order: { spend: 'DESC' },

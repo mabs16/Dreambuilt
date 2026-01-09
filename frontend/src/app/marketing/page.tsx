@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RefreshCw, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle, Sparkles, Loader2, TrendingUp, AlertTriangle, Upload } from "lucide-react";
+import { RefreshCw, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle, Sparkles, Loader2, TrendingUp, AlertTriangle, Upload, Send, Calendar as CalendarIcon, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 
@@ -13,6 +13,17 @@ export default function MarketingPage() {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [showUpload, setShowUpload] = useState(false);
     
+    // Date Filters
+    const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
+
+    // Chat State
+    const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'ai'; content: string }>>([
+        { role: 'ai', content: 'Hola, soy tu asistente de marketing. Pregúntame sobre tus campañas, costos o rendimiento.' }
+    ]);
+    const [chatInput, setChatInput] = useState('');
+    const [isChatting, setIsChatting] = useState(false);
+    const chatScrollRef = useRef<HTMLDivElement>(null);
+
     // File inputs refs
     const campaignsInputRef = useRef<HTMLInputElement>(null);
     const adsetsInputRef = useRef<HTMLInputElement>(null);
@@ -51,9 +62,13 @@ export default function MarketingPage() {
         cpm: 0
     });
 
-    const fetchSummary = async () => {
+    const fetchSummary = async (start?: string, end?: string) => {
         try {
-            const response = await api.get('/marketing/summary');
+            const params = new URLSearchParams();
+            if (start) params.append('startDate', start);
+            if (end) params.append('endDate', end);
+
+            const response = await api.get(`/marketing/summary?${params.toString()}`);
             if (response.data) {
                 setSummaryMetrics(response.data);
             }
@@ -63,8 +78,39 @@ export default function MarketingPage() {
     };
 
     useEffect(() => {
-        fetchSummary();
-    }, []);
+        fetchSummary(dateRange.start, dateRange.end);
+    }, [dateRange]);
+
+    useEffect(() => {
+        if (chatScrollRef.current) {
+            chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+        }
+    }, [chatMessages]);
+
+    const handleChatSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!chatInput.trim()) return;
+
+        const userMessage = chatInput;
+        setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+        setChatInput('');
+        setIsChatting(true);
+
+        try {
+            const response = await api.post('/marketing/chat', {
+                question: userMessage,
+                startDate: dateRange.start,
+                endDate: dateRange.end
+            });
+            
+            setChatMessages(prev => [...prev, { role: 'ai', content: response.data.answer }]);
+        } catch (error) {
+            console.error("Chat error:", error);
+            setChatMessages(prev => [...prev, { role: 'ai', content: "Lo siento, hubo un error al procesar tu mensaje." }]);
+        } finally {
+            setIsChatting(false);
+        }
+    };
 
     const handleFileChange = (type: 'campaigns' | 'adsets' | 'ads', event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files[0]) {
@@ -165,14 +211,31 @@ export default function MarketingPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Meta Analist</h1>
                     <p className="text-muted-foreground mt-2">
                         Análisis de rendimiento de campañas publicitarias.
                     </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 items-end sm:items-center">
+                    <div className="flex items-center gap-2 mr-2 bg-card border rounded-md px-3 py-1.5 shadow-sm">
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                        <input 
+                            type="date" 
+                            className="text-sm bg-transparent outline-none w-[110px]"
+                            value={dateRange.start}
+                            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                        />
+                        <span className="text-muted-foreground">-</span>
+                        <input 
+                            type="date" 
+                            className="text-sm bg-transparent outline-none w-[110px]"
+                            value={dateRange.end}
+                            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                        />
+                    </div>
+                    
                     <Button 
                         onClick={() => setShowUpload(!showUpload)} 
                         variant="outline"
@@ -426,6 +489,60 @@ export default function MarketingPage() {
                     </Button>
                 </div>
             )}
+            {/* AI Chat Assistant */}
+            <Card className="h-[600px] flex flex-col border-2 border-purple-100 dark:border-purple-900/50 shadow-lg">
+                <CardHeader className="bg-purple-50/50 dark:bg-purple-900/10">
+                    <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
+                        <MessageSquare className="h-5 w-5" />
+                        Asistente de Marketing IA
+                    </CardTitle>
+                    <CardDescription>
+                        Consulta detalles específicos sobre tus campañas o pide consejos estratégicos.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col gap-4 min-h-0 p-4">
+                    <div 
+                        ref={chatScrollRef}
+                        className="flex-1 overflow-y-auto space-y-4 pr-2"
+                    >
+                        {chatMessages.map((msg, idx) => (
+                            <div 
+                                key={idx} 
+                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                            >
+                                <div 
+                                    className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${
+                                        msg.role === 'user' 
+                                            ? 'bg-purple-600 text-white rounded-tr-none' 
+                                            : 'bg-white dark:bg-slate-800 border rounded-tl-none'
+                                    }`}
+                                >
+                                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                                </div>
+                            </div>
+                        ))}
+                        {isChatting && (
+                            <div className="flex justify-start">
+                                <div className="bg-white dark:bg-slate-800 border shadow-sm rounded-2xl rounded-tl-none px-4 py-3">
+                                    <Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <form onSubmit={handleChatSubmit} className="flex gap-2 pt-2 border-t">
+                        <input 
+                            className="flex-1 px-4 py-2 rounded-full border bg-background focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                            placeholder="Ej: ¿Cuál es la campaña con mejor rendimiento este mes?"
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                        />
+                        <Button type="submit" size="icon" className="rounded-full bg-purple-600 hover:bg-purple-700" disabled={isChatting || !chatInput.trim()}>
+                            <Send className="h-4 w-4" />
+                        </Button>
+                    </form>
+                </CardContent>
+            </Card>
         </div>
     );
 }

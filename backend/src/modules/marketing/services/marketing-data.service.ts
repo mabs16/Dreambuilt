@@ -157,29 +157,44 @@ export class MarketingDataService implements OnModuleInit {
     }
   }
 
-  async getSummary() {
-    const { sum: totalSpend } = await this.campaignRepo
-      .createQueryBuilder('campaign')
+  async getSummary(startDate?: string, endDate?: string) {
+    const applyFilters = (qb: any) => {
+      if (startDate) {
+        qb.andWhere('campaign.meta_date_start >= :startDate', { startDate });
+      }
+      if (endDate) {
+        qb.andWhere('campaign.meta_date_start <= :endDate', { endDate });
+      }
+      return qb;
+    };
+
+    const { sum: totalSpend } = await applyFilters(
+      this.campaignRepo.createQueryBuilder('campaign'),
+    )
       .select('SUM(campaign.spend)', 'sum')
       .getRawOne();
 
-    const { sum: totalLeads } = await this.campaignRepo
-      .createQueryBuilder('campaign')
+    const { sum: totalLeads } = await applyFilters(
+      this.campaignRepo.createQueryBuilder('campaign'),
+    )
       .select('SUM(campaign.results)', 'sum')
       .getRawOne();
 
-    const { avg: avgCtr } = await this.campaignRepo
-      .createQueryBuilder('campaign')
+    const { avg: avgCtr } = await applyFilters(
+      this.campaignRepo.createQueryBuilder('campaign'),
+    )
       .select('AVG(campaign.ctr_all)', 'avg')
       .getRawOne();
 
-    const { sum: totalImpressions } = await this.campaignRepo
-      .createQueryBuilder('campaign')
+    const { sum: totalImpressions } = await applyFilters(
+      this.campaignRepo.createQueryBuilder('campaign'),
+    )
       .select('SUM(campaign.impressions)', 'sum')
       .getRawOne();
 
-    const { sum: totalClicks } = await this.campaignRepo
-      .createQueryBuilder('campaign')
+    const { sum: totalClicks } = await applyFilters(
+      this.campaignRepo.createQueryBuilder('campaign'),
+    )
       .select('SUM(campaign.clicks_all)', 'sum')
       .getRawOne();
 

@@ -5,6 +5,8 @@ import {
   Logger,
   UseInterceptors,
   UploadedFiles,
+  Query,
+  Body,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { MarketingDataService } from '../services/marketing-data.service';
@@ -186,8 +188,22 @@ export class MarketingController {
   }
 
   @Get('summary')
-  async getSummary() {
-    return this.ingestService.getSummary();
+  async getSummary(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.ingestService.getSummary(startDate, endDate);
+  }
+
+  @Post('chat')
+  async chat(
+    @Body() body: { question: string; startDate?: string; endDate?: string },
+  ) {
+    const contextData = await this.ingestService.getSummary(
+      body.startDate,
+      body.endDate,
+    );
+    return this.aiService.chatWithData(body.question, contextData);
   }
 
   @Get('analyze')
