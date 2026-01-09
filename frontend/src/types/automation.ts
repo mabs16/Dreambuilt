@@ -38,6 +38,17 @@ export interface AdvisorAutomationConfig {
     rollCallSchedules?: string[]; // ["09:00", "14:00"]
     rollCallMessage?: string;
 
+    notesPromptMessage?: string;
+    successNoteMessage?: string;
+
+    // Granular Command Prompts
+    contactedPrompt?: string;
+    followUpPrompt?: string;
+    appointmentPrompt?: string;
+    tourPrompt?: string;
+    discardedPrompt?: string;
+    closedPrompt?: string;
+
     // Availability Messages
     availabilityOnMessage?: string;
     availabilityOffMessage?: string;

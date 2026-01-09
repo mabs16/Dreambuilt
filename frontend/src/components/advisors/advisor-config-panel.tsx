@@ -7,7 +7,8 @@ import {
     UserCheck, 
     Save, 
     Loader2, 
-    AlertTriangle
+    AlertTriangle,
+    Trophy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AdvisorAutomationConfig, MessageConfig, ButtonConfig } from "@/types/automation";
@@ -30,6 +31,15 @@ function ConfigSection({ title, icon: Icon, children }: ConfigSectionProps) {
             <div className="p-6 space-y-6">
                 {children}
             </div>
+        </div>
+    );
+}
+
+function RuleItem({ label, points, color }: { label: string, points: string, color: string }) {
+    return (
+        <div className="flex items-center justify-between text-sm p-3 rounded-lg bg-white/5 border border-white/5">
+            <span className="text-muted-foreground font-medium">{label}</span>
+            <span className={cn("font-bold font-mono", color)}>{points}</span>
         </div>
     );
 }
@@ -102,6 +112,25 @@ function MessageEditor({ label, config, onChange, variables }: MessageEditorProp
     );
 }
 
+function PromptEditor({ label, value, onChange, variables, placeholder }: { label: string, value: string, onChange: (val: string) => void, variables: string[], placeholder?: string }) {
+    return (
+        <div className="space-y-2 p-4 rounded-xl bg-black/20 border border-white/5">
+            <label className="text-xs font-black text-primary uppercase tracking-widest block">
+                {label}
+            </label>
+            <textarea 
+                value={value || ''}
+                onChange={(e) => onChange(e.target.value)}
+                className="w-full h-24 bg-background border border-white/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all resize-none"
+                placeholder={placeholder || `Mensaje para ${label.toLowerCase()}...`}
+            />
+            <p className="text-[10px] text-muted-foreground">
+                Variables: {variables.map(v => <code key={v} className="text-primary mr-1">{v}</code>)}
+            </p>
+        </div>
+    );
+}
+
 export default function AdvisorConfigPanel() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     
@@ -156,7 +185,16 @@ export default function AdvisorConfigPanel() {
             ]
         },
 
-        followUpInstructions: "*Próximos pasos sugeridos:*\n- Si el lead está en proceso, envía: `{{lead_id}} SEGUIMIENTO`\n- Si agendaste cita, envía: `{{lead_id}} CITA`\n- Para ver más info, envía: `{{lead_id}} INFO`",
+        followUpInstructions: "*Próximos pasos sugeridos:*\n- Si el lead está en proceso, envía: `{{lead_id}} SEGUIMIENTO`\n- Si agendaste cita, envía: `{{lead_id}} CITA`\n- Si ya hiciste recorrido, envía: `{{lead_id}} RECORRIDO`\n- Para descartar lead, envía: `{{lead_id}} DESCARTADO`",
+        
+        // Command Prompts Defaults
+        contactedPrompt: "👍 Lead #{{lead_id}} marcado como CONTACTADO.\n\nPor favor, escribe ahora una breve nota sobre este primer contacto:",
+        followUpPrompt: "🔄 Lead #{{lead_id}} ahora está en SEGUIMIENTO. ¿Qué avances hubo hoy? Escribe una breve nota:",
+        appointmentPrompt: "📅 CITA agendada para el Lead #{{lead_id}}. ¡Excelente!\n\nPor favor, indica la fecha y detalles en una nota:",
+        tourPrompt: "🚶 RECORRIDO registrado para el Lead #{{lead_id}}. ¡Muy bien!\n\nPor favor, escribe una nota sobre cómo fue el recorrido:",
+        discardedPrompt: "📉 Lead #{{lead_id}} marcado como DESCARTADO. ¿Cuál fue el motivo? (Escribe una nota)",
+        closedPrompt: "🥳 ¡FELICIDADES! Lead #{{lead_id}} marcado como CIERRE/CLIENTE.\n\nEscribe una nota final sobre la venta:",
+
         slaWarningMessage: "⚠️ *ALERTA DE SLA*: Han pasado 15 minutos sin contacto con el Lead #{{lead_id}} ({{lead_name}}).\n\nEl lead será reasignado y tu puntuación ha sido penalizada. 📉",
         rollCallEnabled: false,
         rollCallSchedules: ["09:00"],
@@ -349,6 +387,48 @@ export default function AdvisorConfigPanel() {
                     </div>
                 </ConfigSection>
 
+                {/* 1.5 Respuestas a Comandos */}
+                <ConfigSection title="Gestión de Respuestas y Seguimiento" icon={MessageSquare}>
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <PromptEditor 
+                            label="Respuesta al marcar CONTACTADO"
+                            value={config.contactedPrompt || ''}
+                            onChange={(val) => updateConfig('contactedPrompt', val)}
+                            variables={['{{lead_id}}', '{{lead_name}}']}
+                        />
+                        <PromptEditor 
+                            label="Respuesta al marcar SEGUIMIENTO"
+                            value={config.followUpPrompt || ''}
+                            onChange={(val) => updateConfig('followUpPrompt', val)}
+                            variables={['{{lead_id}}', '{{lead_name}}']}
+                        />
+                        <PromptEditor 
+                            label="Respuesta al marcar CITA"
+                            value={config.appointmentPrompt || ''}
+                            onChange={(val) => updateConfig('appointmentPrompt', val)}
+                            variables={['{{lead_id}}', '{{lead_name}}']}
+                        />
+                        <PromptEditor 
+                            label="Respuesta al marcar RECORRIDO"
+                            value={config.tourPrompt || ''}
+                            onChange={(val) => updateConfig('tourPrompt', val)}
+                            variables={['{{lead_id}}', '{{lead_name}}']}
+                        />
+                        <PromptEditor 
+                            label="Respuesta al marcar DESCARTADO"
+                            value={config.discardedPrompt || ''}
+                            onChange={(val) => updateConfig('discardedPrompt', val)}
+                            variables={['{{lead_id}}', '{{lead_name}}']}
+                        />
+                        <PromptEditor 
+                            label="Respuesta al marcar CIERRE"
+                            value={config.closedPrompt || ''}
+                            onChange={(val) => updateConfig('closedPrompt', val)}
+                            variables={['{{lead_id}}', '{{lead_name}}']}
+                        />
+                    </div>
+                </ConfigSection>
+
                 {/* 2. Reglas de SLA */}
                 <ConfigSection title="Reglas de Tiempo (SLA)" icon={Clock}>
                     <div className="grid md:grid-cols-2 gap-8">
@@ -434,6 +514,30 @@ export default function AdvisorConfigPanel() {
                                 />
                             </div>
                         </div>
+                    </div>
+                </ConfigSection>
+
+                <ConfigSection title="Reglas de Puntos" icon={Trophy}>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                        <RuleItem label="Cierre de Venta" points="+10" color="text-emerald-500" />
+                        <RuleItem label="Cita Agendada" points="+5" color="text-emerald-400" />
+                        
+                        <div className="col-span-full h-px bg-white/5 my-2" />
+                        
+                        <RuleItem label="Resp. Flash (< 5 min)" points="+2" color="text-emerald-300" />
+                        <RuleItem label="Resp. Normal (5-10 min)" points="+1" color="text-emerald-200/60" />
+                        
+                        <div className="col-span-full h-px bg-white/5 my-2" />
+                        
+                        <RuleItem label="Rechazo Rápido (< 5 min)" points="0" color="text-emerald-200/40" />
+                        <RuleItem label="Rechazo Lento (5-10 min)" points="-2" color="text-rose-300" />
+                        
+                        <div className="col-span-full h-px bg-white/5 my-2" />
+
+                        <RuleItem label="SLA Fallido (Sin Intento)" points="-5" color="text-rose-500" />
+                        <RuleItem label="SLA Fallido (Con Intento)" points="-2" color="text-rose-400" />
+                        <RuleItem label="Reasignación Forzada" points="-10" color="text-rose-600" />
+                        <RuleItem label="Abandono (72h sin gestión)" points="-20" color="text-rose-700 font-black" />
                     </div>
                 </ConfigSection>
             </div>

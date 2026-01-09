@@ -1560,6 +1560,15 @@ export class WhatsappService {
           type: 'MANUAL',
         });
 
+        // Special handling for DESCARTADO reason
+        const stateObj = state as any;
+        if (stateObj.triggerCommand === 'DESCARTADO') {
+          await this.leadsService.updateDisqualificationReason(
+            state.leadId,
+            body,
+          );
+        }
+
         await this.redis.del(stateKey);
 
         // Get Advisor Automation Config
@@ -1577,7 +1586,13 @@ export class WhatsappService {
         await this.sendWhatsappMessage(from, successMsg);
 
         // Send next instructions
-        const nextSteps = `*Próximos pasos sugeridos:*\n- Si el lead está en proceso, envía: \`${state.leadId} SEGUIMIENTO\`\n- Si agendaste cita, envía: \`${state.leadId} CITA\`\n- Para ver más info, envía: \`${state.leadId} INFO\``;
+        const nextSteps = advConfig?.followUpInstructions
+          ? advConfig.followUpInstructions.replace(
+              /\{\{lead_id\}\}/g,
+              String(state.leadId),
+            )
+          : `*Próximos pasos sugeridos:*\n- Si el lead está en proceso, envía: \`${state.leadId} SEGUIMIENTO\`\n- Si agendaste cita, envía: \`${state.leadId} CITA\`\n- Si ya hiciste recorrido, envía: \`${state.leadId} RECORRIDO\`\n- Para descartar lead, envía: \`${state.leadId} DESCARTADO\``;
+
         await this.sendWhatsappMessage(from, nextSteps);
         return;
       }
@@ -1715,8 +1730,8 @@ export class WhatsappService {
           advisorId: advisor.id,
         });
 
-        const contactadoMsg = advConfig?.notesPromptMessage
-          ? advConfig.notesPromptMessage.replace(
+        const contactadoMsg = advConfig?.contactedPrompt
+          ? advConfig.contactedPrompt.replace(
               /\{\{lead_id\}\}/g,
               String(parsed.leadId),
             )
@@ -1730,6 +1745,7 @@ export class WhatsappService {
             type: 'WAITING_FOR_NOTES',
             leadId: parsed.leadId,
             timestamp: Date.now(),
+            triggerCommand: 'CONTACTADO',
           }),
           'EX',
           1800, // 30 mins
@@ -1743,8 +1759,8 @@ export class WhatsappService {
           advisorId: advisor.id,
         });
 
-        const seguimientoMsg = advConfig?.notesPromptMessage
-          ? advConfig.notesPromptMessage.replace(
+        const seguimientoMsg = advConfig?.followUpPrompt
+          ? advConfig.followUpPrompt.replace(
               /\{\{lead_id\}\}/g,
               String(parsed.leadId),
             )
@@ -1757,6 +1773,7 @@ export class WhatsappService {
             type: 'WAITING_FOR_NOTES',
             leadId: parsed.leadId,
             timestamp: Date.now(),
+            triggerCommand: 'SEGUIMIENTO',
           }),
           'EX',
           1800,
@@ -1770,8 +1787,8 @@ export class WhatsappService {
           advisorId: advisor.id,
         });
 
-        const citaMsg = advConfig?.notesPromptMessage
-          ? advConfig.notesPromptMessage.replace(
+        const citaMsg = advConfig?.appointmentPrompt
+          ? advConfig.appointmentPrompt.replace(
               /\{\{lead_id\}\}/g,
               String(parsed.leadId),
             )
@@ -1784,6 +1801,7 @@ export class WhatsappService {
             type: 'WAITING_FOR_NOTES',
             leadId: parsed.leadId,
             timestamp: Date.now(),
+            triggerCommand: 'CITA',
           }),
           'EX',
           1800,
@@ -1791,26 +1809,55 @@ export class WhatsappService {
         break;
       }
 
-      case CommandType.PERDIDO: {
-        this.eventEmitter.emit('command.perdido', {
+      case CommandType.RECORRIDO: {
+        this.eventEmitter.emit('command.recorrido', {
           leadId: parsed.leadId,
           advisorId: advisor.id,
         });
 
-        const perdidoMsg = advConfig?.notesPromptMessage
-          ? advConfig.notesPromptMessage.replace(
+        const tourMsg = advConfig?.tourPrompt
+          ? advConfig.tourPrompt.replace(
               /\{\{lead_id\}\}/g,
               String(parsed.leadId),
             )
-          : `📉 Lead #${parsed.leadId} marcado como PERDIDO. ¿Cuál fue el motivo? (Escribe una nota)`;
+          : `🚶 RECORRIDO registrado para el Lead #${parsed.leadId}. ¡Muy bien!\n\nPor favor, escribe una nota sobre cómo fue el recorrido:`;
 
-        await this.sendWhatsappMessage(from, perdidoMsg);
+        await this.sendWhatsappMessage(from, tourMsg);
         await this.redis.set(
           stateKey,
           JSON.stringify({
             type: 'WAITING_FOR_NOTES',
             leadId: parsed.leadId,
             timestamp: Date.now(),
+            triggerCommand: 'RECORRIDO',
+          }),
+          'EX',
+          1800,
+        );
+        break;
+      }
+
+      case CommandType.DESCARTADO: {
+        this.eventEmitter.emit('command.descartado', {
+          leadId: parsed.leadId,
+          advisorId: advisor.id,
+        });
+
+        const descartadoMsg = advConfig?.discardedPrompt
+          ? advConfig.discardedPrompt.replace(
+              /\{\{lead_id\}\}/g,
+              String(parsed.leadId),
+            )
+          : `📉 Lead #${parsed.leadId} marcado como DESCARTADO. ¿Cuál fue el motivo? (Escribe una nota)`;
+
+        await this.sendWhatsappMessage(from, descartadoMsg);
+        await this.redis.set(
+          stateKey,
+          JSON.stringify({
+            type: 'WAITING_FOR_NOTES',
+            leadId: parsed.leadId,
+            timestamp: Date.now(),
+            triggerCommand: 'DESCARTADO',
           }),
           'EX',
           1800,
@@ -1824,8 +1871,8 @@ export class WhatsappService {
           advisorId: advisor.id,
         });
 
-        const cierreMsg = advConfig?.notesPromptMessage
-          ? advConfig.notesPromptMessage.replace(
+        const cierreMsg = advConfig?.closedPrompt
+          ? advConfig.closedPrompt.replace(
               /\{\{lead_id\}\}/g,
               String(parsed.leadId),
             )
@@ -1838,6 +1885,7 @@ export class WhatsappService {
             type: 'WAITING_FOR_NOTES',
             leadId: parsed.leadId,
             timestamp: Date.now(),
+            triggerCommand: 'CIERRE',
           }),
           'EX',
           1800,

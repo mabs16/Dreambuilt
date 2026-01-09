@@ -75,6 +75,15 @@ export class AdvisorsService {
     });
   }
 
+  async findAllAvailable(): Promise<Advisor[]> {
+    return this.advisorsRepository.find({
+      where: {
+        status: 'available',
+        availability_expires_at: MoreThan(new Date()),
+      },
+    });
+  }
+
   async setAvailability(id: number, available: boolean): Promise<Advisor> {
     const advisor = await this.findById(id);
     if (!advisor) throw new BadRequestException('Advisor not found');

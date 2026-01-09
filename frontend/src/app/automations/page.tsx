@@ -62,6 +62,12 @@ interface AdvisorAutomationConfig {
     slaWarningMessage?: string;
     notesPromptMessage?: string;
     successNoteMessage?: string;
+    contactedPrompt?: string;
+    followUpPrompt?: string;
+    appointmentPrompt?: string;
+    tourPrompt?: string;
+    discardedPrompt?: string;
+    closedPrompt?: string;
 }
 
 type AutomationConfig = LeadQualificationConfig | AdvisorAutomationConfig;

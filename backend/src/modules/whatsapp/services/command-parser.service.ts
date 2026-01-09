@@ -4,8 +4,9 @@ export enum CommandType {
   ACTIVAR = 'ACTIVAR',
   CONTACTADO = 'CONTACTADO',
   CITA = 'CITA',
+  RECORRIDO = 'RECORRIDO',
   SEGUIMIENTO = 'SEGUIMIENTO',
-  PERDIDO = 'PERDIDO',
+  DESCARTADO = 'DESCARTADO',
   CIERRE = 'CIERRE',
   INTENTO_CONTACTO = 'INTENTO',
   NOTAS = 'NOTAS',
@@ -24,7 +25,7 @@ export interface ParsedCommand {
 export class CommandParser {
   // Matches: [COMMAND] [ID] [OPTIONAL_VALUE] or [ID] [COMMAND] [OPTIONAL_VALUE]
   private readonly commandRegex =
-    /^(?:(ACTIVAR|CONTACTADO|CITA|SEGUIMIENTO|PERDIDO|CIERRE|INTENTO|NOTAS|INFO|REJECT)\s+(\d+)|(\d+)\s+(ACTIVAR|CONTACTADO|CITA|SEGUIMIENTO|PERDIDO|CIERRE|INTENTO|NOTAS|INFO|REJECT))(?:\s+(.*))?$/i;
+    /^(?:(ACTIVAR|CONTACTADO|CITA|RECORRIDO|SEGUIMIENTO|DESCARTADO|CIERRE|INTENTO|NOTAS|INFO|REJECT)\s+(\d+)|(\d+)\s+(ACTIVAR|CONTACTADO|CITA|RECORRIDO|SEGUIMIENTO|DESCARTADO|CIERRE|INTENTO|NOTAS|INFO|REJECT))(?:\s+(.*))?$/i;
 
   parse(message: string): ParsedCommand {
     const trimmed = message.trim();
@@ -63,11 +64,20 @@ export class CommandParser {
       );
     }
 
-    // Mapeo especial para 'INTENTO' -> INTENTO_CONTACTO
-    const type =
-      typeStr === 'INTENTO'
-        ? CommandType.INTENTO_CONTACTO
-        : (typeStr as CommandType);
+    // Mapeo especial para comandos
+    let type: CommandType;
+
+    switch (typeStr) {
+      case 'INTENTO':
+        type = CommandType.INTENTO_CONTACTO;
+        break;
+      case 'RECHAZAR':
+      case 'REJECT':
+        type = CommandType.REJECT;
+        break;
+      default:
+        type = typeStr as CommandType;
+    }
 
     return { type, leadId, value };
   }

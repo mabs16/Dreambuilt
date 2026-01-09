@@ -49,6 +49,14 @@ export interface AdvisorAutomationConfig {
   notesPromptMessage?: string;
   successNoteMessage?: string;
 
+  // Granular Command Prompts
+  contactedPrompt?: string;
+  followUpPrompt?: string;
+  appointmentPrompt?: string;
+  tourPrompt?: string;
+  discardedPrompt?: string;
+  closedPrompt?: string;
+
   // Availability Messages (New)
   availabilityOnMessage?: string;
   availabilityOffMessage?: string;

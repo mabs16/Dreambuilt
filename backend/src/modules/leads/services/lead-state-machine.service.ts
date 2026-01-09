@@ -14,26 +14,36 @@ export class LeadStateMachine {
     [LeadStatus.ASIGNADO]: [
       LeadStatus.ASESOR_INFORMADO,
       LeadStatus.CONTACTADO,
-      LeadStatus.PERDIDO,
+      LeadStatus.DESCARTADO,
     ],
-    [LeadStatus.ASESOR_INFORMADO]: [LeadStatus.CONTACTADO, LeadStatus.PERDIDO],
+    [LeadStatus.ASESOR_INFORMADO]: [
+      LeadStatus.CONTACTADO,
+      LeadStatus.DESCARTADO,
+    ],
     [LeadStatus.CONTACTADO]: [
       LeadStatus.CITA,
       LeadStatus.SEGUIMIENTO,
-      LeadStatus.PERDIDO,
+      LeadStatus.DESCARTADO,
     ],
     [LeadStatus.CITA]: [
       LeadStatus.SEGUIMIENTO,
+      LeadStatus.RECORRIDO,
       LeadStatus.CIERRE,
-      LeadStatus.PERDIDO,
+      LeadStatus.DESCARTADO,
+    ],
+    [LeadStatus.RECORRIDO]: [
+      LeadStatus.SEGUIMIENTO,
+      LeadStatus.CITA,
+      LeadStatus.CIERRE,
+      LeadStatus.DESCARTADO,
     ],
     [LeadStatus.SEGUIMIENTO]: [
       LeadStatus.CITA,
       LeadStatus.CIERRE,
-      LeadStatus.PERDIDO,
+      LeadStatus.DESCARTADO,
     ],
     [LeadStatus.CIERRE]: [],
-    [LeadStatus.PERDIDO]: [],
+    [LeadStatus.DESCARTADO]: [],
   };
 
   validateTransition(current: LeadStatus, next: LeadStatus): void {

@@ -57,6 +57,16 @@ export class LeadsService {
     return this.leadsRepository.save(lead);
   }
 
+  async updateDisqualificationReason(
+    id: number,
+    reason: string,
+  ): Promise<Lead> {
+    const lead = await this.findById(id);
+    lead.disqualification_reason = reason;
+    lead.updated_at = new Date();
+    return this.leadsRepository.save(lead);
+  }
+
   async addTag(id: number, tag: string): Promise<Lead> {
     const lead = await this.findById(id);
     if (!lead.tags) {
@@ -111,5 +121,29 @@ export class LeadsService {
       order: { created_at: 'DESC' },
       relations: ['advisor'],
     });
+  }
+
+  async findLeadsWithNoNotesSince(
+    hours: number,
+    statuses: LeadStatus[],
+  ): Promise<Lead[]> {
+    const cutoffDate = new Date();
+    cutoffDate.setHours(cutoffDate.getHours() - hours);
+
+    return this.leadsRepository
+      .createQueryBuilder('lead')
+      .where('lead.status IN (:...statuses)', { statuses })
+      .andWhere((qb) => {
+        const subQuery = qb
+          .subQuery()
+          .select('MAX(n.created_at)')
+          .from(LeadNote, 'n')
+          .where('n.lead_id = lead.id')
+          .getQuery();
+
+        return `COALESCE((${subQuery}), lead.created_at) < :cutoffDate`;
+      })
+      .setParameter('cutoffDate', cutoffDate)
+      .getMany();
   }
 }

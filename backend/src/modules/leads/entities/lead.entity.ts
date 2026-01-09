@@ -15,9 +15,10 @@ export enum LeadStatus {
   ASESOR_INFORMADO = 'ASESOR_INFORMADO',
   CONTACTADO = 'CONTACTADO',
   CITA = 'CITA',
+  RECORRIDO = 'RECORRIDO',
   SEGUIMIENTO = 'SEGUIMIENTO',
   CIERRE = 'CIERRE',
-  PERDIDO = 'PERDIDO',
+  DESCARTADO = 'DESCARTADO',
 }
 
 @Entity('leads')
@@ -40,6 +41,9 @@ export class Lead {
     default: LeadStatus.NUEVO,
   })
   status: LeadStatus;
+
+  @Column({ nullable: true })
+  disqualification_reason: string;
 
   @Column({ nullable: true })
   avatar_url: string;

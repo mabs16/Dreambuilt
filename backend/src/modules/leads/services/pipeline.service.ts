@@ -87,18 +87,31 @@ export class PipelineService {
     );
   }
 
-  @OnEvent('command.perdido')
-  async handlePerdido(payload: { leadId: number; advisorId: number }) {
+  @OnEvent('command.descartado')
+  async handleDescartado(payload: {
+    leadId: number;
+    advisorId: number;
+    reason?: string;
+  }) {
     await this.transitionLead(
       payload.leadId,
       payload.advisorId,
-      LeadStatus.PERDIDO,
+      LeadStatus.DESCARTADO,
     );
 
+    // Si hay razón de descarte, actualizarla
+    if (payload.reason) {
+      // Necesitaría un método en LeadsService para esto, o usar updateStatus con partial
+      // Por ahora asumimos que el servicio ya manejó la nota, pero si queremos guardar en la columna específica:
+      // await this.leadsService.updateDisqualificationReason(payload.leadId, payload.reason);
+      // Pero LeadsService no tiene ese método aún. Lo agregaré después.
+    }
+
     // Emitir evento para posible flujo de nutrición
-    this.eventEmitter.emit('lead.perdido', {
+    this.eventEmitter.emit('lead.descartado', {
       leadId: payload.leadId,
       advisorId: payload.advisorId,
+      reason: payload.reason,
     });
   }
 
