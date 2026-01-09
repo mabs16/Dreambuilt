@@ -43,21 +43,43 @@ export class MarketingAiService {
 
     try {
       // Fetch summarized data
-      const campaigns = await this.campaignRepo.find({ order: { spend: 'DESC' }, take: 5 });
-      const topAds = await this.adRepo.find({ order: { results: 'DESC' }, take: 5 });
-      const expensiveAds = await this.adRepo.find({ order: { cost_per_result: 'DESC' }, take: 5 });
+      const campaigns = await this.campaignRepo.find({
+        order: { spend: 'DESC' },
+        take: 5,
+      });
+      const topAds = await this.adRepo.find({
+        order: { results: 'DESC' },
+        take: 5,
+      });
+      const expensiveAds = await this.adRepo.find({
+        order: { cost_per_result: 'DESC' },
+        take: 5,
+      });
 
       // Construct Prompt
-      let prompt = `Actúa como un Experto en Marketing Digital y Meta Ads. Analiza los siguientes datos de rendimiento de campañas inmobiliarias y dame 3 recomendaciones estratégicas claras y accionables.
+      const prompt = `Actúa como un Experto en Marketing Digital y Meta Ads. Analiza los siguientes datos de rendimiento de campañas inmobiliarias y dame 3 recomendaciones estratégicas claras y accionables.
 
 DATOS DE CAMPAÑAS (Top 5 por Gasto):
-${campaigns.map(c => `- ${c.name}: Gasto $${c.spend}, Leads ${c.results}, Costo/Lead $${c.cost_per_result}, CTR ${c.ctr}%`).join('\n')}
+${campaigns
+  .map(
+    (c) =>
+      `- ${c.name}: Gasto $${c.spend}, Leads ${c.results}, Costo/Lead $${c.cost_per_result}, CTR ${c.ctr_all}%`,
+  )
+  .join('\n')}
 
 TOP ANUNCIOS (Más Resultados):
-${topAds.map(a => `- ${a.name}: Leads ${a.results}, Costo/Lead $${a.cost_per_result}`).join('\n')}
+${topAds
+  .map(
+    (a) => `- ${a.name}: Leads ${a.results}, Costo/Lead $${a.cost_per_result}`,
+  )
+  .join('\n')}
 
 ANUNCIOS MÁS COSTOSOS (Mayor Costo por Resultado):
-${expensiveAds.map(a => `- ${a.name}: Leads ${a.results}, Costo/Lead $${a.cost_per_result}`).join('\n')}
+${expensiveAds
+  .map(
+    (a) => `- ${a.name}: Leads ${a.results}, Costo/Lead $${a.cost_per_result}`,
+  )
+  .join('\n')}
 
 TU RESPUESTA DEBE SEGUIR ESTE FORMATO JSON:
 {
@@ -75,18 +97,19 @@ NO incluyas markdown, solo el JSON puro.`;
 
       const result = await this.model.generateContent(prompt);
       const responseText = result.response.text();
-      
-      // Clean markdown if present
-      const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-      
-      return JSON.parse(cleanJson);
 
+      // Clean markdown if present
+      const cleanJson = responseText
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
+      return JSON.parse(cleanJson);
     } catch (error) {
       this.logger.error('Error generating AI analysis', error);
-      return { 
-        summary: "No se pudo generar el análisis en este momento.",
+      return {
+        summary: 'No se pudo generar el análisis en este momento.',
         recommendations: [],
-        error: error.message 
+        error: error.message,
       };
     }
   }
