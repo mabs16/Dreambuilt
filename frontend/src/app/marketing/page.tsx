@@ -11,6 +11,7 @@ export default function MarketingPage() {
     const { toast } = useToast();
     const [isUploading, setIsUploading] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [showUpload, setShowUpload] = useState(false);
     
     // File inputs refs
     const campaignsInputRef = useRef<HTMLInputElement>(null);
@@ -43,7 +44,11 @@ export default function MarketingPage() {
         totalSpend: 0,
         totalLeads: 0,
         costPerLead: 0,
-        avgCtr: 0
+        avgCtr: 0,
+        totalImpressions: 0,
+        totalClicks: 0,
+        cpc: 0,
+        cpm: 0
     });
 
     const fetchSummary = async () => {
@@ -169,6 +174,14 @@ export default function MarketingPage() {
                 </div>
                 <div className="flex gap-2">
                     <Button 
+                        onClick={() => setShowUpload(!showUpload)} 
+                        variant="outline"
+                        className="gap-2"
+                    >
+                        <Upload className="h-4 w-4" />
+                        {showUpload ? 'Ocultar Carga' : 'Importar Datos'}
+                    </Button>
+                    <Button 
                         onClick={handleAnalyze} 
                         disabled={isAnalyzing}
                         className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
@@ -180,6 +193,7 @@ export default function MarketingPage() {
             </div>
 
             {/* Upload Section */}
+            {showUpload && (
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -258,8 +272,10 @@ export default function MarketingPage() {
                     </Button>
                 </CardContent>
             </Card>
+            )}
 
             {/* Sync Results Status */}
+            {syncResults && (
             <Card>
                 <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -267,7 +283,7 @@ export default function MarketingPage() {
                         Estado de Archivos
                     </CardTitle>
                     <CardDescription>
-                        Datos leídos desde: <code className="bg-muted px-1 py-0.5 rounded text-xs">.../Mabo_OS/Data_Meta</code>
+                        Archivos procesados correctamente. Los datos se han almacenado en la base de datos local.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -300,6 +316,7 @@ export default function MarketingPage() {
                     )}
                 </CardContent>
             </Card>
+            )}
 
             {/* Dashboard Placeholder */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -318,6 +335,22 @@ export default function MarketingPage() {
                 <KPICard 
                     title="CTR Promedio" 
                     value={`${summaryMetrics.avgCtr.toFixed(2)}%`} 
+                />
+                <KPICard 
+                    title="Impresiones Totales" 
+                    value={summaryMetrics.totalImpressions.toLocaleString('es-MX')} 
+                />
+                <KPICard 
+                    title="Clics Totales" 
+                    value={summaryMetrics.totalClicks.toLocaleString('es-MX')} 
+                />
+                <KPICard 
+                    title="CPC Promedio" 
+                    value={`$${summaryMetrics.cpc.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
+                />
+                <KPICard 
+                    title="CPM Promedio" 
+                    value={`$${summaryMetrics.cpm.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
                 />
             </div>
 
