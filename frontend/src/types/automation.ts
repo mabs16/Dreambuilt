@@ -37,6 +37,10 @@ export interface AdvisorAutomationConfig {
     rollCallEnabled?: boolean;
     rollCallSchedules?: string[]; // ["09:00", "14:00"]
     rollCallMessage?: string;
+
+    // Availability Messages
+    availabilityOnMessage?: string;
+    availabilityOffMessage?: string;
 }
 
 export interface Automation {

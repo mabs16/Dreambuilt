@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+// import { Cron, CronExpression } from '@nestjs/schedule';
 import { AutomationsService } from './automations.service';
 import { WhatsappService } from './whatsapp.service';
 import { AdvisorsService } from '../../advisors/services/advisors.service';
@@ -16,7 +16,7 @@ export class RollCallService {
     private readonly advisorsService: AdvisorsService,
   ) {}
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  // @Cron(CronExpression.EVERY_MINUTE)
   async checkRollCallSchedule() {
     const now = new Date();
     const currentHour = now.getHours().toString().padStart(2, '0');

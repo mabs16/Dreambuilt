@@ -216,6 +216,7 @@ export default function AdvisorConfigPanel() {
         setConfig(prev => ({ ...prev, [key]: value }));
     };
 
+    /*
     const toggleSchedule = (time: string) => {
         const current = config.rollCallSchedules || [];
         if (current.includes(time)) {
@@ -224,6 +225,7 @@ export default function AdvisorConfigPanel() {
             updateConfig('rollCallSchedules', [...current, time].sort());
         }
     };
+    */
 
     if (loading) {
         return (
@@ -393,67 +395,45 @@ export default function AdvisorConfigPanel() {
                     </div>
                 </ConfigSection>
 
-                {/* 3. Pase de Lista (Roll Call) */}
-                <ConfigSection title="Pase de Lista (Mantenimiento de Sesión)" icon={UserCheck}>
+                {/* 3. Disponibilidad de Asesores */}
+                <ConfigSection title="Disponibilidad de Asesores" icon={UserCheck}>
                     <div className="flex flex-col gap-6">
-                        <div className="flex items-center justify-between">
+                        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-start gap-3">
+                            <UserCheck className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
                             <div className="space-y-1">
-                                <h4 className="font-bold text-white">Activar Pase de Lista Automático</h4>
-                                <p className="text-xs text-muted-foreground max-w-md">
-                                    Envía mensajes programados para asegurar que la ventana de 24h de WhatsApp se mantenga abierta.
+                                <p className="text-xs font-bold text-emerald-200">Sistema Reactivo</p>
+                                <p className="text-[10px] text-emerald-200/60">
+                                    El asesor activa su disponibilidad enviando &quot;Disponible&quot; y la desactiva con &quot;No disponible&quot;.
+                                    La sesión expira automáticamente en 24 horas.
                                 </p>
                             </div>
-                            <button 
-                                onClick={() => updateConfig('rollCallEnabled', !config.rollCallEnabled)}
-                                className={cn(
-                                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
-                                    config.rollCallEnabled ? "bg-primary" : "bg-white/10"
-                                )}
-                            >
-                                <span className={cn(
-                                    "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-                                    config.rollCallEnabled ? "translate-x-6" : "translate-x-1"
-                                )} />
-                            </button>
                         </div>
 
-                        {config.rollCallEnabled && (
-                            <div className="p-6 bg-background/50 rounded-xl border border-white/5 space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                                <div className="space-y-3">
-                                    <label className="text-xs font-black text-muted-foreground uppercase tracking-widest block">
-                                        Horarios de Ejecución
-                                    </label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {["09:00", "12:00", "15:00", "18:00", "21:00"].map((time) => (
-                                            <button
-                                                key={time}
-                                                onClick={() => toggleSchedule(time)}
-                                                className={cn(
-                                                    "px-4 py-2 rounded-lg text-xs font-bold transition-all border",
-                                                    (config.rollCallSchedules || []).includes(time)
-                                                        ? "bg-primary text-primary-foreground border-primary"
-                                                        : "bg-background border-white/10 hover:border-white/30 text-muted-foreground"
-                                                )}
-                                            >
-                                                {time}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <label className="text-xs font-black text-muted-foreground uppercase tracking-widest block">
-                                        Mensaje de Solicitud
-                                    </label>
-                                    <input 
-                                        type="text"
-                                        value={config.rollCallMessage}
-                                        onChange={(e) => updateConfig('rollCallMessage', e.target.value)}
-                                        className="w-full bg-background border border-white/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
-                                    />
-                                </div>
+                        <div className="grid md:grid-cols-2 gap-8">
+                             <div className="space-y-4">
+                                <label className="text-xs font-black text-muted-foreground uppercase tracking-widest block">
+                                    Respuesta: &quot;Disponible&quot;
+                                </label>
+                                <textarea 
+                                    value={config.availabilityOnMessage || ""}
+                                    onChange={(e) => updateConfig('availabilityOnMessage', e.target.value)}
+                                    className="w-full h-32 bg-background border border-white/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all resize-none"
+                                    placeholder="✅ Disponibilidad activada..."
+                                />
                             </div>
-                        )}
+
+                            <div className="space-y-4">
+                                <label className="text-xs font-black text-muted-foreground uppercase tracking-widest block">
+                                    Respuesta: &quot;No disponible&quot;
+                                </label>
+                                <textarea 
+                                    value={config.availabilityOffMessage || ""}
+                                    onChange={(e) => updateConfig('availabilityOffMessage', e.target.value)}
+                                    className="w-full h-32 bg-background border border-white/10 rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all resize-none"
+                                    placeholder="⛔ Disponibilidad desactivada..."
+                                />
+                            </div>
+                        </div>
                     </div>
                 </ConfigSection>
             </div>

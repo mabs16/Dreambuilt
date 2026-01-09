@@ -1584,27 +1584,24 @@ export class WhatsappService {
     }
 
     if (!parsed) {
-      // Check for Roll Call Response
-      if (
-        body.toLowerCase().trim() === 'presente' ||
-        body.toLowerCase().includes('ubicación')
-      ) {
-        this.logger.log(
-          `✅ Asistencia registrada para advisor ${advisor.name} (${advisor.id})`,
-        );
+      // --- AVAILABILITY LOGIC ---
+      const bodyLower = body.toLowerCase().trim();
+      if (bodyLower === 'disponible' || bodyLower === 'no disponible') {
+        const isAvailable = bodyLower === 'disponible';
+        await this.advisorsService.setAvailability(advisor.id, isAvailable);
 
-        // Emite evento de asistencia para que otros módulos puedan consumirlo (ej. Dashboard)
-        this.eventEmitter.emit('advisor.attendance', {
-          advisorId: advisor.id,
-          timestamp: new Date(),
-          type:
-            body.toLowerCase().trim() === 'presente' ? 'MESSAGE' : 'LOCATION',
-        });
+        // Get config for messages
+        const advAuto =
+          await this.automationsService.getConfig('advisor_automation');
+        const advConfig = advAuto?.config as AdvisorAutomationConfig;
 
-        await this.sendWhatsappMessage(
-          from,
-          '✅ Asistencia registrada correctamente. ¡Excelente jornada! 🚀',
-        );
+        const responseText = isAvailable
+          ? advConfig?.availabilityOnMessage ||
+            '✅ Disponibilidad activada.\n\nQuedaste incluido en la asignación de leads durante las próximas 24 horas.\n\nCuando quieras salir, responde:\n"No disponible"'
+          : advConfig?.availabilityOffMessage ||
+            '⛔ Disponibilidad desactivada.\n\nYa no recibirás nuevos leads.\nCuando estés listo, envía:\n"Disponible"';
+
+        await this.sendWhatsappMessage(from, responseText);
         return;
       }
 
@@ -1624,6 +1621,20 @@ export class WhatsappService {
 
     // 3. Handle Global Commands (PULL Mechanism)
     if (parsed.type === CommandType.SIGUIENTE) {
+      // Check availability rules
+      const now = new Date();
+      if (
+        advisor.status !== 'available' ||
+        !advisor.availability_expires_at ||
+        advisor.availability_expires_at < now
+      ) {
+        await this.sendWhatsappMessage(
+          from,
+          '⛔ No estás disponible para recibir leads.\n\nPor favor envía "Disponible" para activar tu ventana de asignación por 24 horas.',
+        );
+        return;
+      }
+
       const lead = await this.leadsService.findOldestPendingDistributionLead();
 
       if (!lead) {

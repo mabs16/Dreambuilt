@@ -48,6 +48,10 @@ export interface AdvisorAutomationConfig {
 
   notesPromptMessage?: string;
   successNoteMessage?: string;
+
+  // Availability Messages (New)
+  availabilityOnMessage?: string;
+  availabilityOffMessage?: string;
 }
 
 export type AutomationConfig =
