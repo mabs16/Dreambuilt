@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle, Sparkles, Loader2, TrendingUp, AlertTriangle, Upload } from "lucide-react";
@@ -38,6 +38,28 @@ export default function MarketingPage() {
         alert?: string;
         error?: string;
     } | null>(null);
+
+    const [summaryMetrics, setSummaryMetrics] = useState({
+        totalSpend: 0,
+        totalLeads: 0,
+        costPerLead: 0,
+        avgCtr: 0
+    });
+
+    const fetchSummary = async () => {
+        try {
+            const response = await api.get('/marketing/summary');
+            if (response.data) {
+                setSummaryMetrics(response.data);
+            }
+        } catch (error) {
+            console.error("Error fetching summary:", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchSummary();
+    }, []);
 
     const handleFileChange = (type: 'campaigns' | 'adsets' | 'ads', event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files[0]) {
@@ -79,6 +101,9 @@ export default function MarketingPage() {
                     title: "Carga y Sincronización Completada",
                     description: "Archivos subidos y datos procesados correctamente.",
                 });
+                // Refresh summary metrics
+                fetchSummary();
+                
                 // Clear inputs
                 setFiles({ campaigns: null, adsets: null, ads: null });
                 if (campaignsInputRef.current) campaignsInputRef.current.value = '';
@@ -278,10 +303,22 @@ export default function MarketingPage() {
 
             {/* Dashboard Placeholder */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <KPICard title="Gasto Total" value="$0.00" />
-                <KPICard title="Leads Totales" value="0" />
-                <KPICard title="Costo por Lead" value="$0.00" />
-                <KPICard title="CTR Promedio" value="0.00%" />
+                <KPICard 
+                    title="Gasto Total" 
+                    value={`$${summaryMetrics.totalSpend.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
+                />
+                <KPICard 
+                    title="Leads Totales" 
+                    value={summaryMetrics.totalLeads.toLocaleString('es-MX')} 
+                />
+                <KPICard 
+                    title="Costo por Lead" 
+                    value={`$${summaryMetrics.costPerLead.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
+                />
+                <KPICard 
+                    title="CTR Promedio" 
+                    value={`${summaryMetrics.avgCtr.toFixed(2)}%`} 
+                />
             </div>
 
             {/* Analysis Results */}

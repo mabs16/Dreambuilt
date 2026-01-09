@@ -186,11 +186,8 @@ export class MarketingController {
   }
 
   @Get('summary')
-  getSummary() {
-    // Placeholder for dashboard stats
-    return {
-      message: 'Summary endpoint ready',
-    };
+  async getSummary() {
+    return this.ingestService.getSummary();
   }
 
   @Get('analyze')
