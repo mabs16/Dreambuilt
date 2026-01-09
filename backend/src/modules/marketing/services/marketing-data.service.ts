@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as XLSX from 'xlsx';
@@ -7,7 +7,7 @@ import { MarketingAdSet } from '../entities/marketing-adset.entity';
 import { MarketingAd } from '../entities/marketing-ad.entity';
 
 @Injectable()
-export class MarketingDataService {
+export class MarketingDataService implements OnModuleInit {
   private readonly logger = new Logger(MarketingDataService.name);
 
   constructor(
@@ -19,6 +19,10 @@ export class MarketingDataService {
     private adRepo: Repository<MarketingAd>,
   ) {}
 
+  onModuleInit() {
+    this.logger.log('MarketingDataService initialized');
+  }
+
   async ingestFile(filePath: string, type: 'campaign' | 'adset' | 'ad') {
     this.logger.log(`Starting ingestion for ${type} from ${filePath}`);
 
@@ -28,7 +32,6 @@ export class MarketingDataService {
       const sheet = workbook.Sheets[sheetName];
 
       // Convert to JSON with header row 0 (which is line 1 in Excel usually)
-      // Note: My analysis showed headers are on the first row.
       const rawData = XLSX.utils.sheet_to_json(sheet);
 
       this.logger.log(`Found ${rawData.length} rows`);
@@ -58,8 +61,8 @@ export class MarketingDataService {
 
       const entityData = {
         name: name,
-        status: row['Estado de entrega'] || 'Unknown',
-        objective: row['Objetivo'],
+        status: row['Estado de entrega'] || row['Entrega'] || row['Status'] || 'Unknown',
+        objective: row['Objetivo'] || row['Objective'] || 'Unknown',
         results: this.parseNumber(row['Resultados']),
         reach: this.parseNumber(row['Alcance']),
         impressions: this.parseNumber(row['Impresiones']),
@@ -88,8 +91,8 @@ export class MarketingDataService {
       const entityData = {
         name: name,
         campaign_name: row['Nombre de la campaña'] || null, // Try to capture if present
-        status: row['Estado de entrega'] || 'Unknown',
-        objective: row['Objetivo'],
+        status: row['Estado de entrega'] || row['Entrega'] || row['Status'] || 'Unknown',
+        objective: row['Objetivo'] || row['Objective'] || 'Unknown',
         results: this.parseNumber(row['Resultados']),
         reach: this.parseNumber(row['Alcance']),
         impressions: this.parseNumber(row['Impresiones']),
@@ -119,7 +122,7 @@ export class MarketingDataService {
         name: name,
         adset_name: row['Nombre del conjunto de anuncios'] || null,
         campaign_name: row['Nombre de la campaña'] || null,
-        status: row['Estado de entrega'] || 'Unknown',
+        status: row['Estado de entrega'] || row['Entrega'] || row['Status'] || 'Unknown',
         results: this.parseNumber(row['Resultados']),
         reach: this.parseNumber(row['Alcance']),
         impressions: this.parseNumber(row['Impresiones']),
