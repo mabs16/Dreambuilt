@@ -25,6 +25,7 @@ const navigation = [
     { name: "Automatizaciones", href: "/automations", icon: Bot },
     { name: "Pipeline", href: "/pipeline", icon: BarChart3 },
     { name: "Asesores", href: "/advisors", icon: Users },
+    { name: "Meta Analist", href: "/marketing", icon: BarChart3 },
     { name: "Alertas", href: "/alerts", icon: Bell },
 ];
 

@@ -15,6 +15,7 @@ import { SlaModule } from './modules/sla/sla.module';
 import { ScoresModule } from './modules/scores/scores.module';
 import { FlowsModule } from './modules/flows/flows.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { MarketingModule } from './modules/marketing/marketing.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { StorageModule } from './modules/storage/storage.module';
     ScoresModule,
     FlowsModule,
     StorageModule,
+    MarketingModule,
   ],
 })
 export class AppModule implements OnModuleInit {
