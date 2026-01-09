@@ -157,6 +157,34 @@ export class MarketingDataService implements OnModuleInit {
     }
   }
 
+  async getSummary() {
+    const { sum: totalSpend } = await this.campaignRepo
+      .createQueryBuilder('campaign')
+      .select('SUM(campaign.spend)', 'sum')
+      .getRawOne();
+
+    const { sum: totalLeads } = await this.campaignRepo
+      .createQueryBuilder('campaign')
+      .select('SUM(campaign.results)', 'sum')
+      .getRawOne();
+
+    const { avg: avgCtr } = await this.campaignRepo
+      .createQueryBuilder('campaign')
+      .select('AVG(campaign.ctr_all)', 'avg')
+      .getRawOne();
+
+    const spend = parseFloat((totalSpend as string) || '0');
+    const leads = parseFloat((totalLeads as string) || '0');
+    const ctr = parseFloat((avgCtr as string) || '0');
+
+    return {
+      totalSpend: spend,
+      totalLeads: leads,
+      costPerLead: leads > 0 ? spend / leads : 0,
+      avgCtr: ctr,
+    };
+  }
+
   private cleanName(name: any): string | null {
     if (!name) return null;
     return String(name).trim();
