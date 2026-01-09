@@ -54,9 +54,14 @@ export class MarketingDataService implements OnModuleInit {
     }
   }
 
+  private cleanName(name: any): string | null {
+    if (!name) return null;
+    return String(name).trim();
+  }
+
   private async processCampaigns(data: any[]) {
     for (const row of data) {
-      const name = row['Nombre de la campaña'];
+      const name = this.cleanName(row['Nombre de la campaña']);
       if (!name) continue;
 
       const entityData = {
@@ -89,11 +94,12 @@ export class MarketingDataService implements OnModuleInit {
 
   private async processAdSets(data: any[]) {
     for (const row of data) {
-      const name = row['Nombre del conjunto de anuncios'];
+      const name = this.cleanName(row['Nombre del conjunto de anuncios']);
       if (!name) continue;
+
       const entityData = {
         name: name,
-        campaign_name: row['Nombre de la campaña'] || null, // Try to capture if present
+        campaign_name: this.cleanName(row['Nombre de la campaña']),
         status:
           row['Estado de entrega'] ||
           row['Entrega'] ||
@@ -122,13 +128,13 @@ export class MarketingDataService implements OnModuleInit {
 
   private async processAds(data: any[]) {
     for (const row of data) {
-      const name = row['Nombre del anuncio'];
+      const name = this.cleanName(row['Nombre del anuncio']);
       if (!name) continue;
 
       const entityData = {
         name: name,
-        adset_name: row['Nombre del conjunto de anuncios'] || null,
-        campaign_name: row['Nombre de la campaña'] || null,
+        adset_name: this.cleanName(row['Nombre del conjunto de anuncios']),
+        campaign_name: this.cleanName(row['Nombre de la campaña']),
         status:
           row['Estado de entrega'] ||
           row['Entrega'] ||

@@ -131,14 +131,21 @@ export class MarketingController {
       const files = fs.readdirSync(this.DATA_PATH);
 
       const campaignFile = files.find(
-        (f) => f.includes('Campaigns') && f.endsWith('.xlsx'),
+        (f) =>
+          (f.includes('Campaigns') || f.includes('Campañas')) &&
+          f.endsWith('.xlsx'),
       );
       const adSetFile = files.find(
-        (f) => f.includes('AdSets') && f.endsWith('.xlsx'),
+        (f) =>
+          (f.includes('AdSets') || f.includes('Conjuntos')) &&
+          f.endsWith('.xlsx'),
       );
       const adFile = files.find(
         (f) =>
-          f.includes('Ads') && f.endsWith('.xlsx') && !f.includes('AdSets'),
+          (f.includes('Ads') || f.includes('Anuncios')) &&
+          f.endsWith('.xlsx') &&
+          !f.includes('AdSets') &&
+          !f.includes('Conjuntos'),
       );
 
       if (campaignFile) {

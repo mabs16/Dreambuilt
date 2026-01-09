@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 @Entity('marketing_adsets')
 export class MarketingAdSet {
@@ -9,13 +15,13 @@ export class MarketingAdSet {
   name: string;
 
   @Column({ nullable: true })
-  campaign_name: string; // Linking by name for now
+  campaign_name: string | null; // Linking by name for now
 
   @Column({ nullable: true })
-  status: string;
+  status: string | null;
 
   @Column({ nullable: true })
-  objective: string;
+  objective: string | null;
 
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
   spend: number;

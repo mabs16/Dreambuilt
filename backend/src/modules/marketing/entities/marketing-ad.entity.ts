@@ -15,16 +15,16 @@ export class MarketingAd {
   name: string;
 
   @Column({ nullable: true })
-  adset_name: string; // Linking by name for now
+  adset_name: string | null; // Linking by name for now
 
   @Column({ nullable: true })
-  campaign_name: string;
+  campaign_name: string | null;
 
   @Column({ nullable: true })
-  status: string;
+  status: string | null;
 
   @Column({ nullable: true })
-  objective: string;
+  objective: string | null;
 
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
   spend: number;
