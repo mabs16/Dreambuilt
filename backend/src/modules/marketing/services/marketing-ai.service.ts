@@ -142,10 +142,10 @@ NO incluyas markdown, solo el JSON puro.`;
       const response = result.response.text();
       return { answer: response };
     } catch (error) {
+      console.error('Full Error in chatWithData:', error);
       this.logger.error('Error in chatWithData', error);
       return {
-        answer:
-          'Lo siento, hubo un error al procesar tu pregunta. Intenta de nuevo más tarde.',
+        answer: `Lo siento, hubo un error técnico: ${error.message || error}. Por favor verifica la consola del servidor.`,
       };
     }
   }
