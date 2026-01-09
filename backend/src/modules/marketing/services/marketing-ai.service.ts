@@ -32,7 +32,7 @@ export class MarketingAiService {
     }
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.model = this.genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash', // Using a fast model for analysis
+      model: 'gemini-3-flash-preview', // Using the latest flash model
     });
   }
 
