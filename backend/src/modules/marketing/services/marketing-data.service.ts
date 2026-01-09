@@ -61,7 +61,11 @@ export class MarketingDataService implements OnModuleInit {
 
       const entityData = {
         name: name,
-        status: row['Estado de entrega'] || row['Entrega'] || row['Status'] || 'Unknown',
+        status:
+          row['Estado de entrega'] ||
+          row['Entrega'] ||
+          row['Status'] ||
+          'Unknown',
         objective: row['Objetivo'] || row['Objective'] || 'Unknown',
         results: this.parseNumber(row['Resultados']),
         reach: this.parseNumber(row['Alcance']),
@@ -87,11 +91,14 @@ export class MarketingDataService implements OnModuleInit {
     for (const row of data) {
       const name = row['Nombre del conjunto de anuncios'];
       if (!name) continue;
-
       const entityData = {
         name: name,
         campaign_name: row['Nombre de la campaña'] || null, // Try to capture if present
-        status: row['Estado de entrega'] || row['Entrega'] || row['Status'] || 'Unknown',
+        status:
+          row['Estado de entrega'] ||
+          row['Entrega'] ||
+          row['Status'] ||
+          'Unknown',
         objective: row['Objetivo'] || row['Objective'] || 'Unknown',
         results: this.parseNumber(row['Resultados']),
         reach: this.parseNumber(row['Alcance']),
@@ -122,7 +129,11 @@ export class MarketingDataService implements OnModuleInit {
         name: name,
         adset_name: row['Nombre del conjunto de anuncios'] || null,
         campaign_name: row['Nombre de la campaña'] || null,
-        status: row['Estado de entrega'] || row['Entrega'] || row['Status'] || 'Unknown',
+        status:
+          row['Estado de entrega'] ||
+          row['Entrega'] ||
+          row['Status'] ||
+          'Unknown',
         results: this.parseNumber(row['Resultados']),
         reach: this.parseNumber(row['Alcance']),
         impressions: this.parseNumber(row['Impresiones']),
