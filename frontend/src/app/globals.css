@@ -28,6 +28,10 @@
   --color-status-risk: #f59e0b;
   --color-status-expired: #ef4444;
   --color-status-no-atendido: #4b5563;
+  
+  --font-playfair: var(--font-playfair);
+  --font-cormorant: var(--font-cormorant);
+  --font-monsieur: var(--font-monsieur);
 }
 
 :root {

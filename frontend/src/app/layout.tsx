@@ -1,10 +1,20 @@
 import type { Metadata } from "next";
-import { Inter, Outfit } from "next/font/google";
+import { Inter, Outfit, Playfair_Display, Cormorant_Garamond, Monsieur_La_Doulaise } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "@/components/layout/sidebar";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
+const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" });
+const cormorant = Cormorant_Garamond({ 
+  subsets: ["latin"], 
+  weight: ['300', '400', '500', '600', '700'],
+  variable: "--font-cormorant" 
+});
+const monsieur = Monsieur_La_Doulaise({ 
+  subsets: ["latin"], 
+  weight: ['400'],
+  variable: "--font-monsieur" 
+});
 
 export const metadata: Metadata = {
   title: "DREAMBUILT OS | Control Tower",
@@ -18,15 +28,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className="dark" suppressHydrationWarning>
-      <body className="font-sans antialiased bg-background" suppressHydrationWarning>
-        <div className={`${inter.variable} ${outfit.variable} flex flex-col lg:flex-row h-screen overflow-hidden`}>
-          <Sidebar />
-          <main className="flex-1 relative overflow-y-auto no-scrollbar bg-background focus:outline-none">
-            <div className="mx-auto min-h-screen max-w-7xl px-4 py-4 sm:px-6 md:py-8 lg:px-8">
-              {children}
-            </div>
-          </main>
-        </div>
+      <body className={`${inter.variable} ${outfit.variable} ${playfair.variable} ${cormorant.variable} ${monsieur.variable} font-sans antialiased bg-background`} suppressHydrationWarning>
+        {children}
       </body>
     </html>
   );

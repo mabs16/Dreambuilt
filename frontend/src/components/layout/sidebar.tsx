@@ -14,13 +14,15 @@ import {
     Bot,
     Table,
     Menu,
-    X
+    X,
+    Building
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
     { name: "Resumen", href: "/", icon: LayoutDashboard },
     { name: "Leads", href: "/leads", icon: Table },
+    { name: "Propiedades", href: "/properties", icon: Building },
     { name: "Inbox", href: "/inbox", icon: MessageSquare },
     { name: "Automatizaciones", href: "/automations", icon: Bot },
     { name: "Pipeline", href: "/pipeline", icon: BarChart3 },
