@@ -32,6 +32,7 @@ export default async function PropertyLandingPage({ params }: PageProps) {
       <LandingNavbar 
         title={property.title} 
         phone={property.contact_config?.phone} 
+        showTitle={property.hero_config.show_header_title}
       />
 
       {/* Hero Section */}
@@ -96,9 +97,10 @@ export default async function PropertyLandingPage({ params }: PageProps) {
         {/* Hero Content */}
         <div className="relative z-10 container mx-auto px-6 md:px-12 pb-24 md:pb-32">
           <div className="max-w-6xl animate-in fade-in slide-in-from-bottom-8 duration-1000">
-            <h1 className="text-7xl md:text-[10rem] font-cormorant font-light text-white leading-[0.8] tracking-[-0.02em] mb-6 uppercase">
+            {/* Title hidden in Hero as requested, moved to Navbar */}
+            {/* <h1 className="text-7xl md:text-[10rem] font-cormorant font-light text-white leading-[0.8] tracking-[-0.02em] mb-6 uppercase">
               {property.hero_config.title || property.title}
-            </h1>
+            </h1> */}
             <p className="text-lg md:text-2xl text-white/80 font-cormorant tracking-[0.3em] uppercase mb-12 ml-2 font-medium">
               {property.hero_config.subtitle || property.description.split('.')[0]}
             </p>

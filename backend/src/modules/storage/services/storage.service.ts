@@ -57,7 +57,9 @@ export class StorageService {
       );
 
       const videoId = createResponse.data.guid;
-      this.logger.log(`Video created with ID: ${videoId}. Uploading content...`);
+      this.logger.log(
+        `Video created with ID: ${videoId}. Uploading content...`,
+      );
 
       // 2. Upload Video Content
       await axios.put(
@@ -75,7 +77,6 @@ export class StorageService {
       // Standard Play URL format: https://{pullZone}/... but for Stream it's different.
       // Usually: https://iframe.mediadelivery.net/play/{libraryId}/{videoId} for embed
       // Or HLS playlist: https://vz-{zone}.b-cdn.net/{videoId}/playlist.m3u8
-      
       // We will return the Embed URL for now as it's safer without knowing the specific Stream Pull Zone
       const embedUrl = `https://iframe.mediadelivery.net/play/${this.streamLibraryId}/${videoId}`;
 
@@ -87,6 +88,30 @@ export class StorageService {
     } catch (error) {
       this.logger.error('Error uploading video to Bunny Stream', error);
       throw new InternalServerErrorException('Failed to upload video');
+    }
+  }
+
+  async deleteVideo(videoId: string): Promise<void> {
+    if (!this.streamApiKey || !this.streamLibraryId) {
+      throw new InternalServerErrorException(
+        'Bunny.net Stream configuration is missing',
+      );
+    }
+
+    try {
+      this.logger.log(`Deleting video from Bunny Stream: ${videoId}`);
+      await axios.delete(
+        `https://video.bunnycdn.com/library/${this.streamLibraryId}/videos/${videoId}`,
+        {
+          headers: {
+            AccessKey: this.streamApiKey,
+          },
+        },
+      );
+      this.logger.log(`Video deleted successfully: ${videoId}`);
+    } catch (error) {
+      this.logger.error(`Error deleting video ${videoId}`, error);
+      // We don't throw here to avoid blocking the main flow if deletion fails (e.g. already deleted)
     }
   }
 

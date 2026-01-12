@@ -6,6 +6,7 @@ import {
   ParseFilePipe,
   MaxFileSizeValidator,
   BadRequestException,
+  Body,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { StorageService } from '../services/storage.service';
@@ -49,5 +50,14 @@ export class StorageController {
     }
     // TODO: Get title from body if possible, or use filename
     return this.storageService.uploadVideo(file, file.originalname);
+  }
+
+  @Post('delete/video')
+  async deleteVideo(@Body() body: { videoId: string }) {
+    if (!body.videoId) {
+      throw new BadRequestException('Video ID is required');
+    }
+    await this.storageService.deleteVideo(body.videoId);
+    return { success: true };
   }
 }

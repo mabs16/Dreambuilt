@@ -5,9 +5,10 @@ import { Menu, Phone, Facebook, Instagram, Twitter, ChevronDown } from 'lucide-r
 interface LandingNavbarProps {
   title: string;
   phone?: string;
+  showTitle?: boolean;
 }
 
-export default function LandingNavbar({ title, phone }: LandingNavbarProps) {
+export default function LandingNavbar({ title, phone, showTitle = true }: LandingNavbarProps) {
   return (
     <nav className="absolute top-0 left-0 w-full z-50 flex items-center justify-between px-6 py-6 md:px-12">
       {/* Left Section: Menu & Phone */}
@@ -25,16 +26,15 @@ export default function LandingNavbar({ title, phone }: LandingNavbarProps) {
       </div>
 
       {/* Center Section: Logo */}
-      <div className="absolute left-1/2 -translate-x-1/2 text-center">
-        <div className="flex flex-col items-center">
-          <span className="text-white text-2xl md:text-4xl font-cormorant tracking-[0.25em] uppercase leading-none font-light">
-            {title}
-          </span>
-          <span className="text-white/50 text-[7px] md:text-[9px] uppercase tracking-[0.5em] mt-2 font-medium">
-            Inspiring Construction Projects
-          </span>
+      {showTitle && (
+        <div className="absolute left-1/2 -translate-x-1/2 text-center">
+          <div className="flex flex-col items-center">
+            <span className="text-white text-2xl md:text-4xl font-cormorant tracking-[0.25em] uppercase leading-none font-light">
+              {title}
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Right Section: Social & CTA */}
       <div className="flex items-center space-x-4 md:space-x-6 text-white">

@@ -24,9 +24,17 @@ export class Property {
   @Column('jsonb', { default: {} })
   hero_config: {
     type: 'image' | 'video' | 'carousel';
-    assets: { url: string; type: 'image' | 'video'; videoId?: string }[];
+    assets: {
+      url: string;
+      type: 'image' | 'video';
+      videoId?: string;
+      device?: 'desktop' | 'mobile'; // Added device support
+    }[];
     title?: string;
     subtitle?: string;
+    decorative_title_1?: string;
+    decorative_title_2?: string;
+    show_header_title?: boolean;
   };
 
   // Location Configuration

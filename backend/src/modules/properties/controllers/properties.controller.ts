@@ -39,6 +39,13 @@ export class PropertiesController {
     @Param('id') id: string,
     @Body() updatePropertyDto: Partial<Property>,
   ) {
+    // Debug Log para verificar assets
+    if (updatePropertyDto.hero_config?.assets) {
+      console.log(
+        `[PropertiesController] Updating assets for ${id}:`,
+        JSON.stringify(updatePropertyDto.hero_config.assets, null, 2),
+      );
+    }
     return this.propertiesService.update(id, updatePropertyDto);
   }
 

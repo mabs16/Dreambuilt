@@ -10,6 +10,7 @@ export interface Property {
     subtitle?: string;
     decorative_title_1?: string;
     decorative_title_2?: string;
+    show_header_title?: boolean;
   };
   location_config: {
     lat: number;
@@ -112,5 +113,14 @@ export const PropertiesService = {
     });
     if (!res.ok) throw new Error('Failed to upload video');
     return res.json();
+  },
+
+  async deleteVideo(videoId: string): Promise<void> {
+    const res = await fetch(`${API_URL}/storage/delete/video`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId }),
+    });
+    if (!res.ok) console.error('Failed to delete video from storage, but continuing...');
   },
 };

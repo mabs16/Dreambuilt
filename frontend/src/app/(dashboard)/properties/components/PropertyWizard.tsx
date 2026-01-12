@@ -133,6 +133,19 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                 placeholder="Descripción detallada de la propiedad..."
               />
             </div>
+
+            <div className="flex items-center space-x-2 pt-4 border-t border-white/10 mt-4">
+               <input
+                type="checkbox"
+                id="showHeaderTitle"
+                checked={formData.hero_config?.show_header_title || false}
+                onChange={(e) => updateFormData({ hero_config: { ...formData.hero_config!, show_header_title: e.target.checked } })}
+                className="w-4 h-4 text-blue-600 bg-white/5 border-white/10 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="showHeaderTitle" className="text-sm font-medium text-gray-300 select-none cursor-pointer">
+                Mostrar nombre de la propiedad en la barra de navegación (Header)
+              </label>
+            </div>
           </div>
         );
 
@@ -194,32 +207,126 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
               
               {formData.hero_config?.type === 'video' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   <div>
-                      <p className="text-sm text-gray-400 mb-2">Video Desktop (Horizontal)</p>
-                      <FileUploader 
-                          accept="video/*" 
-                          maxSizeMB={500}
-                          onUpload={(url: string, type: 'image' | 'video' | 'document', videoId?: string) => {
-                              // Eliminar video desktop anterior si existe
-                              const existingAssets = formData.hero_config?.assets?.filter(a => a.device !== 'desktop') || [];
-                              const newAssets = [...existingAssets, { url, type: 'video' as const, videoId, device: 'desktop' as const }];
-                              updateFormData({ hero_config: { ...formData.hero_config!, assets: newAssets } });
-                          }}
-                      />
-                   </div>
-                   <div>
-                      <p className="text-sm text-gray-400 mb-2">Video Mobile (Vertical)</p>
-                      <FileUploader 
-                          accept="video/*" 
-                          maxSizeMB={500}
-                          onUpload={(url: string, type: 'image' | 'video' | 'document', videoId?: string) => {
-                              // Eliminar video mobile anterior si existe
-                              const existingAssets = formData.hero_config?.assets?.filter(a => a.device !== 'mobile') || [];
-                              const newAssets = [...existingAssets, { url, type: 'video' as const, videoId, device: 'mobile' as const }];
-                              updateFormData({ hero_config: { ...formData.hero_config!, assets: newAssets } });
-                          }}
-                      />
-                   </div>
+                   {(() => {
+                      const desktopAsset = formData.hero_config?.assets?.find(a => a.device === 'desktop' || (!a.device && a.type === 'video'));
+                      const mobileAsset = formData.hero_config?.assets?.find(a => a.device === 'mobile');
+
+                      return (
+                        <>
+                           <div className={`p-4 rounded-lg border ${desktopAsset ? 'border-blue-500/50 bg-blue-500/10' : 'border-white/5 bg-white/5'}`}>
+                              <div className="flex justify-between items-center mb-2">
+                                <p className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                                    Video Desktop (Horizontal)
+                                    {desktopAsset && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-blue-400 text-xs flex items-center gap-1">
+                                                ✅ Cargado
+                                            </span>
+                                            <a 
+                                                href={desktopAsset.url} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="text-xs text-gray-400 hover:text-white underline"
+                                            >
+                                                Ver
+                                            </a>
+                                        </div>
+                                    )}
+                                </p>
+                                {desktopAsset && (
+                                    <button 
+                                        onClick={async () => {
+                                            if (confirm('¿Estás seguro? Esto eliminará el video del servidor permanentemente.')) {
+                                                if (desktopAsset.videoId) {
+                                                    await PropertiesService.deleteVideo(desktopAsset.videoId);
+                                                }
+                                                const newAssets = formData.hero_config?.assets?.filter(a => a !== desktopAsset) || [];
+                                                updateFormData({ hero_config: { ...formData.hero_config!, assets: newAssets } });
+                                            }
+                                        }}
+                                        className="text-xs text-red-400 hover:text-red-300"
+                                    >
+                                        Eliminar
+                                    </button>
+                                )}
+                              </div>
+                              <FileUploader 
+                                  accept="video/*" 
+                                  label={desktopAsset ? "Reemplazar Video" : "Subir Video Desktop"}
+                                  maxSizeMB={500}
+                                  onUpload={async (url: string, type: 'image' | 'video' | 'document', videoId?: string) => {
+                                      // Si hay un video anterior, eliminarlo del servidor
+                                      const oldDesktopAsset = formData.hero_config?.assets?.find(a => a.device === 'desktop' || (!a.device && a.type === 'video'));
+                                      if (oldDesktopAsset?.videoId) {
+                                          await PropertiesService.deleteVideo(oldDesktopAsset.videoId);
+                                      }
+
+                                      // Eliminar referencia local
+                                      const otherAssets = formData.hero_config?.assets?.filter(a => a.device !== 'desktop' && a.device !== undefined) || [];
+                                      const newAssets = [...otherAssets, { url, type: 'video' as const, videoId, device: 'desktop' as const }];
+                                      updateFormData({ hero_config: { ...formData.hero_config!, assets: newAssets } });
+                                  }}
+                              />
+                           </div>
+
+                           <div className={`p-4 rounded-lg border ${mobileAsset ? 'border-purple-500/50 bg-purple-500/10' : 'border-white/5 bg-white/5'}`}>
+                              <div className="flex justify-between items-center mb-2">
+                                <p className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                                    Video Mobile (Vertical)
+                                    {mobileAsset && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-purple-400 text-xs flex items-center gap-1">
+                                                ✅ Cargado
+                                            </span>
+                                            <a 
+                                                href={mobileAsset.url} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="text-xs text-gray-400 hover:text-white underline"
+                                            >
+                                                Ver
+                                            </a>
+                                        </div>
+                                    )}
+                                </p>
+                                {mobileAsset && (
+                                    <button 
+                                        onClick={async () => {
+                                            if (confirm('¿Estás seguro? Esto eliminará el video del servidor permanentemente.')) {
+                                                if (mobileAsset.videoId) {
+                                                    await PropertiesService.deleteVideo(mobileAsset.videoId);
+                                                }
+                                                const newAssets = formData.hero_config?.assets?.filter(a => a !== mobileAsset) || [];
+                                                updateFormData({ hero_config: { ...formData.hero_config!, assets: newAssets } });
+                                            }
+                                        }}
+                                        className="text-xs text-red-400 hover:text-red-300"
+                                    >
+                                        Eliminar
+                                    </button>
+                                )}
+                              </div>
+                              <FileUploader 
+                                  accept="video/*" 
+                                  label={mobileAsset ? "Reemplazar Video" : "Subir Video Mobile"}
+                                  maxSizeMB={500}
+                                  onUpload={async (url: string, type: 'image' | 'video' | 'document', videoId?: string) => {
+                                      // Si hay un video anterior, eliminarlo del servidor
+                                      const oldMobileAsset = formData.hero_config?.assets?.find(a => a.device === 'mobile');
+                                      if (oldMobileAsset?.videoId) {
+                                          await PropertiesService.deleteVideo(oldMobileAsset.videoId);
+                                      }
+
+                                      // Eliminar referencia local
+                                      const otherAssets = formData.hero_config?.assets?.filter(a => a.device !== 'mobile') || [];
+                                      const newAssets = [...otherAssets, { url, type: 'video' as const, videoId, device: 'mobile' as const }];
+                                      updateFormData({ hero_config: { ...formData.hero_config!, assets: newAssets } });
+                                  }}
+                              />
+                           </div>
+                        </>
+                      );
+                   })()}
                 </div>
               ) : (
                 <div>
