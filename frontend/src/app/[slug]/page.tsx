@@ -19,7 +19,13 @@ export default async function PropertyLandingPage({ params }: PageProps) {
     notFound();
   }
 
-  const heroAsset = property.hero_config.assets[0];
+  // Identificar assets por dispositivo
+  const videos = property.hero_config.assets.filter(a => a.type === 'video');
+  const desktopAsset = videos.find(a => a.device === 'desktop') || videos.find(a => !a.device) || videos[0];
+  const mobileAsset = videos.find(a => a.device === 'mobile');
+  
+  // Fallback para imagen principal
+  const mainImage = property.hero_config.assets.find(a => a.type === 'image');
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -30,37 +36,61 @@ export default async function PropertyLandingPage({ params }: PageProps) {
 
       {/* Hero Section */}
       <section className="relative h-screen w-full bg-gray-900 flex flex-col justify-end overflow-hidden">
-        {heroAsset ? (
-          heroAsset.type === 'video' ? (
-             <div className="absolute inset-0 w-full h-full overflow-hidden bg-black pointer-events-none">
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh]">
-                  <iframe 
-                      src={`${heroAsset.url.replace('/play/', '/embed/')}${heroAsset.url.includes('?') ? '&' : '?'}autoplay=true&loop=true&muted=true&preload=true&responsive=false&playsinline=true`} 
-                      className="absolute top-0 left-0 w-full h-full border-none pointer-events-none"
-                      allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
-                      style={{ 
-                        objectFit: 'cover',
-                      }}
-                  />
-                </div>
-                {/* Capa de bloqueo total para ocultar cualquier control residual */}
-                <div className="absolute inset-0 z-[10] bg-transparent pointer-events-auto" />
-                <div className="absolute inset-0 bg-black/40 z-[1]" />
-             </div>
-          ) : (
+        {property.hero_config.type === 'video' && (desktopAsset || mobileAsset) ? (
+           <>
+              {/* Desktop Video */}
+              {desktopAsset && (
+                 <div className={`absolute inset-0 w-full h-full overflow-hidden bg-black pointer-events-none ${mobileAsset ? 'hidden md:block' : ''}`}>
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh]">
+                      <iframe 
+                          src={`${desktopAsset.url.replace('/play/', '/embed/')}${desktopAsset.url.includes('?') ? '&' : '?'}autoplay=true&loop=true&muted=true&preload=true&responsive=false&playsinline=true`} 
+                          className="absolute top-0 left-0 w-full h-full border-none pointer-events-none"
+                          allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+                          style={{ 
+                            objectFit: 'cover',
+                          }}
+                      />
+                    </div>
+                    {/* Capa de bloqueo total para ocultar cualquier control residual */}
+                    <div className="absolute inset-0 z-[10] bg-transparent pointer-events-auto" />
+                    <div className="absolute inset-0 bg-black/40 z-[1]" />
+                 </div>
+              )}
+
+              {/* Mobile Video */}
+              {mobileAsset && (
+                 <div className="absolute inset-0 w-full h-full overflow-hidden bg-black pointer-events-none md:hidden">
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[177.77vw] h-[100vh] min-w-[100vw] min-h-[56.25vw]">
+                      <iframe 
+                          src={`${mobileAsset.url.replace('/play/', '/embed/')}${mobileAsset.url.includes('?') ? '&' : '?'}autoplay=true&loop=true&muted=true&preload=true&responsive=false&playsinline=true`} 
+                          className="absolute top-0 left-0 w-full h-full border-none pointer-events-none"
+                          allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+                          style={{ 
+                            objectFit: 'cover',
+                          }}
+                      />
+                    </div>
+                    {/* Capa de bloqueo total para ocultar cualquier control residual */}
+                    <div className="absolute inset-0 z-[10] bg-transparent pointer-events-auto" />
+                    <div className="absolute inset-0 bg-black/40 z-[1]" />
+                 </div>
+              )}
+           </>
+        ) : (
             <div className="absolute inset-0 w-full h-full">
-                <Image
-                src={heroAsset.url}
-                alt={property.title}
-                fill
-                className="object-cover"
-                priority
-                />
+                {mainImage ? (
+                    <Image
+                    src={mainImage.url}
+                    alt={property.title}
+                    fill
+                    className="object-cover"
+                    priority
+                    />
+                ) : (
+                    <div className="absolute inset-0 bg-gray-800" />
+                )}
                 <div className="absolute inset-0 bg-black/30" />
             </div>
-          )
-        ) : (
-          <div className="absolute inset-0 bg-gray-800" />
         )}
         
         {/* Hero Content */}

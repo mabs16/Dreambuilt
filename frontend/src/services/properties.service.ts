@@ -5,7 +5,7 @@ export interface Property {
   description: string;
   hero_config: {
     type: 'image' | 'video' | 'carousel';
-    assets: { url: string; type: 'image' | 'video'; videoId?: string }[];
+    assets: { url: string; type: 'image' | 'video'; videoId?: string; device?: 'desktop' | 'mobile' }[];
     title?: string;
     subtitle?: string;
     decorative_title_1?: string;

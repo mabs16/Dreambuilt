@@ -164,9 +164,14 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                 {formData.hero_config?.assets?.map((asset, idx) => (
                   <div key={idx} className="relative group rounded-lg overflow-hidden border border-white/10">
                     {asset.type === 'video' ? (
-                      <div className="bg-black/50 h-32 flex items-center justify-center">
+                      <div className="bg-black/50 h-32 flex items-center justify-center relative">
                         <Video className="text-white" />
                         <span className="ml-2 text-xs">Video ID: {asset.videoId}</span>
+                        {asset.device && (
+                           <span className={`absolute bottom-2 left-2 px-2 py-0.5 rounded text-[10px] uppercase font-bold ${asset.device === 'mobile' ? 'bg-purple-500' : 'bg-blue-500'}`}>
+                              {asset.device}
+                           </span>
+                        )}
                       </div>
                     ) : (
                       <div className="relative h-32 w-full">
@@ -179,7 +184,7 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                         newAssets.splice(idx, 1);
                         updateFormData({ hero_config: { ...formData.hero_config!, assets: newAssets } });
                       }}
-                      className="absolute top-2 right-2 p-1 bg-red-500/80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-2 right-2 p-1 bg-red-500/80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
                     >
                       <X className="w-4 h-4 text-white" />
                     </button>
@@ -187,29 +192,47 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                 ))}
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div>
-                    <p className="text-sm text-gray-400 mb-2">Subir Imagen</p>
-                    <FileUploader 
-                        accept="image/*" 
-                        onUpload={(url: string) => {
-                            const newAssets = [...(formData.hero_config?.assets || []), { url, type: 'image' as const }];
-                            updateFormData({ hero_config: { ...formData.hero_config!, assets: newAssets } });
-                        }}
-                    />
-                 </div>
-                 <div>
-                    <p className="text-sm text-gray-400 mb-2">Subir Video (Bunny Stream)</p>
-                    <FileUploader 
-                        accept="video/*" 
-                        maxSizeMB={500}
-                        onUpload={(url: string, type: 'image' | 'video' | 'document', videoId?: string) => {
-                            const newAssets = [...(formData.hero_config?.assets || []), { url, type: 'video' as const, videoId }];
-                            updateFormData({ hero_config: { ...formData.hero_config!, assets: newAssets } });
-                        }}
-                    />
-                 </div>
-              </div>
+              {formData.hero_config?.type === 'video' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div>
+                      <p className="text-sm text-gray-400 mb-2">Video Desktop (Horizontal)</p>
+                      <FileUploader 
+                          accept="video/*" 
+                          maxSizeMB={500}
+                          onUpload={(url: string, type: 'image' | 'video' | 'document', videoId?: string) => {
+                              // Eliminar video desktop anterior si existe
+                              const existingAssets = formData.hero_config?.assets?.filter(a => a.device !== 'desktop') || [];
+                              const newAssets = [...existingAssets, { url, type: 'video' as const, videoId, device: 'desktop' as const }];
+                              updateFormData({ hero_config: { ...formData.hero_config!, assets: newAssets } });
+                          }}
+                      />
+                   </div>
+                   <div>
+                      <p className="text-sm text-gray-400 mb-2">Video Mobile (Vertical)</p>
+                      <FileUploader 
+                          accept="video/*" 
+                          maxSizeMB={500}
+                          onUpload={(url: string, type: 'image' | 'video' | 'document', videoId?: string) => {
+                              // Eliminar video mobile anterior si existe
+                              const existingAssets = formData.hero_config?.assets?.filter(a => a.device !== 'mobile') || [];
+                              const newAssets = [...existingAssets, { url, type: 'video' as const, videoId, device: 'mobile' as const }];
+                              updateFormData({ hero_config: { ...formData.hero_config!, assets: newAssets } });
+                          }}
+                      />
+                   </div>
+                </div>
+              ) : (
+                <div>
+                   <p className="text-sm text-gray-400 mb-2">Subir Imagen{formData.hero_config?.type === 'carousel' ? 'es' : ''}</p>
+                   <FileUploader 
+                       accept="image/*" 
+                       onUpload={(url: string) => {
+                           const newAssets = [...(formData.hero_config?.assets || []), { url, type: 'image' as const }];
+                           updateFormData({ hero_config: { ...formData.hero_config!, assets: newAssets } });
+                       }}
+                   />
+                </div>
+              )}
             </div>
 
             <div>
