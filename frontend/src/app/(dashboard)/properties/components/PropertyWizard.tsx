@@ -215,7 +215,7 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                         <>
                            <div className={`p-4 rounded-lg border ${desktopAsset ? 'border-blue-500/50 bg-blue-500/10' : 'border-white/5 bg-white/5'}`}>
                               <div className="flex justify-between items-center mb-2">
-                                <p className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                                <div className="text-sm font-medium text-gray-300 flex items-center gap-2">
                                     Video Desktop (Horizontal)
                                     {desktopAsset && (
                                         <div className="flex items-center gap-2">
@@ -232,7 +232,7 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                                             </a>
                                         </div>
                                     )}
-                                </p>
+                                </div>
                                 {desktopAsset && (
                                     <button 
                                         onClick={async () => {
@@ -271,7 +271,7 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
 
                            <div className={`p-4 rounded-lg border ${mobileAsset ? 'border-purple-500/50 bg-purple-500/10' : 'border-white/5 bg-white/5'}`}>
                               <div className="flex justify-between items-center mb-2">
-                                <p className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                                <div className="text-sm font-medium text-gray-300 flex items-center gap-2">
                                     Video Mobile (Vertical)
                                     {mobileAsset && (
                                         <div className="flex items-center gap-2">
@@ -288,7 +288,7 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                                             </a>
                                         </div>
                                     )}
-                                </p>
+                                </div>
                                 {mobileAsset && (
                                     <button 
                                         onClick={async () => {
@@ -340,6 +340,37 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                    />
                 </div>
               )}
+            </div>
+
+            <div>
+               <label className="block text-sm font-medium text-gray-400 mb-2">Logotipo Superpuesto (Opcional)</label>
+               {formData.hero_config?.overlay_logo ? (
+                 <div className="relative w-64 h-64 bg-white/5 border border-white/10 rounded-lg p-2 flex items-center justify-center group">
+                   <div className="relative w-full h-full">
+                     <Image 
+                       src={formData.hero_config.overlay_logo} 
+                       alt="Overlay Logo" 
+                       fill 
+                       className="object-contain" 
+                     />
+                   </div>
+                   <button
+                     onClick={() => updateFormData({ hero_config: { ...formData.hero_config!, overlay_logo: undefined } })}
+                     className="absolute -top-2 -right-2 p-1 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                   >
+                     <X className="w-4 h-4 text-white" />
+                   </button>
+                 </div>
+               ) : (
+                 <FileUploader 
+                   accept="image/*" 
+                   label="Subir Logotipo"
+                   onUpload={(url: string) => {
+                     updateFormData({ hero_config: { ...formData.hero_config!, overlay_logo: url } });
+                   }}
+                 />
+               )}
+               <p className="text-xs text-gray-500 mt-1">Se mostrará sobre el Hero. Puede combinarse con el título.</p>
             </div>
 
             <div>
@@ -636,6 +667,66 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                         onChange={(e) => updateFormData({ contact_config: { ...formData.contact_config!, whatsapp: e.target.value } })}
                         className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
                     />
+                </div>
+
+                <div className="border-t border-white/10 pt-4 mt-4">
+                    <h3 className="text-white font-medium mb-4">Configuración del Header</h3>
+                    
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Texto de Llamada (Ej. Call Us Now)</label>
+                        <input
+                            type="text"
+                            value={formData.contact_config?.call_to_action_text || ''}
+                            onChange={(e) => updateFormData({ contact_config: { ...formData.contact_config!, call_to_action_text: e.target.value } })}
+                            placeholder="Call Us Now"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Link Facebook</label>
+                            <input
+                                type="text"
+                                value={formData.contact_config?.social_links?.facebook || ''}
+                                onChange={(e) => updateFormData({ 
+                                    contact_config: { 
+                                        ...formData.contact_config!, 
+                                        social_links: { ...formData.contact_config?.social_links, facebook: e.target.value } 
+                                    } 
+                                })}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Link Instagram</label>
+                            <input
+                                type="text"
+                                value={formData.contact_config?.social_links?.instagram || ''}
+                                onChange={(e) => updateFormData({ 
+                                    contact_config: { 
+                                        ...formData.contact_config!, 
+                                        social_links: { ...formData.contact_config?.social_links, instagram: e.target.value } 
+                                    } 
+                                })}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Link Twitter/X</label>
+                            <input
+                                type="text"
+                                value={formData.contact_config?.social_links?.twitter || ''}
+                                onChange={(e) => updateFormData({ 
+                                    contact_config: { 
+                                        ...formData.contact_config!, 
+                                        social_links: { ...formData.contact_config?.social_links, twitter: e.target.value } 
+                                    } 
+                                })}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                            />
+                        </div>
+                    </div>
                 </div>
              </div>
           </div>

@@ -33,6 +33,8 @@ export default async function PropertyLandingPage({ params }: PageProps) {
         title={property.title} 
         phone={property.contact_config?.phone} 
         showTitle={property.hero_config.show_header_title}
+        callToActionText={property.contact_config?.call_to_action_text}
+        socialLinks={property.contact_config?.social_links}
       />
 
       {/* Hero Section */}
@@ -54,7 +56,7 @@ export default async function PropertyLandingPage({ params }: PageProps) {
                     </div>
                     {/* Capa de bloqueo total para ocultar cualquier control residual */}
                     <div className="absolute inset-0 z-[10] bg-transparent pointer-events-auto" />
-                    <div className="absolute inset-0 bg-black/40 z-[1]" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/70 to-black/90 z-[1]" />
                  </div>
               )}
 
@@ -73,7 +75,7 @@ export default async function PropertyLandingPage({ params }: PageProps) {
                     </div>
                     {/* Capa de bloqueo total para ocultar cualquier control residual */}
                     <div className="absolute inset-0 z-[10] bg-transparent pointer-events-auto" />
-                    <div className="absolute inset-0 bg-black/40 z-[1]" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/80 z-[1]" />
                  </div>
               )}
            </>
@@ -90,17 +92,35 @@ export default async function PropertyLandingPage({ params }: PageProps) {
                 ) : (
                     <div className="absolute inset-0 bg-gray-800" />
                 )}
-                <div className="absolute inset-0 bg-black/30" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/80" />
             </div>
         )}
         
         {/* Hero Content */}
         <div className="relative z-10 container mx-auto px-6 md:px-12 pb-24 md:pb-32">
           <div className="max-w-6xl animate-in fade-in slide-in-from-bottom-8 duration-1000">
-            {/* Title hidden in Hero as requested, moved to Navbar */}
-            {/* <h1 className="text-7xl md:text-[10rem] font-cormorant font-light text-white leading-[0.8] tracking-[-0.02em] mb-6 uppercase">
-              {property.hero_config.title || property.title}
-            </h1> */}
+            
+            {/* Overlay Logo */}
+            {property.hero_config.overlay_logo && (
+              <div className="mb-8 relative w-80 h-40 md:w-[45rem] md:h-96">
+                <Image
+                  src={property.hero_config.overlay_logo}
+                  alt="Project Logo"
+                  fill
+                  className="object-contain object-left"
+                  style={{ filter: 'drop-shadow(1S0 5px 5px rgba(0, 0, 0, 0.9))' }}
+                  priority
+                />
+              </div>
+            )}
+
+            {/* Overlay Title (Optional) */}
+            {property.hero_config.title && (
+              <h1 className="text-5xl md:text-8xl font-cormorant font-light text-white leading-[0.9] tracking-[-0.02em] mb-6 uppercase">
+                {property.hero_config.title}
+              </h1>
+            )}
+
             <p className="text-lg md:text-2xl text-white/80 font-cormorant tracking-[0.3em] uppercase mb-12 ml-2 font-medium">
               {property.hero_config.subtitle || property.description.split('.')[0]}
             </p>
@@ -126,13 +146,7 @@ export default async function PropertyLandingPage({ params }: PageProps) {
         <div className="absolute right-12 bottom-12 z-10 flex flex-col items-center">
             <div className="relative w-24 h-24 flex items-center justify-center">
                 <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                    <circle 
-                        cx="50" cy="50" r="45" 
-                        fill="none" 
-                        stroke="white" 
-                        strokeWidth="1" 
-                        strokeOpacity="0.2"
-                    />
+
                 </svg>
                 <div className="flex flex-col items-center text-white/60">
                     <span className="text-[10px] uppercase tracking-[0.2em] mb-2">Scroll Down</span>

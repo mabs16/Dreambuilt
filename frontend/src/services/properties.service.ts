@@ -11,6 +11,7 @@ export interface Property {
     decorative_title_1?: string;
     decorative_title_2?: string;
     show_header_title?: boolean;
+    overlay_logo?: string;
   };
   location_config: {
     lat: number;
@@ -39,6 +40,12 @@ export interface Property {
     email?: string;
     phone?: string;
     whatsapp?: string;
+    call_to_action_text?: string;
+    social_links?: {
+      facebook?: string;
+      instagram?: string;
+      twitter?: string;
+    };
   };
   is_active: boolean;
   created_at: string;
