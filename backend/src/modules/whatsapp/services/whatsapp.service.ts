@@ -1734,17 +1734,46 @@ export class WhatsappService {
         break;
 
       case CommandType.CONTACTADO: {
-        this.eventEmitter.emit('command.contactado', {
-          leadId: parsed.leadId,
-          advisorId: advisor.id,
-        });
+        try {
+          await this.eventEmitter.emitAsync('command.contactado', {
+            leadId: parsed.leadId,
+            advisorId: advisor.id,
+          });
+        } catch (error) {
+          const err = error as Error;
+          // Si ya está contactado, permitimos ver el menú de nuevo
+          if (
+            err.message.includes('Invalid transition') &&
+            err.message.includes('to CONTACTADO')
+          ) {
+            // Continuamos
+          } else {
+            await this.sendWhatsappMessage(
+              from,
+              `❌ No se pudo actualizar el estado del lead: ${err.message}`,
+            );
+            return;
+          }
+        }
 
         const contactadoMsg = advConfig?.contactedPrompt
           ? advConfig.contactedPrompt.replace(
               /\{\{lead_id\}\}/g,
               String(parsed.leadId),
             )
-          : `👍 Lead #${parsed.leadId} marcado como CONTACTADO.\n\nPor favor, escribe ahora una breve nota sobre este primer contacto:`;
+          : `� *En proceso:* 
+- Continuar conversando: ${parsed.leadId} SEGUIMIENTO 
+- Cita agendada: ${parsed.leadId} CITA 
+- Recorrido realizado: ${parsed.leadId} RECORRIDO 
+
+🏁 *Resolución:* 
+- Lead descartado: ${parsed.leadId} DESCARTADO 
+- Venta cerrada: ${parsed.leadId} CIERRE 
+
+ℹ️ *Info:* 
+- Ver detalles: ${parsed.leadId} INFO
+
+(O escribe una nota sobre este contacto)`;
 
         await this.sendWhatsappMessage(from, contactadoMsg);
         // Set state to wait for notes
