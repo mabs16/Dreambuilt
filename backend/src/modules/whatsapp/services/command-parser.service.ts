@@ -25,7 +25,7 @@ export interface ParsedCommand {
 export class CommandParser {
   // Matches: [COMMAND] [ID] [OPTIONAL_VALUE] or [ID] [COMMAND] [OPTIONAL_VALUE]
   private readonly commandRegex =
-    /^(?:(ACTIVAR|CONTACTADO|CITA|RECORRIDO|SEGUIMIENTO|DESCARTADO|CIERRE|INTENTO|NOTAS|INFO|REJECT|RECHAZAR)\s+(\d+)|(\d+)\s+(ACTIVAR|CONTACTADO|CITA|RECORRIDO|SEGUIMIENTO|DESCARTADO|CIERRE|INTENTO|NOTAS|INFO|REJECT|RECHAZAR))(?:\s+(.*))?$/i;
+    /^(?:(ACTIVAR|CONTACTADO|CONTACTED|CITA|RECORRIDO|SEGUIMIENTO|DESCARTADO|CIERRE|INTENTO|NOTAS|INFO|REJECT|RECHAZAR)\s+(\d+)|(\d+)\s+(ACTIVAR|CONTACTADO|CONTACTED|CITA|RECORRIDO|SEGUIMIENTO|DESCARTADO|CIERRE|INTENTO|NOTAS|INFO|REJECT|RECHAZAR))(?:\s+(.*))?$/i;
 
   parse(message: string): ParsedCommand {
     const trimmed = message.trim();
@@ -74,6 +74,9 @@ export class CommandParser {
       case 'RECHAZAR':
       case 'REJECT':
         type = CommandType.REJECT;
+        break;
+      case 'CONTACTED':
+        type = CommandType.CONTACTADO;
         break;
       default:
         type = typeStr as CommandType;

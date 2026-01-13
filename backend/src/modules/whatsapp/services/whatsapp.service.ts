@@ -2302,7 +2302,7 @@ ${summary}`;
     // 2. Configuración por defecto (Fallback)
     let actionMsg = `⚠️ *URGENCIA:* El lead debe de ser contactado desde el momento que se te asignó en menos de ${responseLimit} min. o será reasignado.\n\n✅ Presiona el botón de contactado después de tu primer mensaje con el lead.`;
     let actionButtons = [
-      { action: 'CONTACTED', label: '✅ LEAD CONTACTADO', enabled: true },
+      { action: 'CONTACTADO', label: '✅ LEAD CONTACTADO', enabled: true },
     ];
 
     // 3. Cargar configuración específica según origen
