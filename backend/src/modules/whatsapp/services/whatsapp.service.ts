@@ -968,40 +968,44 @@ export class WhatsappService {
 
         // 1. Determine Assignment Strategy
         const label = (currentNode.data?.label as string) || '';
+        const assignmentType = currentNode.data?.assignmentType || '';
         let advisor: Advisor | null = null;
 
-        if (label.toLowerCase().includes('manual')) {
-          // Extract advisor name or ID from label "👤 Asignación:\nManual: Nombre (ID: 123)" or "Manual: Nombre"
-
-          // 1. Try to extract ID directly (more robust)
-          const idMatch = label.match(/\(ID:\s*(\d+)\)/);
-          if (idMatch && idMatch[1]) {
-            const advisorId = parseInt(idMatch[1], 10);
+        if (
+          assignmentType === 'MANUAL' ||
+          label.toLowerCase().includes('manual')
+        ) {
+          // --- MANUAL ASSIGNMENT ---
+          // 1. Try to get ID from data (New Way)
+          if (currentNode.data?.manualAdvisorId) {
+            const advisorId = Number(currentNode.data.manualAdvisorId);
             advisor = await this.advisorsService.findById(advisorId);
-            this.logger.log(
-              `Manual assignment by ID: ${advisorId} -> Found: ${advisor ? advisor.name : 'No'}`,
-            );
           }
 
-          // 2. Fallback to name search if ID not found or advisor lookup failed
+          // 2. Fallback: Extract ID from label (Old Way)
+          if (!advisor) {
+            const idMatch = label.match(/\(ID:\s*(\d+)\)/);
+            if (idMatch && idMatch[1]) {
+              const advisorId = parseInt(idMatch[1], 10);
+              advisor = await this.advisorsService.findById(advisorId);
+            }
+          }
+
+          // 3. Fallback: Search by name from label (Old Way)
           if (!advisor) {
             const parts = label.split('Manual:');
             if (parts.length > 1) {
-              // Remove (ID: ...) part if present to clean the name
               const advisorName = parts[1].replace(/\(ID:\s*\d+\)/, '').trim();
-
-              this.logger.log(
-                `Manual assignment searching by name: '${advisorName}'`,
-              );
-
               const allAdvisors = await this.advisorsService.findAll();
+
+              // Exact match
               advisor =
                 allAdvisors.find(
                   (a) => a.name.toLowerCase() === advisorName.toLowerCase(),
                 ) || null;
 
+              // Fuzzy match
               if (!advisor) {
-                // Try partial match or more lenient search
                 const targetName = advisorName.toLowerCase();
                 advisor =
                   allAdvisors.find((a) => {
@@ -1010,17 +1014,22 @@ export class WhatsappService {
                       aName.includes(targetName) || targetName.includes(aName)
                     );
                   }) || null;
-                if (advisor) {
-                  this.logger.warn(
-                    `Advisor found via fuzzy match: '${advisorName}' -> '${advisor.name}'`,
-                  );
-                }
               }
             }
           }
+        } else if (assignmentType === 'ROUND_ROBIN') {
+          // --- ROUND ROBIN ---
+          advisor =
+            await this.assignmentsService.findBestAdvisorForAssignment(
+              'ROUND_ROBIN',
+            );
         } else {
-          // Default: Round Robin
-          advisor = await this.advisorsService.findFirstAvailable();
+          // --- QUOTA DEFICIT (Hybrid) ---
+          // Default behavior if 'QUOTA_DEFICIT' or unspecified
+          advisor =
+            await this.assignmentsService.findBestAdvisorForAssignment(
+              'QUOTA_DEFICIT',
+            );
         }
 
         if (advisor) {

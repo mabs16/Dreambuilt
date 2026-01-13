@@ -25,7 +25,9 @@ export class AssignmentsService {
     private readonly scoresService: ScoresService,
   ) {}
 
-  async findBestAdvisorForAssignment(): Promise<Advisor | null> {
+  async findBestAdvisorForAssignment(
+    strategy: 'ROUND_ROBIN' | 'QUOTA_DEFICIT' = 'QUOTA_DEFICIT',
+  ): Promise<Advisor | null> {
     const availableAdvisors = await this.advisorsService.findAllAvailable();
     if (availableAdvisors.length === 0) return null;
 
@@ -54,10 +56,15 @@ export class AssignmentsService {
       assignmentCounts.set(parseInt(a.advisorId, 10), parseInt(a.count, 10));
     });
 
-    // STRATEGY 1: ROUND ROBIN (Days 1-7)
-    // Also use Round Robin if total monthly score is 0 (start of month)
-    if (dayOfMonth <= 7) {
-      this.logger.log('Assignment Strategy: ROUND ROBIN (First 7 days)');
+    // STRATEGY 1: ROUND ROBIN
+    // Used explicitly OR if Quota Deficit is active but it's the first 7 days
+    if (
+      strategy === 'ROUND_ROBIN' ||
+      (strategy === 'QUOTA_DEFICIT' && dayOfMonth <= 7)
+    ) {
+      this.logger.log(
+        `Assignment Strategy: ROUND ROBIN ${strategy === 'QUOTA_DEFICIT' ? '(First 7 days)' : '(Forced)'}`,
+      );
       // Pick advisor with FEWEST assignments today
       // Shuffle first to randomize ties
       const shuffled = availableAdvisors.sort(() => 0.5 - Math.random());

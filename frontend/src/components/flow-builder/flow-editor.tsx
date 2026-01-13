@@ -787,7 +787,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                     </div>
 
                     {/* Conditional Input for Name/Email Node */}
-                    {(selectedNode.data.label as string)?.startsWith('👤') || (selectedNode.data.label as string)?.startsWith('📧') ? (
+                    {((selectedNode.data.label as string)?.startsWith('👤') && !(selectedNode.data.label as string)?.startsWith('👤 Asignación:')) || (selectedNode.data.label as string)?.startsWith('📧') ? (
                          <div className="flex flex-col gap-2">
                              <p className="text-[10px] text-white/40 mb-1">Personaliza la pregunta para el lead:</p>
                              <textarea 
@@ -1131,34 +1131,48 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                             </p>
                         </div>
                     ) : (selectedNode.data.label as string)?.startsWith('👤 Asignación:') ? (
-                        <div className="flex flex-col gap-2">
-                            <p className="text-[10px] text-white/40 mb-1">Tipo de Asignación:</p>
-                            <div className="flex gap-2 mb-2">
-                                <button
-                                    onClick={() => updateNodeLabel("👤 Asignación:\nRound Robin")}
-                                    className={cn(
-                                        "flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all",
-                                        (selectedNode.data.label as string).includes("Round Robin")
-                                            ? "bg-amber-600 border-amber-500 text-white shadow-[0_0_10px_rgba(217,119,6,0.5)]"
-                                            : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
-                                    )}
-                                >
-                                    Round Robin
-                                </button>
-                                <button
-                                    onClick={() => updateNodeLabel("👤 Asignación:\nManual")}
-                                    className={cn(
-                                        "flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition-all",
-                                        (selectedNode.data.label as string).includes("Manual")
-                                            ? "bg-amber-600 border-amber-500 text-white shadow-[0_0_10px_rgba(217,119,6,0.5)]"
-                                            : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
-                                    )}
-                                >
-                                    Manual
-                                </button>
-                            </div>
+                        <div className="flex flex-col gap-3">
+                            <p className="text-[10px] text-white/40 mb-1">Método de Asignación:</p>
                             
-                            {(selectedNode.data.label as string).includes("Manual") && (
+                            <select
+                                className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                                value={selectedNode.data.assignmentType as string || ((selectedNode.data.label as string).includes("Manual") ? "MANUAL" : (selectedNode.data.label as string).includes("Round Robin") ? "ROUND_ROBIN" : "QUOTA_DEFICIT")}
+                                onChange={(e) => {
+                                    const type = e.target.value;
+                                    let newLabel = "";
+                                    const updateData: Record<string, unknown> = { assignmentType: type };
+
+                                    if (type === 'ROUND_ROBIN') {
+                                        newLabel = "👤 Asignación:\nRound Robin";
+                                    } else if (type === 'QUOTA_DEFICIT') {
+                                        newLabel = "👤 Asignación:\nDéficit de Cuota";
+                                    } else {
+                                        newLabel = "👤 Asignación:\nManual";
+                                    }
+                                    
+                                    setNodes((nds) =>
+                                        nds.map((node) => {
+                                            if (node.id === selectedNodeId) {
+                                                return { 
+                                                    ...node, 
+                                                    data: { 
+                                                        ...node.data, 
+                                                        label: newLabel,
+                                                        ...updateData 
+                                                    } 
+                                                };
+                                            }
+                                            return node;
+                                        })
+                                    );
+                                }}
+                            >
+                                <option value="ROUND_ROBIN">🔄 Round Robin (Secuencial)</option>
+                                <option value="QUOTA_DEFICIT">⚖️ Déficit de Cuota (Mérito)</option>
+                                <option value="MANUAL">👤 Asignación Manual</option>
+                            </select>
+                            
+                            {(selectedNode.data.assignmentType === 'MANUAL' || (selectedNode.data.label as string).includes("Manual")) && (
                                 <div className="mt-2 space-y-2">
                                     <div className="flex justify-between items-center">
                                         <p className="text-[10px] text-white/40">Seleccionar Asesor:</p>
@@ -1183,19 +1197,45 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                                         <select 
                                             className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500"
                                             onChange={(e) => {
-                                                const selectedId = parseInt(e.target.value);
-                                                const selectedAdvisor = advisors.find(a => a.id === selectedId);
+                                                const selectedId = e.target.value; // Keep as string initially
+                                                // Robust comparison: check both string and number
+                                                const selectedAdvisor = advisors.find(a => 
+                                                    String(a.id) === String(selectedId)
+                                                );
+                                                
                                                 if (selectedAdvisor) {
-                                                    updateNodeLabel(`👤 Asignación:\nManual: ${selectedAdvisor.name} (ID: ${selectedAdvisor.id})`);
+                                                    const newLabel = `👤 Asignación:\nManual: ${selectedAdvisor.name} (ID: ${selectedAdvisor.id})`;
+                                                    setNodes((nds) =>
+                                                        nds.map((node) => {
+                                                            if (node.id === selectedNodeId) {
+                                                                return { 
+                                                                    ...node, 
+                                                                    data: { 
+                                                                        ...node.data, 
+                                                                        label: newLabel,
+                                                                        manualAdvisorId: selectedAdvisor.id // Store original ID type
+                                                                    } 
+                                                                };
+                                                            }
+                                                            return node;
+                                                        })
+                                                    );
                                                 }
                                             }}
                                             value={(() => {
-                                                const label = selectedNode.data.label as string;
+                                                if (selectedNode.data.manualAdvisorId) return String(selectedNode.data.manualAdvisorId);
+                                                // Fallback to parsing label
+                                                const label = (selectedNode.data.label as string) || "";
                                                 const idMatch = label.match(/\(ID:\s*(\d+)\)/);
                                                 if (idMatch) return idMatch[1];
-                                                const namePart = label.split('Manual: ')[1]?.trim();
-                                                const foundByName = advisors.find(a => a.name === namePart);
-                                                return foundByName ? foundByName.id : "";
+                                                
+                                                const parts = label.split('Manual: ');
+                                                if (parts.length > 1) {
+                                                    const namePart = parts[1].trim();
+                                                    const foundByName = advisors.find(a => a.name === namePart);
+                                                    return foundByName ? String(foundByName.id) : "";
+                                                }
+                                                return "";
                                             })()}
                                         >
                                             <option value="">Selecciona un asesor...</option>
