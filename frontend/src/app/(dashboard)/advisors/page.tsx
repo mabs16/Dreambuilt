@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AdvisorConfigPanel from "@/components/advisors/advisor-config-panel";
+import PointsRulesPanel from "@/components/advisors/points-rules-panel";
 
 interface Advisor {
     id: string | number;
@@ -29,7 +30,7 @@ interface Advisor {
 
 export default function AdvisorsPage() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    const [activeTab, setActiveTab] = useState<'directory' | 'config'>('directory');
+    const [activeTab, setActiveTab] = useState<'directory' | 'config' | 'points'>('directory');
     const [advisors, setAdvisors] = useState<Advisor[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -206,6 +207,18 @@ export default function AdvisorsPage() {
                         Directorio
                     </button>
                     <button
+                        onClick={() => setActiveTab('points')}
+                        className={cn(
+                            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300",
+                            activeTab === 'points' 
+                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                                : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                        )}
+                    >
+                        <Trophy className="h-4 w-4" />
+                        Reglas de Puntos
+                    </button>
+                    <button
                         onClick={() => setActiveTab('config')}
                         className={cn(
                             "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300",
@@ -256,6 +269,8 @@ export default function AdvisorsPage() {
 
             {activeTab === 'config' ? (
                 <AdvisorConfigPanel />
+            ) : activeTab === 'points' ? (
+                <PointsRulesPanel />
             ) : (
                 <div className={cn(
                     viewMode === 'list' 
