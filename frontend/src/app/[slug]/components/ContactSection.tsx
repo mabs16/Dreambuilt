@@ -76,7 +76,11 @@ export default function ContactSection({ config }: ContactSectionProps) {
 
           {config.whatsapp && (
             <motion.a
-              href={`https://wa.me/${config.whatsapp.replace(/[^0-9]/g, '')}`}
+              href={`https://wa.me/${(() => {
+                const clean = config.whatsapp.replace(/[^0-9]/g, '');
+                // Si tiene 10 dígitos exactos, asumimos que es un número de México y le agregamos el prefijo 52
+                return clean.length === 10 ? `52${clean}` : clean;
+              })()}`}
               target="_blank"
               rel="noopener noreferrer"
               initial={{ opacity: 0, y: 20 }}
