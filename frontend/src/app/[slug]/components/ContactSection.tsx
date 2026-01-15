@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Mail, Phone, MessageCircle } from 'lucide-react';
 
 interface ContactSectionProps {
+  propertyName?: string;
   config: {
     email?: string;
     phone?: string;
@@ -17,7 +18,7 @@ interface ContactSectionProps {
   };
 }
 
-export default function ContactSection({ config }: ContactSectionProps) {
+export default function ContactSection({ config, propertyName }: ContactSectionProps) {
   if (!config) return null;
 
   return (
@@ -79,7 +80,13 @@ export default function ContactSection({ config }: ContactSectionProps) {
               href={`https://wa.me/${(() => {
                 const clean = config.whatsapp.replace(/[^0-9]/g, '');
                 // Si tiene 10 dígitos exactos, asumimos que es un número de México y le agregamos el prefijo 52
-                return clean.length === 10 ? `52${clean}` : clean;
+                const phone = clean.length === 10 ? `52${clean}` : clean;
+                
+                const message = propertyName 
+                  ? `Hola, estoy interesado en ${propertyName} y me gustaría recibir más información.`
+                  : 'Hola, me gustaría recibir más información.';
+                  
+                return `${phone}?text=${encodeURIComponent(message)}`;
               })()}`}
               target="_blank"
               rel="noopener noreferrer"

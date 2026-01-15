@@ -293,7 +293,7 @@ export default async function PropertyLandingPage({ params }: PageProps) {
           <>
             <SectionSeparator />
             <div id="contacto" className="scroll-mt-24" />
-            <ContactSection config={property.contact_config} />
+            <ContactSection config={property.contact_config} propertyName={property.title} />
           </>
       )}
 
