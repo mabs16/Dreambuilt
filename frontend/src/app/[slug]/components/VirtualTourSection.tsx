@@ -106,7 +106,7 @@ export default function VirtualTourSection({ config }: VirtualTourSectionProps) 
               if (event.data.startsWith('{')) {
                   data = JSON.parse(event.data);
               }
-          } catch (e) {
+          } catch {
               // Si no es JSON válido, lo tratamos como string normal
           }
       }
