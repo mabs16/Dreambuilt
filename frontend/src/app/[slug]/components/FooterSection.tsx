@@ -1,8 +1,9 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Facebook, Instagram, Twitter, Linkedin, Youtube } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Linkedin, Youtube, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface FooterSectionProps {
   config: {
@@ -30,10 +31,54 @@ interface FooterSectionProps {
   };
 }
 
+const MENU_LINKS = [
+  { label: 'Inicio', url: '#inicio' },
+  { label: 'Sobre el Proyecto', url: '#sobre-el-proyecto' },
+  { label: 'Ubicación', url: '#location' },
+  { label: 'Tipologías', url: '#tipologias' },
+  { label: 'Tour Virtual', url: '#tour-virtual' },
+  { label: 'Amenidades', url: '#amenidades' },
+  { label: 'Esquemas de Pago', url: '#esquemas-de-pago' },
+  { label: 'Contacto', url: '#contacto' },
+];
+
 export default function FooterSection({ config }: FooterSectionProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, []);
+
+  const checkScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setShowLeftArrow(scrollLeft > 0);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+  };
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 200;
+      scrollContainerRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+      setTimeout(checkScroll, 300);
+    }
+  };
+
   if (!config.enabled) return null;
 
   const currentYear = new Date().getFullYear();
+  // Use config.links if provided (and not empty), otherwise fallback to MENU_LINKS
+  // Actually, user asked to match menu sections specifically. 
+  // Let's prioritize config.links if they exist, but if it's the default empty array, use MENU_LINKS.
+  const navigationLinks = (config.links && config.links.length > 0) ? config.links : MENU_LINKS;
 
   return (
     <footer className="bg-black text-white pt-20 pb-8 border-t border-white/10">
@@ -58,17 +103,45 @@ export default function FooterSection({ config }: FooterSectionProps) {
           </div>
 
           {/* Navigation Links */}
-          {config.links && config.links.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 mb-12 border-y border-white/10 py-8">
-              {config.links.map((link, index) => (
-                <Link 
-                  key={index} 
-                  href={link.url} 
-                  className="text-gray-300 hover:text-white transition-colors text-sm uppercase tracking-wider font-light"
-                >
-                  {link.label}
-                </Link>
-              ))}
+          {navigationLinks.length > 0 && (
+            <div className="relative mb-12 border-y border-white/10 py-8 group">
+              {/* Mobile Left Arrow */}
+              <button
+                onClick={() => scroll('left')}
+                className={`md:hidden absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-black/50 backdrop-blur-sm rounded-full border border-white/10 text-white transition-all duration-300 ${
+                  showLeftArrow ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none'
+                }`}
+                aria-label="Scroll left"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+
+              {/* Mobile Right Arrow */}
+              <button
+                onClick={() => scroll('right')}
+                className={`md:hidden absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-black/50 backdrop-blur-sm rounded-full border border-white/10 text-white transition-all duration-300 ${
+                  showRightArrow ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'
+                }`}
+                aria-label="Scroll right"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+
+              <div 
+                ref={scrollContainerRef}
+                onScroll={checkScroll}
+                className="flex md:flex-wrap md:justify-center items-center gap-x-8 gap-y-4 overflow-x-auto scrollbar-hide px-8 md:px-0"
+              >
+                {navigationLinks.map((link, index) => (
+                  <Link 
+                    key={index} 
+                    href={link.url} 
+                    className="text-gray-300 hover:text-white transition-colors text-sm uppercase tracking-wider font-light whitespace-nowrap flex-shrink-0"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
 
