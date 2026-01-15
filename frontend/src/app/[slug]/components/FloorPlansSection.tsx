@@ -46,7 +46,7 @@ export default function FloorPlansSection({ typologies, config }: FloorPlansSect
   if (!typologies || typologies.length === 0) return null;
 
   return (
-    <section className="py-24 bg-gray-950 text-white overflow-hidden">
+    <section className="py-24 bg-black text-white overflow-hidden">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-right mb-16">
@@ -69,11 +69,11 @@ export default function FloorPlansSection({ typologies, config }: FloorPlansSect
           {/* Sidebar / Navigation */}
           <div className="w-full lg:w-1/4 relative">
             {/* Mobile Scroll Indicators */}
-            <div className={`absolute left-0 top-0 bottom-4 w-12 bg-gradient-to-r from-gray-950 via-gray-950/80 to-transparent z-10 pointer-events-none lg:hidden flex items-center justify-start pl-2 transition-opacity duration-300 ${showLeftArrow ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`absolute left-0 top-0 bottom-4 w-12 bg-gradient-to-r from-black via-black/80 to-transparent z-10 pointer-events-none lg:hidden flex items-center justify-start pl-2 transition-opacity duration-300 ${showLeftArrow ? 'opacity-100' : 'opacity-0'}`}>
                  <ChevronLeft className="w-6 h-6 text-amber-500/70 animate-pulse" />
             </div>
             
-            <div className={`absolute right-0 top-0 bottom-4 w-12 bg-gradient-to-l from-gray-950 via-gray-950/80 to-transparent z-10 pointer-events-none lg:hidden flex items-center justify-end pr-2 transition-opacity duration-300 ${showRightArrow ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`absolute right-0 top-0 bottom-4 w-12 bg-gradient-to-l from-black via-black/80 to-transparent z-10 pointer-events-none lg:hidden flex items-center justify-end pr-2 transition-opacity duration-300 ${showRightArrow ? 'opacity-100' : 'opacity-0'}`}>
                  <ChevronRight className="w-6 h-6 text-amber-500/70 animate-pulse" />
             </div>
 

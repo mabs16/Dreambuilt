@@ -1,0 +1,130 @@
+'use client';
+
+import { motion } from 'framer-motion';
+
+interface PaymentScheme {
+  id: string;
+  down_payment: string;
+  construction_payment: string;
+  delivery_payment: string;
+  discount: string;
+}
+
+interface PaymentSchemesSectionProps {
+  config: {
+    enabled: boolean;
+    decorative_title?: string;
+    title?: string;
+    subtitle?: string;
+    footer_title?: string;
+    footer_text?: string;
+    schemes: PaymentScheme[];
+  };
+}
+
+export default function PaymentSchemesSection({ config }: PaymentSchemesSectionProps) {
+  if (!config.enabled) return null;
+
+  return (
+    <section className="relative w-full bg-black py-20 md:py-32 px-4 overflow-hidden">
+      {/* Background Texture Effect - Optional subtle grain or texture could be added here */}
+      <div className="absolute inset-0 opacity-5 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] pointer-events-none"></div>
+
+      <div className="container mx-auto max-w-5xl relative z-10">
+        
+        {/* Header */}
+        <div className="text-center mb-16">
+          {config.decorative_title && (
+            <motion.span 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-amber-500 font-monsieur text-4xl md:text-5xl tracking-widest block mb-4"
+            >
+              {config.decorative_title}
+            </motion.span>
+          )}
+          <motion.h2 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="text-4xl md:text-6xl font-cormorant font-light text-white uppercase tracking-wide mb-6"
+          >
+            {config.title || 'Esquemas de Pago'}
+          </motion.h2>
+          {config.subtitle && (
+             <motion.p
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.3 }}
+                className="text-gray-400 italic font-light text-sm md:text-base"
+             >
+                {config.subtitle}
+             </motion.p>
+          )}
+        </div>
+
+        {/* Table Container */}
+        <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.4 }}
+            className="bg-zinc-900/30 border border-white/20 rounded-2xl p-2 md:p-8 backdrop-blur-sm shadow-2xl overflow-hidden"
+        >
+            <div className="overflow-x-auto">
+                <table className="w-full text-center border-collapse min-w-[600px]">
+                    <thead>
+                        <tr>
+                            <th className="py-6 px-4 text-white font-cormorant text-xl md:text-2xl uppercase tracking-wider border-b border-white/10 w-1/4">Enganche</th>
+                            <th className="py-6 px-4 text-white font-cormorant text-xl md:text-2xl uppercase tracking-wider border-b border-white/10 w-1/4">Pagos Durante Obra</th>
+                            <th className="py-6 px-4 text-white font-cormorant text-xl md:text-2xl uppercase tracking-wider border-b border-white/10 w-1/4">Entrega</th>
+                            <th className="py-6 px-4 text-white font-cormorant text-xl md:text-2xl uppercase tracking-wider border-b border-white/10 w-1/4">Descuento</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                        {config.schemes?.map((scheme, index) => (
+                            <tr key={scheme.id || index} className="group hover:bg-white/5 transition-colors duration-300">
+                                <td className="py-6 px-4 text-gray-300 font-light text-lg md:text-xl">{scheme.down_payment}</td>
+                                <td className="py-6 px-4 text-gray-300 font-light text-lg md:text-xl">{scheme.construction_payment}</td>
+                                <td className="py-6 px-4 text-gray-300 font-light text-lg md:text-xl">{scheme.delivery_payment}</td>
+                                <td className="py-6 px-4 text-amber-500 font-medium text-lg md:text-xl">{scheme.discount}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </motion.div>
+
+        {/* Footer */}
+        <div className="text-center mt-16 space-y-4">
+            {config.footer_title && (
+                <motion.h3 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.5 }}
+                    className="text-2xl md:text-3xl font-cormorant text-white uppercase tracking-widest"
+                >
+                    {config.footer_title}
+                </motion.h3>
+            )}
+            {config.footer_text && (
+                <motion.p 
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.6 }}
+                    className="text-gray-500 font-light text-sm italic max-w-3xl mx-auto leading-relaxed whitespace-pre-wrap"
+                >
+                    {config.footer_text}
+                </motion.p>
+            )}
+        </div>
+
+      </div>
+    </section>
+  );
+}

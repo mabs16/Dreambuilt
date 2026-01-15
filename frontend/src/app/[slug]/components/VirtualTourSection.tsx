@@ -1,3 +1,8 @@
+'use client';
+
+import { useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
 interface VirtualTourSectionProps {
   config: {
     enabled: boolean;
@@ -16,14 +21,25 @@ interface VirtualTourSectionProps {
 }
 
 export default function VirtualTourSection({ config }: VirtualTourSectionProps) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
   if (!config.enabled) return null;
 
   const hasContent = config.tour_embed || (config.videos && config.videos.length > 0);
   if (!hasContent) return null;
 
-  // Determinar orientación del primer video (por defecto portrait si no se especifica, para mantener el comportamiento actual)
-  const mainVideo = config.videos && config.videos[0];
-  const isLandscape = mainVideo?.orientation === 'landscape';
+  // Obtener videos y el video actual
+  const videos = config.videos || [];
+  const currentVideo = videos.length > 0 ? videos[currentIndex] : null;
+  const isLandscape = currentVideo?.orientation === 'landscape';
+
+  const nextVideo = () => {
+    setCurrentIndex((prev) => (prev + 1) % videos.length);
+  };
+
+  const prevVideo = () => {
+    setCurrentIndex((prev) => (prev - 1 + videos.length) % videos.length);
+  };
 
   return (
     <section className="py-20 bg-black text-white relative overflow-hidden">
@@ -50,53 +66,60 @@ export default function VirtualTourSection({ config }: VirtualTourSectionProps) 
                     {config.description}
                 </p>
             )}
-
-            {/* List of videos if more than 1, or titles */}
-            {config.videos && config.videos.length > 1 && (
-                <div className="space-y-2">
-                    <h3 className="text-amber-500 font-medium uppercase tracking-widest text-sm mb-4">Galería de Videos</h3>
-                    <div className="flex flex-wrap gap-2">
-                        {config.videos.map((video, idx) => (
-                            <div key={video.id || idx} className="text-sm text-gray-400 flex items-center">
-                                <span className="w-2 h-2 bg-amber-500 rounded-full mr-2"></span>
-                                {video.title || `Video ${idx + 1}`}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
           </div>
 
           {/* Right Column: Media (Video/Tour) */}
           <div className={`relative w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 order-1 lg:order-2 bg-gray-900 group ${isLandscape ? 'aspect-video' : 'h-[500px] lg:h-[700px]'}`}>
+            {/* Navigation Arrows Overlay */}
+            {videos.length > 1 && !config.tour_embed && (
+                <>
+                    <button 
+                        onClick={prevVideo}
+                        className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 p-3 rounded-full bg-black/40 hover:bg-black/80 text-white/70 hover:text-white transition-all duration-300 border border-white/10 backdrop-blur-sm group pointer-events-auto"
+                        aria-label="Video anterior"
+                    >
+                        <ChevronLeft className="w-8 h-8 group-hover:scale-110 transition-transform" />
+                    </button>
+                    <button 
+                        onClick={nextVideo}
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 p-3 rounded-full bg-black/40 hover:bg-black/80 text-white/70 hover:text-white transition-all duration-300 border border-white/10 backdrop-blur-sm group pointer-events-auto"
+                        aria-label="Siguiente video"
+                    >
+                        <ChevronRight className="w-8 h-8 group-hover:scale-110 transition-transform" />
+                    </button>
+                </>
+            )}
+
             {config.tour_embed ? (
                  <div 
                     className="w-full h-full [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:object-cover"
                     dangerouslySetInnerHTML={{ __html: config.tour_embed }} 
                 />
-            ) : mainVideo ? (
+            ) : currentVideo ? (
                 // Lógica condicional según orientación
                 <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
                     {isLandscape ? (
                         // LANDSCAPE: Priorizamos ancho para cubrir (técnica Hero desktop)
                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 min-w-full min-h-full w-[177.77vh] aspect-video">
                             <iframe 
-                                src={`${mainVideo.url}${mainVideo.url.includes('?') ? '&' : '?'}autoplay=0&loop=1&muted=0&controls=1`}
+                                key={currentVideo.id}
+                                src={`${currentVideo.url}${currentVideo.url.includes('?') ? '&' : '?'}autoplay=0&loop=1&muted=0&controls=1`}
                                 className="w-full h-full pointer-events-auto"
                                 allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" 
                                 allowFullScreen
-                                title={mainVideo.title || "Virtual Tour Video"}
+                                title={currentVideo.title || "Virtual Tour Video"}
                             />
                         </div>
                     ) : (
                         // PORTRAIT: Priorizamos altura para cubrir (técnica actual)
                         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 min-w-[100%] min-h-[100%] w-auto h-[177.77vw] aspect-video">
                             <iframe 
-                                src={`${mainVideo.url}${mainVideo.url.includes('?') ? '&' : '?'}autoplay=0&loop=1&muted=0&controls=1`}
+                                key={currentVideo.id}
+                                src={`${currentVideo.url}${currentVideo.url.includes('?') ? '&' : '?'}autoplay=0&loop=1&muted=0&controls=1`}
                                 className="w-full h-full pointer-events-auto"
                                 allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" 
                                 allowFullScreen
-                                title={mainVideo.title || "Virtual Tour Video"}
+                                title={currentVideo.title || "Virtual Tour Video"}
                             />
                         </div>
                     )}

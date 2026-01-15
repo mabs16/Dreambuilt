@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Save, Check, Plus, Trash2, MapPin, Home, Video, Image as ImageIcon, Layout, List, Phone, CheckCircle, X, Loader2, FileVideo } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Save, Check, Plus, Trash2, MapPin, Home, Video, Image as ImageIcon, Layout, List, Phone, CheckCircle, X, Loader2, FileVideo, CreditCard } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
@@ -20,7 +20,9 @@ const STEPS = [
   { id: 'typologies', title: 'Tipologías', icon: Layout },
   { id: 'virtual', title: 'Tour Virtual', icon: Video },
   { id: 'amenities', title: 'Amenidades', icon: List },
+  { id: 'payments', title: 'Esquemas de Pago', icon: CreditCard },
   { id: 'contact', title: 'Contacto', icon: Phone },
+  { id: 'footer', title: 'Footer', icon: Layout },
   { id: 'status', title: 'Estado', icon: CheckCircle },
 ];
 
@@ -44,7 +46,35 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
     typologies: [],
     virtual_tour_config: { enabled: false, tour_embed: '', videos: [] },
     amenities: [],
+    payment_scheme_config: {
+        enabled: false,
+        decorative_title: 'Inversión Inteligente',
+        title: 'Esquemas de Pago',
+        subtitle: '*Precios y esquemas de pago sujetos a cambios sin previo aviso.',
+        footer_title: 'UNIDADES LLAVE EN MANO',
+        footer_text: '*Los pagos durante la obra podrán ser mensuales, bimestrales o semestrales.\n*Términos y condiciones sujetos a cambio sin previo aviso.',
+        schemes: [
+            { id: crypto.randomUUID(), down_payment: '30%', construction_payment: '20%', delivery_payment: '50%', discount: '0%' },
+            { id: crypto.randomUUID(), down_payment: '50%', construction_payment: '0%', delivery_payment: '50%', discount: '5%' },
+            { id: crypto.randomUUID(), down_payment: '50%', construction_payment: '30%', delivery_payment: '20%', discount: '10%' },
+            { id: crypto.randomUUID(), down_payment: '90%', construction_payment: '0%', delivery_payment: '10%', discount: '15%' },
+        ]
+    },
     contact_config: {},
+    footer_config: {
+        enabled: true,
+        logo_url: 'https://dreambuilt.b-cdn.net/Logo-Dreambuilt%20web.png',
+        description: '',
+        copyright_text: '',
+        disclaimer_text: '',
+        social_links: { facebook: '', instagram: '', twitter: '', linkedin: '', youtube: '' },
+        links: [
+            { label: 'Home', url: '/' },
+            { label: 'About Us', url: '#about' },
+            { label: 'Our Properties', url: '#properties' },
+            { label: 'Contact Us', url: '#contact' }
+        ]
+    },
     is_active: true,
   });
 
@@ -915,7 +945,7 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                 <h3 className="text-lg font-medium text-white">Amenidades</h3>
                 <button 
                     onClick={() => {
-                        const newAmenity = { id: crypto.randomUUID(), name: 'Nueva Amenidad' };
+                        const newAmenity = { id: crypto.randomUUID(), name: 'Nueva Amenidad', description: '' };
                         updateFormData({ amenities: [...(formData.amenities || []), newAmenity] });
                     }}
                     className="flex items-center space-x-2 bg-blue-600 px-3 py-1.5 rounded-lg text-sm"
@@ -924,14 +954,14 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                 </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
                 {formData.amenities?.map((amenity, idx) => (
-                    <div key={amenity.id} className="bg-white/5 border border-white/10 rounded-lg p-3 flex items-center gap-3">
-                         <div className="w-12 h-12 bg-black/20 rounded flex-shrink-0 overflow-hidden relative group">
+                    <div key={amenity.id} className="bg-white/5 border border-white/10 rounded-lg p-4 flex gap-4">
+                         <div className="w-24 h-24 bg-black/20 rounded-lg flex-shrink-0 overflow-hidden relative group">
                             {amenity.image_url ? (
                                 <Image src={amenity.image_url} alt={amenity.name} fill className="object-cover" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-500"><ImageIcon className="w-4 h-4"/></div>
+                                <div className="w-full h-full flex items-center justify-center text-gray-500"><ImageIcon className="w-8 h-8"/></div>
                             )}
                              <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                                 <FileUploader 
@@ -945,23 +975,42 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                                 />
                             </div>
                          </div>
-                         <input
-                            type="text"
-                            value={amenity.name}
-                            onChange={(e) => {
-                                const newAmenities = [...(formData.amenities || [])];
-                                newAmenities[idx].name = e.target.value;
-                                updateFormData({ amenities: newAmenities });
-                            }}
-                            className="flex-1 bg-transparent border-b border-white/10 focus:border-blue-500 text-white px-2 py-1"
-                        />
+                         <div className="flex-1 space-y-3">
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">Nombre</label>
+                                <input
+                                    type="text"
+                                    value={amenity.name}
+                                    onChange={(e) => {
+                                        const newAmenities = [...(formData.amenities || [])];
+                                        newAmenities[idx].name = e.target.value;
+                                        updateFormData({ amenities: newAmenities });
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 rounded px-3 py-1.5 text-white focus:border-blue-500 text-sm"
+                                    placeholder="Nombre de la amenidad"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">Descripción</label>
+                                <textarea
+                                    value={amenity.description || ''}
+                                    onChange={(e) => {
+                                        const newAmenities = [...(formData.amenities || [])];
+                                        newAmenities[idx].description = e.target.value;
+                                        updateFormData({ amenities: newAmenities });
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 rounded px-3 py-1.5 text-white focus:border-blue-500 text-sm h-20 resize-none"
+                                    placeholder="Descripción corta de la amenidad..."
+                                />
+                            </div>
+                         </div>
                          <button 
                             onClick={() => {
                                 const newAmenities = [...(formData.amenities || [])];
                                 newAmenities.splice(idx, 1);
                                 updateFormData({ amenities: newAmenities });
                             }}
-                            className="text-red-400 hover:text-red-300"
+                            className="text-red-400 hover:text-red-300 self-start p-1"
                         >
                             <Trash2 className="w-4 h-4" />
                         </button>
@@ -971,7 +1020,211 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
           </div>
         );
 
-      case 7: // Contact
+      case 7: // Payment Schemes
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center space-x-3 mb-6">
+                <input
+                    type="checkbox"
+                    checked={formData.payment_scheme_config?.enabled}
+                    onChange={(e) => updateFormData({ 
+                        payment_scheme_config: { ...formData.payment_scheme_config!, enabled: e.target.checked } 
+                    })}
+                    className="w-5 h-5 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+                />
+                <label className="text-white font-medium">Habilitar Sección de Esquemas de Pago</label>
+            </div>
+
+            {formData.payment_scheme_config?.enabled && (
+                <div className="space-y-6 border-t border-white/10 pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Título Decorativo</label>
+                            <input
+                                type="text"
+                                value={formData.payment_scheme_config?.decorative_title || ''}
+                                onChange={(e) => updateFormData({ 
+                                    payment_scheme_config: { ...formData.payment_scheme_config!, decorative_title: e.target.value } 
+                                })}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                placeholder="Ej. Inversión Inteligente"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Título Principal</label>
+                            <input
+                                type="text"
+                                value={formData.payment_scheme_config?.title || ''}
+                                onChange={(e) => updateFormData({ 
+                                    payment_scheme_config: { ...formData.payment_scheme_config!, title: e.target.value } 
+                                })}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                placeholder="Ej. ESQUEMAS DE PAGO"
+                            />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Subtítulo</label>
+                            <input
+                                type="text"
+                                value={formData.payment_scheme_config?.subtitle || ''}
+                                onChange={(e) => updateFormData({ 
+                                    payment_scheme_config: { ...formData.payment_scheme_config!, subtitle: e.target.value } 
+                                })}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                placeholder="Ej. *Precios y esquemas de pago sujetos a cambios..."
+                            />
+                        </div>
+                    </div>
+
+                    {/* Schemes Table Editor */}
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-lg font-medium text-white">Tabla de Esquemas</h3>
+                            <button 
+                                onClick={() => {
+                                    const newScheme = { 
+                                        id: crypto.randomUUID(), 
+                                        down_payment: '0%', 
+                                        construction_payment: '0%', 
+                                        delivery_payment: '0%', 
+                                        discount: '0%' 
+                                    };
+                                    const currentSchemes = formData.payment_scheme_config?.schemes || [];
+                                    updateFormData({ 
+                                        payment_scheme_config: { 
+                                            ...formData.payment_scheme_config!, 
+                                            schemes: [...currentSchemes, newScheme] 
+                                        } 
+                                    });
+                                }}
+                                className="flex items-center space-x-2 bg-blue-600 px-3 py-1.5 rounded-lg text-sm"
+                            >
+                                <Plus className="w-4 h-4" /> <span>Agregar Fila</span>
+                            </button>
+                        </div>
+                        
+                        <div className="bg-white/5 border border-white/10 rounded-lg overflow-hidden">
+                            <table className="w-full text-left">
+                                <thead className="bg-white/5">
+                                    <tr>
+                                        <th className="p-3 text-xs font-medium text-gray-400 uppercase">Enganche</th>
+                                        <th className="p-3 text-xs font-medium text-gray-400 uppercase">Durante Obra</th>
+                                        <th className="p-3 text-xs font-medium text-gray-400 uppercase">Entrega</th>
+                                        <th className="p-3 text-xs font-medium text-gray-400 uppercase">Descuento</th>
+                                        <th className="p-3 w-10"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {formData.payment_scheme_config?.schemes?.map((scheme, idx) => (
+                                        <tr key={scheme.id} className="hover:bg-white/5">
+                                            <td className="p-2">
+                                                <input
+                                                    type="text"
+                                                    value={scheme.down_payment}
+                                                    onChange={(e) => {
+                                                        const newSchemes = [...(formData.payment_scheme_config?.schemes || [])];
+                                                        newSchemes[idx].down_payment = e.target.value;
+                                                        updateFormData({ 
+                                                            payment_scheme_config: { ...formData.payment_scheme_config!, schemes: newSchemes } 
+                                                        });
+                                                    }}
+                                                    className="w-full bg-transparent border-none focus:ring-0 text-white text-sm"
+                                                />
+                                            </td>
+                                            <td className="p-2">
+                                                <input
+                                                    type="text"
+                                                    value={scheme.construction_payment}
+                                                    onChange={(e) => {
+                                                        const newSchemes = [...(formData.payment_scheme_config?.schemes || [])];
+                                                        newSchemes[idx].construction_payment = e.target.value;
+                                                        updateFormData({ 
+                                                            payment_scheme_config: { ...formData.payment_scheme_config!, schemes: newSchemes } 
+                                                        });
+                                                    }}
+                                                    className="w-full bg-transparent border-none focus:ring-0 text-white text-sm"
+                                                />
+                                            </td>
+                                            <td className="p-2">
+                                                <input
+                                                    type="text"
+                                                    value={scheme.delivery_payment}
+                                                    onChange={(e) => {
+                                                        const newSchemes = [...(formData.payment_scheme_config?.schemes || [])];
+                                                        newSchemes[idx].delivery_payment = e.target.value;
+                                                        updateFormData({ 
+                                                            payment_scheme_config: { ...formData.payment_scheme_config!, schemes: newSchemes } 
+                                                        });
+                                                    }}
+                                                    className="w-full bg-transparent border-none focus:ring-0 text-white text-sm"
+                                                />
+                                            </td>
+                                            <td className="p-2">
+                                                <input
+                                                    type="text"
+                                                    value={scheme.discount}
+                                                    onChange={(e) => {
+                                                        const newSchemes = [...(formData.payment_scheme_config?.schemes || [])];
+                                                        newSchemes[idx].discount = e.target.value;
+                                                        updateFormData({ 
+                                                            payment_scheme_config: { ...formData.payment_scheme_config!, schemes: newSchemes } 
+                                                        });
+                                                    }}
+                                                    className="w-full bg-transparent border-none focus:ring-0 text-amber-500 text-sm font-medium"
+                                                />
+                                            </td>
+                                            <td className="p-2 text-center">
+                                                <button 
+                                                    onClick={() => {
+                                                        const newSchemes = [...(formData.payment_scheme_config?.schemes || [])];
+                                                        newSchemes.splice(idx, 1);
+                                                        updateFormData({ 
+                                                            payment_scheme_config: { ...formData.payment_scheme_config!, schemes: newSchemes } 
+                                                        });
+                                                    }}
+                                                    className="text-red-400 hover:text-red-300 p-1"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Título del Pie de Página</label>
+                            <input
+                                type="text"
+                                value={formData.payment_scheme_config?.footer_title || ''}
+                                onChange={(e) => updateFormData({ 
+                                    payment_scheme_config: { ...formData.payment_scheme_config!, footer_title: e.target.value } 
+                                })}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                placeholder="Ej. UNIDADES LLAVE EN MANO"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Texto del Pie de Página</label>
+                            <textarea
+                                value={formData.payment_scheme_config?.footer_text || ''}
+                                onChange={(e) => updateFormData({ 
+                                    payment_scheme_config: { ...formData.payment_scheme_config!, footer_text: e.target.value } 
+                                })}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white h-24 resize-none"
+                                placeholder="Notas adicionales..."
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+          </div>
+        );
+
+      case 8: // Contact
         return (
           <div className="space-y-6">
              <div className="grid grid-cols-1 gap-4">
@@ -1016,57 +1269,231 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                             className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
                         />
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Link Facebook</label>
-                            <input
-                                type="text"
-                                value={formData.contact_config?.social_links?.facebook || ''}
-                                onChange={(e) => updateFormData({ 
-                                    contact_config: { 
-                                        ...formData.contact_config!, 
-                                        social_links: { ...formData.contact_config?.social_links, facebook: e.target.value } 
-                                    } 
-                                })}
-                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Link Instagram</label>
-                            <input
-                                type="text"
-                                value={formData.contact_config?.social_links?.instagram || ''}
-                                onChange={(e) => updateFormData({ 
-                                    contact_config: { 
-                                        ...formData.contact_config!, 
-                                        social_links: { ...formData.contact_config?.social_links, instagram: e.target.value } 
-                                    } 
-                                })}
-                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Link Twitter/X</label>
-                            <input
-                                type="text"
-                                value={formData.contact_config?.social_links?.twitter || ''}
-                                onChange={(e) => updateFormData({ 
-                                    contact_config: { 
-                                        ...formData.contact_config!, 
-                                        social_links: { ...formData.contact_config?.social_links, twitter: e.target.value } 
-                                    } 
-                                })}
-                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
-                            />
-                        </div>
-                    </div>
                 </div>
              </div>
           </div>
         );
 
-      case 8: // Status
+      case 9: // Footer
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center space-x-3 mb-6">
+                <input
+                    type="checkbox"
+                    checked={formData.footer_config?.enabled}
+                    onChange={(e) => updateFormData({ 
+                        footer_config: { ...formData.footer_config!, enabled: e.target.checked } 
+                    })}
+                    className="w-5 h-5 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+                />
+                <label className="text-white font-medium">Habilitar Footer Personalizado</label>
+            </div>
+
+            {formData.footer_config?.enabled && (
+                <div className="space-y-6 border-t border-white/10 pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">URL del Logo</label>
+                            <input
+                                type="text"
+                                value={formData.footer_config?.logo_url || ''}
+                                onChange={(e) => updateFormData({ 
+                                    footer_config: { ...formData.footer_config!, logo_url: e.target.value } 
+                                })}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                placeholder="https://..."
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Descripción / Slogan</label>
+                            <input
+                                type="text"
+                                value={formData.footer_config?.description || ''}
+                                onChange={(e) => updateFormData({ 
+                                    footer_config: { ...formData.footer_config!, description: e.target.value } 
+                                })}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                placeholder="Inspiring construction projects..."
+                            />
+                        </div>
+                    </div>
+
+                    {/* Social Media Links */}
+                    <div className="border-t border-white/10 pt-4">
+                        <h4 className="text-white font-medium mb-4">Redes Sociales</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Facebook</label>
+                                <input
+                                    type="text"
+                                    value={formData.footer_config?.social_links?.facebook || ''}
+                                    onChange={(e) => updateFormData({ 
+                                        footer_config: { 
+                                            ...formData.footer_config!, 
+                                            social_links: { ...formData.footer_config?.social_links, facebook: e.target.value } 
+                                        } 
+                                    })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Instagram</label>
+                                <input
+                                    type="text"
+                                    value={formData.footer_config?.social_links?.instagram || ''}
+                                    onChange={(e) => updateFormData({ 
+                                        footer_config: { 
+                                            ...formData.footer_config!, 
+                                            social_links: { ...formData.footer_config?.social_links, instagram: e.target.value } 
+                                        } 
+                                    })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Twitter/X</label>
+                                <input
+                                    type="text"
+                                    value={formData.footer_config?.social_links?.twitter || ''}
+                                    onChange={(e) => updateFormData({ 
+                                        footer_config: { 
+                                            ...formData.footer_config!, 
+                                            social_links: { ...formData.footer_config?.social_links, twitter: e.target.value } 
+                                        } 
+                                    })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">LinkedIn</label>
+                                <input
+                                    type="text"
+                                    value={formData.footer_config?.social_links?.linkedin || ''}
+                                    onChange={(e) => updateFormData({ 
+                                        footer_config: { 
+                                            ...formData.footer_config!, 
+                                            social_links: { ...formData.footer_config?.social_links, linkedin: e.target.value } 
+                                        } 
+                                    })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">YouTube</label>
+                                <input
+                                    type="text"
+                                    value={formData.footer_config?.social_links?.youtube || ''}
+                                    onChange={(e) => updateFormData({ 
+                                        footer_config: { 
+                                            ...formData.footer_config!, 
+                                            social_links: { ...formData.footer_config?.social_links, youtube: e.target.value } 
+                                        } 
+                                    })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Navigation Links Editor */}
+                    <div className="border-t border-white/10 pt-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-white font-medium">Enlaces de Navegación</h4>
+                            <button 
+                                onClick={() => {
+                                    const currentLinks = formData.footer_config?.links || [];
+                                    updateFormData({ 
+                                        footer_config: { 
+                                            ...formData.footer_config!, 
+                                            links: [...currentLinks, { label: 'Nuevo Link', url: '#' }] 
+                                        } 
+                                    });
+                                }}
+                                className="flex items-center space-x-2 bg-blue-600 px-3 py-1.5 rounded-lg text-sm"
+                            >
+                                <Plus className="w-4 h-4" /> <span>Agregar Link</span>
+                            </button>
+                        </div>
+                        <div className="space-y-3">
+                            {formData.footer_config?.links?.map((link, idx) => (
+                                <div key={idx} className="flex gap-3 items-center">
+                                    <input
+                                        type="text"
+                                        value={link.label}
+                                        onChange={(e) => {
+                                            const newLinks = [...(formData.footer_config?.links || [])];
+                                            newLinks[idx].label = e.target.value;
+                                            updateFormData({ 
+                                                footer_config: { ...formData.footer_config!, links: newLinks } 
+                                            });
+                                        }}
+                                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm"
+                                        placeholder="Texto del Link"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={link.url}
+                                        onChange={(e) => {
+                                            const newLinks = [...(formData.footer_config?.links || [])];
+                                            newLinks[idx].url = e.target.value;
+                                            updateFormData({ 
+                                                footer_config: { ...formData.footer_config!, links: newLinks } 
+                                            });
+                                        }}
+                                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm"
+                                        placeholder="URL (#seccion o https://)"
+                                    />
+                                    <button 
+                                        onClick={() => {
+                                            const newLinks = [...(formData.footer_config?.links || [])];
+                                            newLinks.splice(idx, 1);
+                                            updateFormData({ 
+                                                footer_config: { ...formData.footer_config!, links: newLinks } 
+                                            });
+                                        }}
+                                        className="text-red-400 hover:text-red-300 p-1"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Copyright & Disclaimer */}
+                    <div className="border-t border-white/10 pt-4">
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Texto de Copyright</label>
+                                <input
+                                    type="text"
+                                    value={formData.footer_config?.copyright_text || ''}
+                                    onChange={(e) => updateFormData({ 
+                                        footer_config: { ...formData.footer_config!, copyright_text: e.target.value } 
+                                    })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                    placeholder="Copyright © 2024..."
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Disclaimer (Texto Legal Pequeño)</label>
+                                <textarea
+                                    value={formData.footer_config?.disclaimer_text || ''}
+                                    onChange={(e) => updateFormData({ 
+                                        footer_config: { ...formData.footer_config!, disclaimer_text: e.target.value } 
+                                    })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white h-24 resize-none"
+                                    placeholder="Texto legal que aparecerá al final..."
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+          </div>
+        );
+
+      case 10: // Status
         return (
           <div className="space-y-6 text-center py-10">
              <div className="flex justify-center mb-4">

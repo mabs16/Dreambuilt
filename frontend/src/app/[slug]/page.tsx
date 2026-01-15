@@ -1,11 +1,16 @@
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import { PropertiesService } from '@/services/properties.service';
-import { MapPin, CheckCircle, ArrowRight } from 'lucide-react';
+import { MapPin, ArrowRight } from 'lucide-react';
 import ClientMap from './components/ClientMap';
 import LandingNavbar from './components/LandingNavbar';
 import FloorPlansSection from './components/FloorPlansSection';
 import VirtualTourSection from './components/VirtualTourSection';
+import AmenitiesSection from './components/AmenitiesSection';
+import PaymentSchemesSection from './components/PaymentSchemesSection';
+import ContactSection from './components/ContactSection';
+import SectionSeparator from './components/SectionSeparator';
+import FooterSection from './components/FooterSection';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -30,7 +35,7 @@ export default async function PropertyLandingPage({ params }: PageProps) {
   const mainImage = property.hero_config.assets.find(a => a.type === 'image');
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-black text-white">
       <LandingNavbar 
         title={property.title} 
         phone={property.contact_config?.phone} 
@@ -40,7 +45,7 @@ export default async function PropertyLandingPage({ params }: PageProps) {
       />
 
       {/* Hero Section */}
-      <section className="relative h-screen w-full bg-gray-900 flex flex-col justify-end overflow-hidden">
+      <section className="relative h-screen w-full bg-black flex flex-col justify-end overflow-hidden">
         {property.hero_config.type === 'video' && (desktopAsset || mobileAsset) ? (
            <>
               {/* Desktop Video */}
@@ -147,8 +152,10 @@ export default async function PropertyLandingPage({ params }: PageProps) {
 
       </section>
 
+      <SectionSeparator />
+
       {/* About Project Section */}
-      <section className={`py-20 ${property.about_project_config?.enabled ? 'bg-black' : 'container mx-auto px-4'}`}>
+      <section className="py-20 bg-black">
         {property.about_project_config?.enabled ? (
             <div className="container mx-auto px-4">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -199,17 +206,19 @@ export default async function PropertyLandingPage({ params }: PageProps) {
                 </div>
             </div>
         ) : (
-            <div className="max-w-4xl mx-auto text-center">
-                <h2 className="text-3xl font-bold mb-8 text-gray-900">Sobre el Proyecto</h2>
-                <p className="text-lg text-gray-600 leading-relaxed whitespace-pre-wrap">
+            <div className="container mx-auto px-4 max-w-4xl mx-auto text-center">
+                <h2 className="text-3xl font-bold mb-8 text-white">Sobre el Proyecto</h2>
+                <p className="text-lg text-gray-300 leading-relaxed whitespace-pre-wrap">
                     {property.description}
                 </p>
             </div>
         )}
       </section>
 
+      <SectionSeparator />
+
       {/* Location Section */}
-      <section className="py-20 bg-gray-950 relative overflow-hidden min-h-screen flex items-center">
+      <section id="location" className="py-20 bg-black relative overflow-hidden min-h-screen flex items-center">
          <div className="container mx-auto px-4 relative z-10 w-full">
             {/* Header */}
             <div className="mb-12">
@@ -255,40 +264,54 @@ export default async function PropertyLandingPage({ params }: PageProps) {
       </section>
 
       {/* Floor Plans Section */}
+      {property.typologies && property.typologies.length > 0 && <SectionSeparator />}
       <FloorPlansSection typologies={property.typologies} config={property.typologies_config} />
 
       {/* Virtual Tour Section */}
-      {property.virtual_tour_config && <VirtualTourSection config={property.virtual_tour_config} />}
+      {property.virtual_tour_config && property.virtual_tour_config.enabled && (
+        <>
+          <SectionSeparator />
+          <VirtualTourSection config={property.virtual_tour_config} />
+        </>
+      )}
 
       {/* Amenities Section */}
       {property.amenities && property.amenities.length > 0 && (
-        <section className="py-20 container mx-auto px-4">
-            <h2 className="text-3xl font-bold mb-12 text-center text-gray-900">Amenidades</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                {property.amenities.map((amenity) => (
-                    <div key={amenity.id} className="flex flex-col items-center text-center p-6 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                        <div className="w-16 h-16 mb-4 relative rounded-full overflow-hidden bg-blue-50 flex items-center justify-center text-blue-600">
-                            {amenity.image_url ? (
-                                <Image src={amenity.image_url} alt={amenity.name} fill className="object-cover" />
-                            ) : (
-                                <CheckCircle className="w-8 h-8" />
-                            )}
-                        </div>
-                        <span className="font-medium text-gray-900">{amenity.name}</span>
-                    </div>
-                ))}
-            </div>
-        </section>
+          <>
+            <SectionSeparator />
+            <AmenitiesSection amenities={property.amenities} />
+          </>
+      )}
+
+      {/* Payment Schemes Section */}
+      {property.payment_scheme_config && property.payment_scheme_config.enabled && (
+          <>
+            <SectionSeparator />
+            <PaymentSchemesSection config={property.payment_scheme_config} />
+          </>
+      )}
+
+      {/* Contact Section */}
+      {property.contact_config && (
+          <>
+            <SectionSeparator />
+            <ContactSection config={property.contact_config} />
+          </>
       )}
 
 
 
+
       {/* Footer */}
-      <footer className="bg-gray-50 py-12 border-t border-gray-200">
-        <div className="container mx-auto px-4 text-center text-gray-500">
-            <p>&copy; {new Date().getFullYear()} {property.title}. Todos los derechos reservados.</p>
-        </div>
-      </footer>
+      {property.footer_config && property.footer_config.enabled ? (
+        <FooterSection config={property.footer_config} />
+      ) : (
+        <footer className="bg-black py-12 border-t border-white/10">
+            <div className="container mx-auto px-4 text-center text-gray-500">
+                <p>&copy; {new Date().getFullYear()} {property.title}. Todos los derechos reservados.</p>
+            </div>
+        </footer>
+      )}
     </div>
   );
 }

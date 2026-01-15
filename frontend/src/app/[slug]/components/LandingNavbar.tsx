@@ -33,7 +33,7 @@ export default function LandingNavbar({ title, phone, showTitle = true, callToAc
     <>
       <nav 
         className={`fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 py-4 md:px-12 transition-all duration-300 ${
-          isScrolled ? 'bg-gray-900/90 backdrop-blur-md py-3' : 'bg-transparent py-6'
+          isScrolled ? 'bg-black/90 backdrop-blur-md py-3' : 'bg-transparent py-6'
         }`}
       >
         {/* Left Section: Dreambuilt Logo */}

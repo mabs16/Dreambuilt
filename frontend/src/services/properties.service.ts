@@ -60,9 +60,25 @@ export interface Property {
   amenities: {
     id: string;
     name: string;
+    description?: string;
     image_url?: string;
     icon?: string;
   }[];
+  payment_scheme_config?: {
+    enabled: boolean;
+    decorative_title?: string;
+    title?: string;
+    subtitle?: string;
+    footer_title?: string;
+    footer_text?: string;
+    schemes: {
+        id: string;
+        down_payment: string;
+        construction_payment: string;
+        delivery_payment: string;
+        discount: string;
+    }[];
+  };
   contact_config: {
     email?: string;
     phone?: string;
@@ -73,6 +89,29 @@ export interface Property {
       instagram?: string;
       twitter?: string;
     };
+  };
+  footer_config?: {
+    enabled: boolean;
+    logo_url?: string;
+    description?: string;
+    copyright_text?: string;
+    disclaimer_text?: string;
+    social_links?: {
+      facebook?: string;
+      instagram?: string;
+      twitter?: string;
+      linkedin?: string;
+      youtube?: string;
+    };
+    contact_info?: {
+      address?: string;
+      email?: string;
+      phone?: string;
+    };
+    links?: {
+      label: string;
+      url: string;
+    }[];
   };
   is_active: boolean;
   created_at: string;
