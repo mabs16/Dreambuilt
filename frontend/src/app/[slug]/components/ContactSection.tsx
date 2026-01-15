@@ -48,30 +48,14 @@ export default function ContactSection({ config, propertyName }: ContactSectionP
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="group flex flex-col items-center p-8 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all duration-300"
+              className="group flex flex-col items-center p-10 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-amber-500/30 hover:bg-white/10 hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-500 relative overflow-hidden"
             >
-              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 mb-4 group-hover:scale-110 transition-transform">
-                <Phone size={24} />
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative z-10 w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-500/5 flex items-center justify-center text-amber-500 mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 border border-amber-500/10">
+                <Phone size={28} />
               </div>
-              <span className="text-gray-400 text-sm uppercase tracking-widest mb-2">Teléfono</span>
-              <span className="text-white text-lg font-light">{config.phone}</span>
-            </motion.a>
-          )}
-
-          {config.email && (
-            <motion.a
-              href={`mailto:${config.email}`}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="group flex flex-col items-center p-8 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all duration-300"
-            >
-              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 mb-4 group-hover:scale-110 transition-transform">
-                <Mail size={24} />
-              </div>
-              <span className="text-gray-400 text-sm uppercase tracking-widest mb-2">Email</span>
-              <span className="text-white text-lg font-light">{config.email}</span>
+              <span className="relative z-10 text-amber-500 text-xs font-bold uppercase tracking-[0.2em] mb-3">Llamada</span>
+              <span className="relative z-10 text-white text-lg font-light tracking-wide group-hover:text-amber-200 transition-colors">{config.phone}</span>
             </motion.a>
           )}
 
@@ -93,14 +77,33 @@ export default function ContactSection({ config, propertyName }: ContactSectionP
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
-              className="group flex flex-col items-center p-8 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all duration-300"
+              transition={{ delay: 0.2 }}
+              className="group flex flex-col items-center p-10 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-emerald-500/30 hover:bg-white/10 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500 relative overflow-hidden"
             >
-              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 mb-4 group-hover:scale-110 transition-transform">
-                <MessageCircle size={24} />
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative z-10 w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 flex items-center justify-center text-emerald-500 mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 border border-emerald-500/10">
+                <MessageCircle size={28} />
               </div>
-              <span className="text-gray-400 text-sm uppercase tracking-widest mb-2">WhatsApp</span>
-              <span className="text-white text-lg font-light">{config.whatsapp}</span>
+              <span className="relative z-10 text-emerald-500 text-xs font-bold uppercase tracking-[0.2em] mb-3">WhatsApp</span>
+              <span className="relative z-10 text-white text-lg font-light tracking-wide group-hover:text-emerald-200 transition-colors">{config.whatsapp}</span>
+            </motion.a>
+          )}
+
+          {config.email && (
+            <motion.a
+              href={`mailto:${config.email}`}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+              className="group flex flex-col items-center p-6 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-blue-500/30 hover:bg-white/10 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative z-10 w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-500/5 flex items-center justify-center text-blue-500 mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 border border-blue-500/10">
+                <Mail size={28} />
+              </div>
+              <span className="relative z-10 text-blue-500 text-xs font-bold uppercase tracking-[0.2em] mb-3">Email</span>
+              <span className="relative z-10 text-white text-sm md:text-base font-light tracking-wide text-center group-hover:text-blue-200 transition-colors px-2">{config.email}</span>
             </motion.a>
           )}
         </div>
