@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Save, Check, Plus, Trash2, MapPin, Home, Video, Image as ImageIcon, Layout, List, Phone, CheckCircle, X, Loader2 } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Save, Check, Plus, Trash2, MapPin, Home, Video, Image as ImageIcon, Layout, List, Phone, CheckCircle, X, Loader2, FileVideo } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
@@ -15,6 +15,7 @@ const MapPicker = dynamic(() => import('./MapPicker'), { ssr: false });
 const STEPS = [
   { id: 'info', title: 'Información', icon: Home },
   { id: 'hero', title: 'Hero', icon: ImageIcon },
+  { id: 'about', title: 'Sobre el Proyecto', icon: List },
   { id: 'location', title: 'Ubicación', icon: MapPin },
   { id: 'typologies', title: 'Tipologías', icon: Layout },
   { id: 'virtual', title: 'Tour Virtual', icon: Video },
@@ -38,9 +39,10 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
     slug: '',
     description: '',
     hero_config: { type: 'image', assets: [] },
+    about_project_config: { enabled: false, title: 'Sobre el Proyecto' },
     location_config: { lat: 19.4326, lng: -99.1332, address: '' },
     typologies: [],
-    virtual_tour_config: { enabled: false, type: 'embed', content: '' },
+    virtual_tour_config: { enabled: false, tour_embed: '', videos: [] },
     amenities: [],
     contact_config: {},
     is_active: true,
@@ -409,32 +411,230 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
           </div>
         );
 
-      case 2: // Location
+      case 2: // About the Project
         return (
           <div className="space-y-6">
-             <div className="h-[400px]">
-                <MapPicker 
-                    lat={formData.location_config?.lat || 19.4326} 
-                    lng={formData.location_config?.lng || -99.1332}
-                    onChange={(lat, lng) => updateFormData({ location_config: { ...formData.location_config!, lat, lng } })}
-                />
-             </div>
-             <div>
-               <label className="block text-sm font-medium text-gray-400 mb-1">Dirección Escrita</label>
+            <div className="flex items-center space-x-3 mb-4">
                <input
+                type="checkbox"
+                id="enableAbout"
+                checked={formData.about_project_config?.enabled || false}
+                onChange={(e) => updateFormData({ about_project_config: { ...formData.about_project_config!, enabled: e.target.checked } })}
+                className="w-4 h-4 text-blue-600 bg-white/5 border-white/10 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="enableAbout" className="text-sm font-medium text-gray-300 select-none cursor-pointer">
+                Habilitar Sección &quot;Sobre el Proyecto&quot;
+              </label>
+            </div>
+
+            {formData.about_project_config?.enabled && (
+                <div className="space-y-6 pl-4 border-l border-white/10 ml-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-2">Imagen de la Sección</label>
+                            <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                                {formData.about_project_config?.image_url ? (
+                                    <div className="relative h-48 w-full rounded-lg overflow-hidden group">
+                                        <Image 
+                                            src={formData.about_project_config.image_url} 
+                                            alt="About Project" 
+                                            fill 
+                                            className="object-cover" 
+                                        />
+                                        <button
+                                            onClick={() => updateFormData({ about_project_config: { ...formData.about_project_config!, image_url: undefined } })}
+                                            className="absolute top-2 right-2 p-1.5 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <Trash2 className="w-4 h-4 text-white" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <FileUploader 
+                                        accept="image/*" 
+                                        label="Subir Imagen"
+                                        onUpload={(url) => {
+                                            updateFormData({ about_project_config: { ...formData.about_project_config!, image_url: url } });
+                                        }}
+                                    />
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                             <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Título Decorativo (Opcional)</label>
+                                <input
+                                    type="text"
+                                    value={formData.about_project_config?.decorative_title || ''}
+                                    onChange={(e) => updateFormData({ about_project_config: { ...formData.about_project_config!, decorative_title: e.target.value } })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                    placeholder="Ej. CONCEPT"
+                                />
+                             </div>
+                             <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Título Principal</label>
+                                <input
+                                    type="text"
+                                    value={formData.about_project_config?.title || ''}
+                                    onChange={(e) => updateFormData({ about_project_config: { ...formData.about_project_config!, title: e.target.value } })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                    placeholder="Ej. Sobre el Proyecto"
+                                />
+                             </div>
+                             <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Texto del Botón (Opcional)</label>
+                                <input
+                                    type="text"
+                                    value={formData.about_project_config?.button_text || ''}
+                                    onChange={(e) => updateFormData({ about_project_config: { ...formData.about_project_config!, button_text: e.target.value } })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                    placeholder="Ej. Descargar Brochure"
+                                />
+                             </div>
+                             <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Enlace del Botón (Opcional)</label>
+                                <input
+                                    type="text"
+                                    value={formData.about_project_config?.button_link || ''}
+                                    onChange={(e) => updateFormData({ about_project_config: { ...formData.about_project_config!, button_link: e.target.value } })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                    placeholder="https://..."
+                                />
+                             </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Descripción</label>
+                        <textarea
+                            value={formData.about_project_config?.description || ''}
+                            onChange={(e) => updateFormData({ about_project_config: { ...formData.about_project_config!, description: e.target.value } })}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white h-32"
+                            placeholder="Descripción detallada..."
+                        />
+                    </div>
+                </div>
+            )}
+          </div>
+        );
+
+      case 3: // Location
+        return (
+          <div className="space-y-6">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Título Decorativo (Opcional)</label>
+                        <input
+                            type="text"
+                            value={formData.location_config?.decorative_title || ''}
+                            onChange={(e) => updateFormData({ location_config: { ...formData.location_config!, decorative_title: e.target.value } })}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                            placeholder="Ej. PRIME LOCATION"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Título Principal</label>
+                        <input
+                            type="text"
+                            value={formData.location_config?.title || ''}
+                            onChange={(e) => updateFormData({ location_config: { ...formData.location_config!, title: e.target.value } })}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                            placeholder="Ej. PROJECT LOCATION"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Descripción</label>
+                        <textarea
+                            value={formData.location_config?.description || ''}
+                            onChange={(e) => updateFormData({ location_config: { ...formData.location_config!, description: e.target.value } })}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white h-24"
+                            placeholder="Breve descripción de la ubicación..."
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Zoom del Mapa (8-18)</label>
+                        <input
+                            type="range"
+                            min="8"
+                            max="18"
+                            value={formData.location_config?.zoom || 13}
+                            onChange={(e) => updateFormData({ location_config: { ...formData.location_config!, zoom: parseInt(e.target.value) } })}
+                            className="w-full accent-blue-500 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>Lejos (8)</span>
+                            <span className="text-white font-bold">{formData.location_config?.zoom || 13}</span>
+                            <span>Cerca (18)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-4">Ubicación en Mapa</label>
+                    <div className="h-[300px] w-full bg-white/5 border border-white/10 rounded-lg overflow-hidden">
+                        <MapPicker
+                            lat={formData.location_config?.lat || 19.4326}
+                            lng={formData.location_config?.lng || -99.1332}
+                            onChange={(lat, lng) => updateFormData({ location_config: { ...formData.location_config!, lat, lng } })}
+                            theme="dark"
+                            zoom={formData.location_config?.zoom || 13}
+                        />
+                    </div>
+                </div>
+             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">Dirección Escrita</label>
+              <input
                 type="text"
                 value={formData.location_config?.address || ''}
                 onChange={(e) => updateFormData({ location_config: { ...formData.location_config!, address: e.target.value } })}
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
                 placeholder="Calle 123, Col. Centro..."
               />
-             </div>
+            </div>
           </div>
         );
 
-      case 3: // Typologies
+      case 4: // Typologies
         return (
           <div className="space-y-6">
+            <div className="space-y-4 mb-8 pb-8 border-b border-white/10">
+                 <h3 className="text-lg font-medium text-white mb-4">Configuración de la Sección</h3>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Título Decorativo (Opcional)</label>
+                        <input
+                            type="text"
+                            value={formData.typologies_config?.decorative_title || ''}
+                            onChange={(e) => updateFormData({ typologies_config: { ...formData.typologies_config, decorative_title: e.target.value } })}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                            placeholder="Ej. EXPLORA"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Título Principal</label>
+                        <input
+                            type="text"
+                            value={formData.typologies_config?.title || ''}
+                            onChange={(e) => updateFormData({ typologies_config: { ...formData.typologies_config, title: e.target.value } })}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                            placeholder="Ej. PLANOS"
+                        />
+                    </div>
+                 </div>
+                 <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Descripción de la Sección (Opcional)</label>
+                    <textarea
+                        value={formData.typologies_config?.description || ''}
+                        onChange={(e) => updateFormData({ typologies_config: { ...formData.typologies_config, description: e.target.value } })}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white h-20"
+                        placeholder="Descripción general de los modelos..."
+                    />
+                 </div>
+            </div>
+
             <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium text-white">Planos y Modelos</h3>
                 <button 
@@ -509,7 +709,7 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
           </div>
         );
 
-      case 4: // Virtual Tour
+      case 5: // Virtual Tour
         return (
           <div className="space-y-6">
             <div className="flex items-center space-x-3 mb-4">
@@ -519,62 +719,196 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                     onChange={(e) => updateFormData({ virtual_tour_config: { ...formData.virtual_tour_config!, enabled: e.target.checked } })}
                     className="w-5 h-5 rounded border-gray-600"
                 />
-                <label className="text-white font-medium">Habilitar Tour Virtual</label>
+                <label className="text-white font-medium">Habilitar Sección Multimedia</label>
             </div>
 
             {formData.virtual_tour_config?.enabled && (
-                <div className="space-y-4 pl-8 border-l-2 border-white/10">
-                     <div>
-                        <label className="block text-sm font-medium text-gray-400 mb-2">Tipo</label>
-                        <div className="flex space-x-4">
-                            {['embed', 'video'].map((type) => (
-                            <button
-                                key={type}
-                                onClick={() => updateFormData({ virtual_tour_config: { ...formData.virtual_tour_config!, type: type as 'embed' | 'video' } })}
-                                className={`px-4 py-2 rounded-lg capitalize ${
-                                formData.virtual_tour_config?.type === type
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                                }`}
-                            >
-                                {type}
-                            </button>
-                            ))}
+                <div className="space-y-6 pl-8 border-l-2 border-white/10">
+                    {/* Títulos y Descripción */}
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Título Decorativo</label>
+                            <input
+                                type="text"
+                                value={formData.virtual_tour_config?.decorative_title || ''}
+                                onChange={(e) => updateFormData({ virtual_tour_config: { ...formData.virtual_tour_config!, decorative_title: e.target.value } })}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                placeholder="Ej. VIRTUAL TOUR"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Título Principal</label>
+                            <input
+                                type="text"
+                                value={formData.virtual_tour_config?.title || ''}
+                                onChange={(e) => updateFormData({ virtual_tour_config: { ...formData.virtual_tour_config!, title: e.target.value } })}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                placeholder="Ej. Conoce tu futuro hogar"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Descripción</label>
+                            <textarea
+                                value={formData.virtual_tour_config?.description || ''}
+                                onChange={(e) => updateFormData({ virtual_tour_config: { ...formData.virtual_tour_config!, description: e.target.value } })}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white h-24"
+                                placeholder="Descripción de la sección..."
+                            />
                         </div>
                     </div>
 
-                    {formData.virtual_tour_config?.type === 'embed' ? (
+                    {/* Recorrido Virtual 3D */}
+                    <div className="pt-4 border-t border-white/10">
+                        <h4 className="text-white font-medium mb-4 flex items-center gap-2">
+                            <Video className="w-4 h-4 text-blue-400" />
+                            Recorrido Virtual 3D (Matterport)
+                        </h4>
                         <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Código Embed / URL (Matterport, etc)</label>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Código Embed / URL</label>
                             <textarea
-                                value={formData.virtual_tour_config?.content}
-                                onChange={(e) => updateFormData({ virtual_tour_config: { ...formData.virtual_tour_config!, content: e.target.value } })}
+                                value={formData.virtual_tour_config?.tour_embed || ''}
+                                onChange={(e) => updateFormData({ virtual_tour_config: { ...formData.virtual_tour_config!, tour_embed: e.target.value } })}
                                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white h-24 font-mono text-xs"
                                 placeholder="<iframe src='...'></iframe>"
                             />
                         </div>
-                    ) : (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Subir Video Recorrido</label>
+                    </div>
+
+                    {/* Videos Promocionales */}
+                    <div className="pt-4 border-t border-white/10">
+                        <h4 className="text-white font-medium mb-4 flex items-center gap-2">
+                            <FileVideo className="w-4 h-4 text-purple-400" />
+                            Videos Promocionales
+                        </h4>
+                        
+                        {/* Lista de Videos */}
+                        {formData.virtual_tour_config?.videos && formData.virtual_tour_config.videos.length > 0 && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                {formData.virtual_tour_config.videos.map((video, idx) => (
+                                    <div key={video.id || idx} className="group relative bg-white/5 rounded-lg border border-white/10 overflow-hidden">
+                                        <div className="aspect-video bg-black/50 relative">
+                                            {/* Usamos iframe con pointer-events-none para simular miniatura si es embed de bunny, o video tag si es archivo directo */}
+                                            <iframe 
+                                                src={video.url} 
+                                                className="w-full h-full pointer-events-none" 
+                                                loading="lazy"
+                                                title={`Video ${idx}`}
+                                            />
+                                            <div className="absolute inset-0 bg-transparent" /> {/* Overlay para prevenir interacción */}
+                                        </div>
+                                        
+                                        <button
+                                            onClick={async () => {
+                                                if (confirm('¿Estás seguro de eliminar este video?')) {
+                                                    try {
+                                                        // Eliminar de Bunny.net
+                                                        await PropertiesService.deleteVideo(video.id);
+                                                        
+                                                        // Actualizar estado local
+                                                        const newVideos = [...(formData.virtual_tour_config?.videos || [])];
+                                                        newVideos.splice(idx, 1);
+                                                        updateFormData({ 
+                                                            virtual_tour_config: { 
+                                                                ...formData.virtual_tour_config!, 
+                                                                videos: newVideos 
+                                                            } 
+                                                        });
+                                                    } catch (error) {
+                                                        console.error('Error deleting video:', error);
+                                                        alert('Error al eliminar el video');
+                                                    }
+                                                }
+                                            }}
+                                            className="absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                            title="Eliminar video"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+
+                                        <div className="p-3 space-y-3">
+                                            <input 
+                                                type="text"
+                                                value={video.title || ''} 
+                                                onChange={(e) => {
+                                                    const newVideos = [...(formData.virtual_tour_config?.videos || [])];
+                                                    newVideos[idx] = { ...newVideos[idx], title: e.target.value };
+                                                    updateFormData({ 
+                                                        virtual_tour_config: { 
+                                                            ...formData.virtual_tour_config!, 
+                                                            videos: newVideos 
+                                                        } 
+                                                    });
+                                                }}
+                                                placeholder="Título del video (Opcional)"
+                                                className="w-full bg-transparent text-sm text-gray-300 placeholder-gray-600 focus:text-white focus:outline-none border-b border-transparent focus:border-blue-500/50 transition-colors"
+                                            />
+                                            
+                                            <div>
+                                                <label className="text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1 block">Orientación</label>
+                                                <select
+                                                    value={video.orientation || 'portrait'}
+                                                    onChange={(e) => {
+                                                        const newVideos = [...(formData.virtual_tour_config?.videos || [])];
+                                                        newVideos[idx] = { 
+                                                            ...newVideos[idx], 
+                                                            orientation: e.target.value as 'landscape' | 'portrait' 
+                                                        };
+                                                        updateFormData({ 
+                                                            virtual_tour_config: { 
+                                                                ...formData.virtual_tour_config!, 
+                                                                videos: newVideos 
+                                                            } 
+                                                        });
+                                                    }}
+                                                    className="w-full bg-white/5 text-xs text-gray-300 border border-white/10 rounded px-2 py-1.5 focus:border-blue-500 focus:outline-none appearance-none cursor-pointer hover:bg-white/10 transition-colors"
+                                                >
+                                                    <option value="portrait" className="bg-gray-900 text-white">Vertical (9:16)</option>
+                                                    <option value="landscape" className="bg-gray-900 text-white">Horizontal (16:9)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-400 mb-2">Subir Nuevo Video</label>
                             <FileUploader 
                                 accept="video/*"
                                 maxSizeMB={500}
-                                onUpload={(url) => {
-                                    // Use the embed URL from Bunny
-                                    updateFormData({ virtual_tour_config: { ...formData.virtual_tour_config!, content: url } });
+                                onUpload={(url, type, videoId) => {
+                                    if (type === 'video' && videoId) {
+                                        const newVideo = {
+                                            id: videoId,
+                                            url: url,
+                                            title: `Video ${(formData.virtual_tour_config?.videos?.length || 0) + 1}`,
+                                            orientation: 'portrait' as 'landscape' | 'portrait',
+                                            thumbnail_url: '' // TODO: Intentar obtener thumbnail
+                                        };
+                                        
+                                        const currentVideos = formData.virtual_tour_config?.videos || [];
+                                        updateFormData({ 
+                                            virtual_tour_config: { 
+                                                ...formData.virtual_tour_config!, 
+                                                videos: [...currentVideos, newVideo] 
+                                            } 
+                                        });
+                                    }
                                 }}
+                                label="Arrastra un video aquí o haz clic para subir"
                             />
-                            {formData.virtual_tour_config?.content && (
-                                <p className="text-xs text-green-400 mt-2">Video cargado: {formData.virtual_tour_config.content}</p>
-                            )}
+                            <p className="text-xs text-gray-500 mt-2">
+                                Los videos se subirán a Bunny.net Stream y se optimizarán automáticamente.
+                            </p>
                         </div>
-                    )}
+                    </div>
                 </div>
             )}
           </div>
         );
 
-      case 5: // Amenities
+      case 6: // Amenities
         return (
           <div className="space-y-6">
              <div className="flex justify-between items-center">
@@ -637,7 +971,7 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
           </div>
         );
 
-      case 6: // Contact
+      case 7: // Contact
         return (
           <div className="space-y-6">
              <div className="grid grid-cols-1 gap-4">
@@ -732,7 +1066,7 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
           </div>
         );
 
-      case 7: // Status
+      case 8: // Status
         return (
           <div className="space-y-6 text-center py-10">
              <div className="flex justify-center mb-4">

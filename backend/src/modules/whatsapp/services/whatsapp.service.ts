@@ -1065,8 +1065,6 @@ export class WhatsappService {
               type: 'SYSTEM_SUMMARY',
             });
           }
-
-
         } else {
           this.logger.warn(
             `No advisor found to assign for lead ${session.lead_id}`,

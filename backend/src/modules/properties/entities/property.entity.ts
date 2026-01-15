@@ -38,13 +38,37 @@ export class Property {
     overlay_logo?: string;
   };
 
+  // About Project Configuration
+  @Column('jsonb', { default: {} })
+  about_project_config: {
+    enabled: boolean;
+    image_url?: string;
+    decorative_title?: string;
+    title?: string;
+    description?: string;
+    button_text?: string;
+    button_link?: string;
+  };
+
   // Location Configuration
   @Column('jsonb', { default: {} })
   location_config: {
     lat: number;
     lng: number;
+    zoom?: number;
     address: string;
     mapType?: 'google' | 'leaflet';
+    decorative_title?: string;
+    title?: string;
+    description?: string;
+  };
+
+  // Typologies Configuration
+  @Column('jsonb', { nullable: true, default: {} })
+  typologies_config?: {
+    decorative_title?: string;
+    title?: string;
+    description?: string;
   };
 
   // Typologies / Floor Plans
@@ -60,8 +84,17 @@ export class Property {
   @Column('jsonb', { default: {} })
   virtual_tour_config: {
     enabled: boolean;
-    type: 'embed' | 'video';
-    content: string; // Embed code or Video URL
+    decorative_title?: string;
+    title?: string;
+    description?: string;
+    tour_embed?: string;
+    videos?: {
+      id: string;
+      url: string;
+      thumbnail_url?: string;
+      title?: string;
+      orientation?: 'landscape' | 'portrait';
+    }[];
   };
 
   // Amenities

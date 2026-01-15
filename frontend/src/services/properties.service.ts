@@ -13,11 +13,29 @@ export interface Property {
     show_header_title?: boolean;
     overlay_logo?: string;
   };
+  about_project_config?: {
+    enabled: boolean;
+    image_url?: string;
+    decorative_title?: string;
+    title?: string;
+    description?: string;
+    button_text?: string;
+    button_link?: string;
+  };
   location_config: {
     lat: number;
     lng: number;
+    zoom?: number;
     address: string;
     mapType?: 'google' | 'leaflet';
+    decorative_title?: string;
+    title?: string;
+    description?: string;
+  };
+  typologies_config?: {
+    decorative_title?: string;
+    title?: string;
+    description?: string;
   };
   typologies: {
     id: string;
@@ -27,8 +45,17 @@ export interface Property {
   }[];
   virtual_tour_config: {
     enabled: boolean;
-    type: 'embed' | 'video';
-    content: string;
+    decorative_title?: string;
+    title?: string;
+    description?: string;
+    tour_embed?: string;
+    videos?: {
+      id: string;
+      url: string;
+      thumbnail_url?: string;
+      title?: string;
+      orientation?: 'landscape' | 'portrait';
+    }[];
   };
   amenities: {
     id: string;

@@ -1,9 +1,11 @@
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import { PropertiesService } from '@/services/properties.service';
-import { MapPin, CheckCircle, Phone, Mail, MessageCircle, ArrowDown } from 'lucide-react';
+import { MapPin, CheckCircle, ArrowRight } from 'lucide-react';
 import ClientMap from './components/ClientMap';
 import LandingNavbar from './components/LandingNavbar';
+import FloorPlansSection from './components/FloorPlansSection';
+import VirtualTourSection from './components/VirtualTourSection';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -142,57 +144,121 @@ export default async function PropertyLandingPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Scroll Indicator */}
-        <div className="absolute right-12 bottom-12 z-10 flex flex-col items-center">
-            <div className="relative w-24 h-24 flex items-center justify-center">
-                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
 
-                </svg>
-                <div className="flex flex-col items-center text-white/60">
-                    <span className="text-[10px] uppercase tracking-[0.2em] mb-2">Scroll Down</span>
-                    <ArrowDown className="w-4 h-4 animate-bounce" />
-                </div>
-            </div>
-        </div>
       </section>
 
-      {/* Description Section */}
-      <section className="py-20 container mx-auto px-4">
-        <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-8 text-gray-900">Sobre el Proyecto</h2>
-            <p className="text-lg text-gray-600 leading-relaxed whitespace-pre-wrap">
-                {property.description}
-            </p>
-        </div>
-      </section>
-
-      {/* Typologies Section */}
-      {property.typologies && property.typologies.length > 0 && (
-        <section className="py-20 bg-gray-50">
+      {/* About Project Section */}
+      <section className={`py-20 ${property.about_project_config?.enabled ? 'bg-black' : 'container mx-auto px-4'}`}>
+        {property.about_project_config?.enabled ? (
             <div className="container mx-auto px-4">
-                <h2 className="text-3xl font-bold mb-12 text-center text-gray-900">Modelos Disponibles</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {property.typologies.map((typo) => (
-                        <div key={typo.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
-                            <div className="h-64 relative bg-gray-200">
-                                {typo.image_url ? (
-                                    <Image src={typo.image_url} alt={typo.name} fill className="object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-gray-400">Sin imagen</div>
-                                )}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                    <div className="relative h-[500px] lg:h-[700px] w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+                        {property.about_project_config.image_url ? (
+                            <Image
+                                src={property.about_project_config.image_url}
+                                alt={property.about_project_config.title || "Sobre el Proyecto"}
+                                fill
+                                className="object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+                                <span className="text-gray-600">Sin imagen configurada</span>
                             </div>
-                            <div className="p-6">
-                                <h3 className="text-xl font-bold mb-2 text-gray-900">{typo.name}</h3>
-                                {typo.description && (
-                                    <p className="text-gray-600 text-sm">{typo.description}</p>
-                                )}
-                            </div>
+                        )}
+                    </div>
+                    <div className="space-y-8">
+                        <div>
+                            {property.about_project_config.decorative_title && (
+                                <span className="text-amber-500 font-monsieur text-5xl md:text-7xl block mb-4">
+                                    {property.about_project_config.decorative_title}
+                                </span>
+                            )}
+                            <h2 className="text-4xl md:text-6xl font-cormorant font-light text-white leading-tight uppercase">
+                                {property.about_project_config.title || "Sobre el Proyecto"}
+                            </h2>
                         </div>
-                    ))}
+                        
+                        <p className="text-lg text-gray-300 leading-relaxed font-light whitespace-pre-wrap mb-8">
+                            {property.about_project_config.description || property.description}
+                        </p>
+
+                        <div className="border-t border-white/20 w-full mb-8"></div>
+
+                        {property.about_project_config.button_text && property.about_project_config.button_link && (
+                            <a 
+                                href={property.about_project_config.button_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center px-8 py-3 bg-transparent border border-amber-500/50 text-white font-medium rounded-full hover:bg-amber-500/10 transition-colors uppercase tracking-wider text-sm group"
+                            >
+                                {property.about_project_config.button_text}
+                                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                            </a>
+                        )}
+                    </div>
                 </div>
             </div>
-        </section>
-      )}
+        ) : (
+            <div className="max-w-4xl mx-auto text-center">
+                <h2 className="text-3xl font-bold mb-8 text-gray-900">Sobre el Proyecto</h2>
+                <p className="text-lg text-gray-600 leading-relaxed whitespace-pre-wrap">
+                    {property.description}
+                </p>
+            </div>
+        )}
+      </section>
+
+      {/* Location Section */}
+      <section className="py-20 bg-gray-950 relative overflow-hidden min-h-screen flex items-center">
+         <div className="container mx-auto px-4 relative z-10 w-full">
+            {/* Header */}
+            <div className="mb-12">
+                {property.location_config?.decorative_title && (
+                    <span className="text-amber-500 font-monsieur text-2xl md:text-3xl block mb-2 tracking-wider">
+                        {property.location_config.decorative_title}
+                    </span>
+                )}
+                
+                <div className="flex flex-col md:flex-row justify-between items-start gap-8">
+                    <h2 className="text-4xl md:text-6xl font-cormorant font-light text-white uppercase leading-none">
+                        {property.location_config?.title || "Project Location"}
+                    </h2>
+                    
+                    {property.location_config?.description && (
+                        <p className="text-gray-400 max-w-md text-sm md:text-base leading-relaxed font-light text-right md:text-left">
+                            {property.location_config.description}
+                        </p>
+                    )}
+                </div>
+            </div>
+
+            {/* Map Container */}
+            <div className="relative max-w-4xl mx-auto w-full h-[450px] md:h-[525px] rounded-3xl overflow-hidden border border-white/10 shadow-2xl group">
+                 <ClientMap 
+                    lat={property.location_config.lat} 
+                    lng={property.location_config.lng} 
+                    theme="dark"
+                    zoom={property.location_config.zoom || 13}
+                />
+            </div>
+
+            {/* Address Below Map */}
+            <div className="max-w-4xl mx-auto mt-8 px-4 md:px-0">
+                 <div className="flex items-center space-x-4 text-white/90">
+                    <div className="p-3 bg-amber-500/10 rounded-full border border-amber-500/20">
+                        <MapPin className="w-6 h-6 text-amber-500" />
+                    </div>
+                    <p className="text-xl font-light tracking-wide text-gray-300">{property.location_config.address || 'Ubicación privilegiada'}</p>
+                 </div>
+            </div>
+         </div>
+      </section>
+
+      {/* Floor Plans Section */}
+      <FloorPlansSection typologies={property.typologies} config={property.typologies_config} />
+
+      {/* Virtual Tour Section */}
+      {property.virtual_tour_config && <VirtualTourSection config={property.virtual_tour_config} />}
 
       {/* Amenities Section */}
       {property.amenities && property.amenities.length > 0 && (
@@ -215,69 +281,7 @@ export default async function PropertyLandingPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* Virtual Tour Section */}
-      {property.virtual_tour_config?.enabled && property.virtual_tour_config.content && (
-        <section className="py-20 bg-gray-900 text-white">
-            <div className="container mx-auto px-4 text-center">
-                <h2 className="text-3xl font-bold mb-12">Recorrido Virtual</h2>
-                <div className="max-w-5xl mx-auto aspect-video rounded-2xl overflow-hidden bg-black shadow-2xl">
-                    {property.virtual_tour_config.type === 'embed' ? (
-                        <div 
-                            className="w-full h-full"
-                            dangerouslySetInnerHTML={{ __html: property.virtual_tour_config.content }} 
-                        />
-                    ) : (
-                         <iframe 
-                            src={property.virtual_tour_config.content} 
-                            className="w-full h-full" 
-                            allow="autoplay; fullscreen"
-                        />
-                    )}
-                </div>
-            </div>
-        </section>
-      )}
 
-      {/* Location Section */}
-      <section className="py-20 container mx-auto px-4">
-         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-900">Ubicación</h2>
-                <div className="flex items-start space-x-4 mb-8">
-                    <MapPin className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
-                    <p className="text-xl text-gray-600">{property.location_config.address || 'Ubicación privilegiada'}</p>
-                </div>
-                {/* Contact Info Preview */}
-                <div className="bg-blue-50 p-8 rounded-2xl">
-                    <h3 className="text-xl font-bold mb-4 text-blue-900">¿Te interesa este proyecto?</h3>
-                    <div className="space-y-4">
-                        {property.contact_config?.phone && (
-                            <a href={`tel:${property.contact_config.phone}`} className="flex items-center text-blue-700 hover:text-blue-800">
-                                <Phone className="w-5 h-5 mr-3" /> {property.contact_config.phone}
-                            </a>
-                        )}
-                        {property.contact_config?.email && (
-                            <a href={`mailto:${property.contact_config.email}`} className="flex items-center text-blue-700 hover:text-blue-800">
-                                <Mail className="w-5 h-5 mr-3" /> {property.contact_config.email}
-                            </a>
-                        )}
-                        {property.contact_config?.whatsapp && (
-                             <a href={`https://wa.me/${property.contact_config.whatsapp}`} target="_blank" className="flex items-center text-green-600 hover:text-green-700 font-medium">
-                                <MessageCircle className="w-5 h-5 mr-3" /> Contactar por WhatsApp
-                            </a>
-                        )}
-                    </div>
-                </div>
-            </div>
-            <div className="h-[500px] rounded-2xl overflow-hidden shadow-lg">
-                {/* Map Component - Read only mode implied by not passing onChange */}
-                <ClientMap 
-                    lat={property.location_config.lat} 
-                    lng={property.location_config.lng} 
-                />
-            </div>
-         </div>
-      </section>
 
       {/* Footer */}
       <footer className="bg-gray-50 py-12 border-t border-gray-200">
