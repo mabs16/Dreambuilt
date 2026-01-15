@@ -47,12 +47,6 @@ export default function FooterSection({ config }: FooterSectionProps) {
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
 
-  useEffect(() => {
-    checkScroll();
-    window.addEventListener('resize', checkScroll);
-    return () => window.removeEventListener('resize', checkScroll);
-  }, []);
-
   const checkScroll = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
@@ -60,6 +54,12 @@ export default function FooterSection({ config }: FooterSectionProps) {
       setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1);
     }
   };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, []);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
@@ -81,13 +81,13 @@ export default function FooterSection({ config }: FooterSectionProps) {
   const navigationLinks = (config.links && config.links.length > 0) ? config.links : MENU_LINKS;
 
   return (
-    <footer className="bg-black text-white pt-20 pb-8 border-t border-white/10">
+    <footer className="bg-black text-white pt-10 md:pt-20 pb-8 border-t border-white/10">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-1 gap-12 text-center">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-12 text-center">
           
           {/* Logo & Description */}
           <div className="flex flex-col items-center max-w-2xl mx-auto">
-            <div className="relative w-48 h-16 mb-6">
+            <div className="relative w-48 h-16 mb-4 md:mb-6">
                 <Image 
                     src={config.logo_url || "https://dreambuilt.b-cdn.net/Logo-Dreambuilt%20web.png"} 
                     alt="Dreambuilt" 
@@ -96,7 +96,7 @@ export default function FooterSection({ config }: FooterSectionProps) {
                 />
             </div>
             {config.description && (
-              <p className="text-gray-400 font-light text-sm md:text-base mb-8 max-w-lg mx-auto">
+              <p className="text-gray-400 font-light text-sm md:text-base mb-6 md:mb-8 max-w-lg mx-auto">
                 {config.description}
               </p>
             )}
@@ -104,7 +104,7 @@ export default function FooterSection({ config }: FooterSectionProps) {
 
           {/* Navigation Links */}
           {navigationLinks.length > 0 && (
-            <div className="relative mb-12 border-y border-white/10 py-8 group">
+            <div className="relative mb-8 md:mb-12 border-y border-white/10 py-6 md:py-8 group">
               {/* Mobile Left Arrow */}
               <button
                 onClick={() => scroll('left')}
@@ -146,8 +146,8 @@ export default function FooterSection({ config }: FooterSectionProps) {
           )}
 
           {/* Social Media */}
-          <div className="mb-12">
-            <h4 className="text-white text-lg font-cormorant mb-6">Síguenos en Redes Sociales</h4>
+          <div className="mb-8 md:mb-12">
+            <h4 className="text-white text-lg font-cormorant mb-4 md:mb-6">Síguenos en Redes Sociales</h4>
             <div className="flex justify-center space-x-6">
               {config.social_links?.facebook && (
                 <a href={config.social_links.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center hover:opacity-80 transition-opacity text-white">
@@ -180,17 +180,17 @@ export default function FooterSection({ config }: FooterSectionProps) {
         </div>
 
         {/* Divider */}
-        <div className="border-t border-white/10 my-8"></div>
+        <div className="border-t border-white/10 my-6 md:my-8"></div>
 
         {/* Copyright */}
         <div className="text-center">
-            <p className="text-gray-500 text-sm font-light mb-8">
+            <p className="text-gray-500 text-sm font-light mb-4 md:mb-8">
                 {config.copyright_text || `Copyright © ${currentYear} - Dreambuilt Construction. All Right Reserved.`}
             </p>
             
             {/* Disclaimer */}
             {config.disclaimer_text && (
-                <div className="max-w-4xl mx-auto mt-8">
+                <div className="max-w-4xl mx-auto mt-4 md:mt-8">
                     <p className="text-[10px] text-gray-600 text-justify leading-relaxed whitespace-pre-wrap">
                         {config.disclaimer_text}
                     </p>

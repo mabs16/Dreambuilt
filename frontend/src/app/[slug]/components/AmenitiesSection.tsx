@@ -15,9 +15,14 @@ interface Amenity {
 
 interface AmenitiesSectionProps {
   amenities: Amenity[];
+  config?: {
+    decorative_title?: string;
+    title?: string;
+    description?: string;
+  };
 }
 
-export default function AmenitiesSection({ amenities }: AmenitiesSectionProps) {
+export default function AmenitiesSection({ amenities, config }: AmenitiesSectionProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (!amenities || amenities.length === 0) return null;
@@ -71,12 +76,23 @@ export default function AmenitiesSection({ amenities }: AmenitiesSectionProps) {
         {/* Section Header */}
         <div className="md:ml-12">
           <span className="text-amber-500 font-monsieur text-3xl md:text-4xl tracking-widest block mb-2">
-            Amazing Features
+            {config?.decorative_title || "Amazing Features"}
           </span>
-          <h2 className="text-5xl md:text-7xl font-cormorant font-light text-white leading-none uppercase">
-            Top-Level <br />
-            <span className="italic text-amber-500">Amenities</span>
+          <h2 className="hidden md:block text-5xl md:text-7xl font-cormorant font-light text-white leading-none uppercase">
+            {config?.title ? (
+                <span dangerouslySetInnerHTML={{ __html: config.title.replace(/\n/g, '<br/>') }} />
+            ) : (
+                <>
+                    Top-Level <br />
+                    <span className="italic text-amber-500">Amenities</span>
+                </>
+            )}
           </h2>
+          {config?.description && (
+              <p className="text-gray-300 font-light leading-relaxed mt-4 max-w-lg">
+                  {config.description}
+              </p>
+          )}
         </div>
 
         <div className="flex flex-col md:flex-row items-end justify-between w-full">

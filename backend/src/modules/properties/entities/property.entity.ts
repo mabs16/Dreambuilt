@@ -97,6 +97,14 @@ export class Property {
     }[];
   };
 
+  // Amenities Configuration
+  @Column('jsonb', { nullable: true, default: {} })
+  amenities_config?: {
+    decorative_title?: string;
+    title?: string;
+    description?: string;
+  };
+
   // Amenities
   @Column('jsonb', { default: [] })
   amenities: {

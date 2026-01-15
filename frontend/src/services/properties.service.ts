@@ -21,6 +21,13 @@ export interface Property {
     description?: string;
     button_text?: string;
     button_link?: string;
+    modal_config?: {
+      enabled: boolean;
+      decorative_title?: string;
+      title?: string;
+      description?: string;
+      images?: string[];
+    };
   };
   location_config: {
     lat: number;
@@ -56,6 +63,11 @@ export interface Property {
       title?: string;
       orientation?: 'landscape' | 'portrait';
     }[];
+  };
+  amenities_config?: {
+    decorative_title?: string;
+    title?: string;
+    description?: string;
   };
   amenities: {
     id: string;

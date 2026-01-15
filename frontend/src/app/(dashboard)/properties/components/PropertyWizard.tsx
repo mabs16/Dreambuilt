@@ -46,6 +46,11 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
     location_config: { lat: 19.4326, lng: -99.1332, address: '' },
     typologies: [],
     virtual_tour_config: { enabled: false, tour_embed: '', videos: [] },
+    amenities_config: {
+      decorative_title: 'Amazing Features',
+      title: 'Top-Level Amenities',
+      description: ''
+    },
     amenities: [],
     payment_scheme_config: {
         enabled: false,
@@ -544,8 +549,146 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                             placeholder="Descripción detallada..."
                         />
                     </div>
+
+                    {/* Modal Configuration */}
+                    <div className="pt-6 border-t border-white/10 mt-6">
+                        <div className="flex items-center space-x-3 mb-4">
+                           <input
+                            type="checkbox"
+                            id="enableAboutModal"
+                            checked={formData.about_project_config?.modal_config?.enabled || false}
+                            onChange={(e) => {
+                                const currentModal = formData.about_project_config?.modal_config || { enabled: false, images: [] };
+                                updateFormData({ 
+                                    about_project_config: { 
+                                        ...formData.about_project_config!, 
+                                        modal_config: { 
+                                            ...currentModal,
+                                            enabled: e.target.checked 
+                                        } 
+                                    } 
+                                });
+                            }}
+                            className="w-4 h-4 text-blue-600 bg-white/5 border-white/10 rounded focus:ring-blue-500"
+                          />
+                          <label htmlFor="enableAboutModal" className="text-sm font-medium text-gray-300 select-none cursor-pointer">
+                            Habilitar Modal de Detalle
+                          </label>
+                        </div>
+
+                        {formData.about_project_config?.modal_config?.enabled && (
+                            <div className="space-y-4 pl-4 border-l border-white/10 ml-2">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Título Decorativo (Modal)</label>
+                                    <input
+                                        type="text"
+                                        value={formData.about_project_config?.modal_config?.decorative_title || ''}
+                                        onChange={(e) => updateFormData({ 
+                                            about_project_config: { 
+                                                ...formData.about_project_config!, 
+                                                modal_config: { 
+                                                    ...formData.about_project_config!.modal_config!, 
+                                                    decorative_title: e.target.value 
+                                                } 
+                                            } 
+                                        })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                        placeholder="Ej. GALLERY"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Título Principal (Modal)</label>
+                                    <input
+                                        type="text"
+                                        value={formData.about_project_config?.modal_config?.title || ''}
+                                        onChange={(e) => updateFormData({ 
+                                            about_project_config: { 
+                                                ...formData.about_project_config!, 
+                                                modal_config: { 
+                                                    ...formData.about_project_config!.modal_config!, 
+                                                    title: e.target.value 
+                                                } 
+                                            } 
+                                        })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                        placeholder="Ej. Galería del Proyecto"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Descripción (Modal)</label>
+                                    <textarea
+                                        value={formData.about_project_config?.modal_config?.description || ''}
+                                        onChange={(e) => updateFormData({ 
+                                            about_project_config: { 
+                                                ...formData.about_project_config!, 
+                                                modal_config: { 
+                                                    ...formData.about_project_config!.modal_config!, 
+                                                    description: e.target.value 
+                                                } 
+                                            } 
+                                        })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white h-24"
+                                        placeholder="Descripción extendida..."
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-2">Imágenes del Carrusel</label>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                        {formData.about_project_config?.modal_config?.images?.map((url, idx) => (
+                                            <div key={idx} className="relative aspect-video rounded-lg overflow-hidden group border border-white/10">
+                                                <Image 
+                                                    src={url} 
+                                                    alt={`Gallery ${idx}`} 
+                                                    fill 
+                                                    className="object-cover" 
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        const currentImages = formData.about_project_config?.modal_config?.images || [];
+                                                        const newImages = currentImages.filter((_, i) => i !== idx);
+                                                        updateFormData({ 
+                                                            about_project_config: { 
+                                                                ...formData.about_project_config!, 
+                                                                modal_config: { 
+                                                                    ...formData.about_project_config!.modal_config!, 
+                                                                    images: newImages 
+                                                                } 
+                                                            } 
+                                                        });
+                                                    }}
+                                                    className="absolute top-1 right-1 p-1 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <Trash2 className="w-3 h-3 text-white" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <div className="aspect-video bg-white/5 border border-white/10 rounded-lg overflow-hidden">
+                                            <FileUploader 
+                                                accept="image/*" 
+                                                label="+"
+                                                onUpload={(url) => {
+                                                    const currentImages = formData.about_project_config?.modal_config?.images || [];
+                                                    updateFormData({ 
+                                                        about_project_config: { 
+                                                            ...formData.about_project_config!, 
+                                                            modal_config: { 
+                                                                ...formData.about_project_config!.modal_config!, 
+                                                                images: [...currentImages, url] 
+                                                            } 
+                                                        } 
+                                                    });
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
+
           </div>
         );
 
@@ -942,8 +1085,46 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
       case 6: // Amenities
         return (
           <div className="space-y-6">
+             <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-medium text-white">Configuración de la Sección</h3>
+            </div>
+
+            <div className="space-y-4 mb-8 pb-8 border-b border-white/10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Título Decorativo (Opcional)</label>
+                        <input
+                            type="text"
+                            value={formData.amenities_config?.decorative_title || ''}
+                            onChange={(e) => updateFormData({ amenities_config: { ...formData.amenities_config, decorative_title: e.target.value } })}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                            placeholder="Ej. Amazing Features"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Título Principal</label>
+                        <input
+                            type="text"
+                            value={formData.amenities_config?.title || ''}
+                            onChange={(e) => updateFormData({ amenities_config: { ...formData.amenities_config, title: e.target.value } })}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                            placeholder="Ej. TOP-LEVEL AMENITIES"
+                        />
+                    </div>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Descripción (Opcional)</label>
+                    <textarea
+                        value={formData.amenities_config?.description || ''}
+                        onChange={(e) => updateFormData({ amenities_config: { ...formData.amenities_config, description: e.target.value } })}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white h-24 resize-none"
+                        placeholder="Descripción breve de la sección de amenidades..."
+                    />
+                </div>
+            </div>
+
              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium text-white">Amenidades</h3>
+                <h3 className="text-lg font-medium text-white">Lista de Amenidades</h3>
                 <button 
                     onClick={() => {
                         const newAmenity = { id: crypto.randomUUID(), name: 'Nueva Amenidad', description: '' };
@@ -951,7 +1132,7 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                     }}
                     className="flex items-center space-x-2 bg-blue-600 px-3 py-1.5 rounded-lg text-sm"
                 >
-                    <Plus className="w-4 h-4" /> <span>Agregar</span>
+                    <Plus className="w-4 h-4" /> <span>Agregar Amenidad</span>
                 </button>
             </div>
             

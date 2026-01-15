@@ -12,6 +12,7 @@ import ContactSection from './components/ContactSection';
 import SectionSeparator from './components/SectionSeparator';
 import FooterSection from './components/FooterSection';
 import HeroVideo from './components/HeroVideo';
+import AboutProjectSection from './components/AboutProjectSection';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -148,65 +149,10 @@ export default async function PropertyLandingPage({ params }: PageProps) {
       <SectionSeparator />
 
       {/* About Project Section */}
-      <section id="sobre-el-proyecto" className="py-20 bg-black scroll-mt-24">
-        {property.about_project_config?.enabled ? (
-            <div className="container mx-auto px-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                    <div className="relative h-[500px] lg:h-[700px] w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10">
-                        {property.about_project_config.image_url ? (
-                            <Image
-                                src={property.about_project_config.image_url}
-                                alt={property.about_project_config.title || "Sobre el Proyecto"}
-                                fill
-                                className="object-cover"
-                            />
-                        ) : (
-                            <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-                                <span className="text-gray-600">Sin imagen configurada</span>
-                            </div>
-                        )}
-                    </div>
-                    <div className="space-y-8">
-                        <div>
-                            {property.about_project_config.decorative_title && (
-                                <span className="text-amber-500 font-monsieur text-5xl md:text-7xl block mb-4">
-                                    {property.about_project_config.decorative_title}
-                                </span>
-                            )}
-                            <h2 className="text-4xl md:text-6xl font-cormorant font-light text-white leading-tight uppercase">
-                                {property.about_project_config.title || "Sobre el Proyecto"}
-                            </h2>
-                        </div>
-                        
-                        <p className="text-lg text-gray-300 leading-relaxed font-light whitespace-pre-wrap mb-8">
-                            {property.about_project_config.description || property.description}
-                        </p>
-
-                        <div className="border-t border-white/20 w-full mb-8"></div>
-
-                        {property.about_project_config.button_text && property.about_project_config.button_link && (
-                            <a 
-                                href={property.about_project_config.button_link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center px-8 py-3 bg-transparent border border-amber-500/50 text-white font-medium rounded-full hover:bg-amber-500/10 transition-colors uppercase tracking-wider text-sm group"
-                            >
-                                {property.about_project_config.button_text}
-                                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                            </a>
-                        )}
-                    </div>
-                </div>
-            </div>
-        ) : (
-            <div className="container mx-auto px-4 max-w-4xl mx-auto text-center">
-                <h2 className="text-3xl font-bold mb-8 text-white">Sobre el Proyecto</h2>
-                <p className="text-lg text-gray-300 leading-relaxed whitespace-pre-wrap">
-                    {property.description}
-                </p>
-            </div>
-        )}
-      </section>
+      <AboutProjectSection 
+          config={property.about_project_config} 
+          defaultDescription={property.description} 
+      />
 
       <SectionSeparator />
 
@@ -275,7 +221,10 @@ export default async function PropertyLandingPage({ params }: PageProps) {
           <>
             <SectionSeparator />
             <div id="amenidades" className="scroll-mt-24" />
-            <AmenitiesSection amenities={property.amenities} />
+            <AmenitiesSection 
+                amenities={property.amenities} 
+                config={property.amenities_config}
+            />
           </>
       )}
 
