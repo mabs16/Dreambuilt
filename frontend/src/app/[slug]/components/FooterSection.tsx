@@ -74,7 +74,7 @@ export default function FooterSection({ config }: FooterSectionProps) {
 
           {/* Social Media */}
           <div className="mb-12">
-            <h4 className="text-white text-lg font-cormorant mb-6">Follow Us on Social Media</h4>
+            <h4 className="text-white text-lg font-cormorant mb-6">Síguenos en Redes Sociales</h4>
             <div className="flex justify-center space-x-6">
               {config.social_links?.facebook && (
                 <a href={config.social_links.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center hover:opacity-80 transition-opacity text-white">

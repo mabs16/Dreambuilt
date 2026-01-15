@@ -11,6 +11,7 @@ import PaymentSchemesSection from './components/PaymentSchemesSection';
 import ContactSection from './components/ContactSection';
 import SectionSeparator from './components/SectionSeparator';
 import FooterSection from './components/FooterSection';
+import HeroVideo from './components/HeroVideo';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -45,20 +46,16 @@ export default async function PropertyLandingPage({ params }: PageProps) {
       />
 
       {/* Hero Section */}
-      <section className="relative h-screen w-full bg-black flex flex-col justify-end overflow-hidden">
+      <section id="inicio" className="relative h-screen w-full bg-black flex flex-col justify-end overflow-hidden">
         {property.hero_config.type === 'video' && (desktopAsset || mobileAsset) ? (
            <>
               {/* Desktop Video */}
               {desktopAsset && (
                  <div className={`absolute inset-0 w-full h-full overflow-hidden bg-black pointer-events-none ${mobileAsset ? 'hidden md:block' : ''}`}>
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh]">
-                      <iframe 
-                          src={`${desktopAsset.url.replace('/play/', '/embed/')}${desktopAsset.url.includes('?') ? '&' : '?'}autoplay=true&loop=true&muted=true&preload=true&responsive=false&playsinline=true`} 
+                      <HeroVideo 
+                          url={desktopAsset.url}
                           className="absolute top-0 left-0 w-full h-full border-none pointer-events-none"
-                          allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
-                          style={{ 
-                            objectFit: 'cover',
-                          }}
                       />
                     </div>
                     {/* Capa de bloqueo total para ocultar cualquier control residual */}
@@ -71,13 +68,9 @@ export default async function PropertyLandingPage({ params }: PageProps) {
               {mobileAsset && (
                  <div className="absolute inset-0 w-full h-full overflow-hidden bg-black pointer-events-none md:hidden">
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[177.77vw] h-[100vh] min-w-[100vw] min-h-[56.25vw]">
-                      <iframe 
-                          src={`${mobileAsset.url.replace('/play/', '/embed/')}${mobileAsset.url.includes('?') ? '&' : '?'}autoplay=true&loop=true&muted=true&preload=true&responsive=false&playsinline=true`} 
+                      <HeroVideo 
+                          url={mobileAsset.url}
                           className="absolute top-0 left-0 w-full h-full border-none pointer-events-none"
-                          allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
-                          style={{ 
-                            objectFit: 'cover',
-                          }}
                       />
                     </div>
                     {/* Capa de bloqueo total para ocultar cualquier control residual */}
@@ -155,7 +148,7 @@ export default async function PropertyLandingPage({ params }: PageProps) {
       <SectionSeparator />
 
       {/* About Project Section */}
-      <section className="py-20 bg-black">
+      <section id="sobre-el-proyecto" className="py-20 bg-black scroll-mt-24">
         {property.about_project_config?.enabled ? (
             <div className="container mx-auto px-4">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -265,12 +258,14 @@ export default async function PropertyLandingPage({ params }: PageProps) {
 
       {/* Floor Plans Section */}
       {property.typologies && property.typologies.length > 0 && <SectionSeparator />}
+      <div id="tipologias" className="scroll-mt-24" />
       <FloorPlansSection typologies={property.typologies} config={property.typologies_config} />
 
       {/* Virtual Tour Section */}
       {property.virtual_tour_config && property.virtual_tour_config.enabled && (
         <>
           <SectionSeparator />
+          <div id="tour-virtual" className="scroll-mt-24" />
           <VirtualTourSection config={property.virtual_tour_config} />
         </>
       )}
@@ -279,6 +274,7 @@ export default async function PropertyLandingPage({ params }: PageProps) {
       {property.amenities && property.amenities.length > 0 && (
           <>
             <SectionSeparator />
+            <div id="amenidades" className="scroll-mt-24" />
             <AmenitiesSection amenities={property.amenities} />
           </>
       )}
@@ -287,6 +283,7 @@ export default async function PropertyLandingPage({ params }: PageProps) {
       {property.payment_scheme_config && property.payment_scheme_config.enabled && (
           <>
             <SectionSeparator />
+            <div id="esquemas-de-pago" className="scroll-mt-24" />
             <PaymentSchemesSection config={property.payment_scheme_config} />
           </>
       )}
@@ -295,6 +292,7 @@ export default async function PropertyLandingPage({ params }: PageProps) {
       {property.contact_config && (
           <>
             <SectionSeparator />
+            <div id="contacto" className="scroll-mt-24" />
             <ContactSection config={property.contact_config} />
           </>
       )}

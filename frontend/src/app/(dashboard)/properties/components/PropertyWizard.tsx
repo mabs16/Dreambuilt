@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Save, Check, Plus, Trash2, MapPin, Home, Video, Image as ImageIcon, Layout, List, Phone, CheckCircle, X, Loader2, FileVideo, CreditCard } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Save, Check, Plus, Trash2, MapPin, Home, Video, Image as ImageIcon, Layout, List, Phone, CheckCircle, X, Loader2, FileVideo, CreditCard, Menu } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
@@ -35,6 +35,7 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const [formData, setFormData] = useState<Partial<Property>>(initialData || {
     title: '',
@@ -1529,11 +1530,30 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
   };
 
   return (
-    <div className="flex h-[calc(100vh-100px)] gap-6">
+    <div className="flex h-[calc(100vh-100px)] gap-6 relative">
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+            className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm"
+            onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar Navigation */}
-      <div className="w-64 bg-white/5 rounded-2xl border border-white/10 p-4 flex flex-col h-full overflow-y-auto">
-        <h2 className="text-lg font-bold text-white mb-6 px-2">Configuración</h2>
-        <div className="space-y-1">
+      <div className={`
+        fixed inset-y-0 left-0 z-50 w-72 bg-gray-950 border-r border-white/10 p-4 transition-transform duration-300 ease-in-out shadow-2xl md:shadow-none
+        md:relative md:translate-x-0 md:bg-white/5 md:w-64 md:rounded-2xl md:border md:flex md:flex-col md:h-full md:overflow-y-auto
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <div className="flex justify-between items-center mb-6 px-2 md:hidden">
+             <h2 className="text-lg font-bold text-white">Configuración</h2>
+             <button onClick={() => setIsMobileMenuOpen(false)} className="text-gray-400 hover:text-white">
+                <X className="w-6 h-6" />
+             </button>
+        </div>
+        <h2 className="hidden md:block text-lg font-bold text-white mb-6 px-2">Configuración</h2>
+        
+        <div className="space-y-1 overflow-y-auto h-full md:h-auto pb-20 md:pb-0">
           {STEPS.map((step, idx) => {
             const Icon = step.icon;
             const isActive = idx === currentStep;
@@ -1542,14 +1562,17 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
             return (
               <button
                 key={step.id}
-                onClick={() => setCurrentStep(idx)}
+                onClick={() => {
+                    setCurrentStep(idx);
+                    setIsMobileMenuOpen(false);
+                }}
                 className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
                   isActive 
                     ? 'bg-blue-600/20 text-blue-400 border border-blue-600/30' 
                     : 'text-gray-400 hover:bg-white/5 hover:text-white'
                 }`}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${
                     isActive ? 'bg-blue-600 text-white' : isCompleted ? 'bg-green-500/20 text-green-500' : 'bg-white/10'
                 }`}>
                     {isCompleted ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
@@ -1562,51 +1585,64 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 bg-white/5 rounded-2xl border border-white/10 flex flex-col overflow-hidden">
+      <div className="flex-1 bg-white/5 rounded-2xl border border-white/10 flex flex-col overflow-hidden w-full">
         {/* Header */}
-        <div className="p-6 border-b border-white/10 flex justify-between items-center">
-            <div>
-                <h1 className="text-2xl font-bold text-white">{STEPS[currentStep].title}</h1>
-                <p className="text-gray-400 text-sm">Paso {currentStep + 1} de {STEPS.length}</p>
+        <div className="p-4 md:p-6 border-b border-white/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex items-center gap-3 w-full md:w-auto">
+                <button 
+                    className="md:hidden p-2 bg-white/10 rounded-lg text-white hover:bg-white/20 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(true)}
+                >
+                    <Menu className="w-5 h-5" />
+                </button>
+                <div>
+                    <h1 className="text-xl md:text-2xl font-bold text-white truncate max-w-[200px] md:max-w-none">{STEPS[currentStep].title}</h1>
+                    <p className="text-gray-400 text-xs md:text-sm">Paso {currentStep + 1} de {STEPS.length}</p>
+                </div>
             </div>
-            <div className="flex space-x-3">
+            
+            <div className="flex space-x-2 md:space-x-3 w-full md:w-auto justify-end overflow-x-auto pb-2 md:pb-0">
                  <button
                     onClick={handleSaveDraft}
                     disabled={saving}
-                    className="px-4 py-2 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white flex items-center border border-white/10"
+                    className="px-3 py-2 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white flex items-center border border-white/10 text-sm whitespace-nowrap"
                 >
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                    Guardar Borrador
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin md:mr-2" /> : <Save className="w-4 h-4 md:mr-2" />}
+                    <span className="hidden md:inline">Guardar Borrador</span>
+                    <span className="md:hidden">Guardar</span>
                 </button>
                  <button
                     onClick={handlePrev}
                     disabled={currentStep === 0}
-                    className="px-4 py-2 rounded-lg bg-white/5 text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    className="px-3 py-2 rounded-lg bg-white/5 text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm whitespace-nowrap"
                 >
-                    <ChevronLeft className="w-4 h-4 mr-2" /> Anterior
+                    <ChevronLeft className="w-4 h-4 md:mr-2" /> 
+                    <span className="hidden md:inline">Anterior</span>
                 </button>
                 {currentStep === STEPS.length - 1 ? (
                     <button
                         onClick={handleSave}
                         disabled={saving}
-                        className="px-6 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 flex items-center disabled:opacity-50"
+                        className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 flex items-center disabled:opacity-50 text-sm whitespace-nowrap"
                     >
-                        {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                        {saving ? <Loader2 className="w-4 h-4 animate-spin md:mr-2" /> : <Save className="w-4 h-4 md:mr-2" />}
                         {isEditing ? 'Actualizar' : 'Publicar'}
                     </button>
                 ) : (
                     <button
                         onClick={handleNext}
-                        className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center"
+                        className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center text-sm whitespace-nowrap"
                     >
-                        Siguiente <ChevronRight className="w-4 h-4 ml-2" />
+                        <span className="hidden md:inline">Siguiente</span>
+                        <span className="md:hidden">Sig.</span>
+                         <ChevronRight className="w-4 h-4 ml-2" />
                     </button>
                 )}
             </div>
         </div>
 
         {/* Form Content */}
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8">
             <motion.div
                 key={currentStep}
                 initial={{ opacity: 0, x: 20 }}

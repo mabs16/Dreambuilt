@@ -29,6 +29,28 @@ export default function LandingNavbar({ title, phone, showTitle = true, callToAc
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Bloquear scroll cuando el menú está abierto
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMenuOpen]);
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    setIsMenuOpen(false);
+    
+    const element = document.querySelector(href);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <>
       <nav 
@@ -120,6 +142,29 @@ export default function LandingNavbar({ title, phone, showTitle = true, callToAc
                         className="object-contain" 
                     />
                 </div>
+
+                {/* Navigation Links */}
+                <nav className="flex flex-col items-center gap-6 mb-8">
+                    {[
+                        { label: 'Inicio', href: '#inicio' },
+                        { label: 'Sobre el Proyecto', href: '#sobre-el-proyecto' },
+                        { label: 'Ubicación', href: '#location' },
+                        { label: 'Tipologías', href: '#tipologias' },
+                        { label: 'Tour Virtual', href: '#tour-virtual' },
+                        { label: 'Amenidades', href: '#amenidades' },
+                        { label: 'Esquemas de Pago', href: '#esquemas-de-pago' },
+                        { label: 'Contacto', href: '#contacto' },
+                    ].map((link) => (
+                        <a 
+                            key={link.label}
+                            href={link.href}
+                            onClick={(e) => handleNavClick(e, link.href)}
+                            className="text-2xl md:text-3xl font-cormorant text-white hover:text-amber-500 transition-colors uppercase tracking-widest"
+                        >
+                            {link.label}
+                        </a>
+                    ))}
+                </nav>
 
                 {/* Mobile Phone Button */}
                 {phone && (
