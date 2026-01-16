@@ -35,12 +35,21 @@ export class FlowsService {
     return await this.flowRepository.findOne({ where: { id } });
   }
 
-  async findByKeyword(keyword: string): Promise<Flow | null> {
-    this.logger.log(`Searching for flow with keyword: "${keyword}"`);
+  async findByKeyword(message: string): Promise<Flow | null> {
+    this.logger.log(`Searching for flow matching message: "${message}"`);
+
+    // Updated to support partial matches (phrases)
+    // Checks if the incoming message contains any of the trigger keywords/phrases
     return await this.flowRepository
       .createQueryBuilder('flow')
-      .where(':keyword = ANY(flow.trigger_keywords)', { keyword })
-      .andWhere('flow.is_active = :isActive', { isActive: true })
+      .where('flow.is_active = :isActive', { isActive: true })
+      .andWhere(
+        `EXISTS (
+        SELECT 1 FROM unnest(flow.trigger_keywords) AS k 
+        WHERE :message ILIKE '%' || k || '%'
+      )`,
+        { message },
+      )
       .getOne();
   }
 

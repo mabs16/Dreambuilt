@@ -98,7 +98,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
   const [edges, setEdges] = useState<Edge[]>(initialData?.edges || initialEdges);
   const [isSaving, setIsSaving] = useState(false);
   const [flowName, setFlowName] = useState(initialData?.name || "Nuevo Flujo");
-  const [triggerKeywords, setTriggerKeywords] = useState<string>(initialData?.trigger_keywords?.join(', ') || "hola");
+  const [triggerKeywords, setTriggerKeywords] = useState<string[]>(initialData?.trigger_keywords || []);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [advisors, setAdvisors] = useState<Array<{id: number, name: string}>>([]);
   const [availableFlows, setAvailableFlows] = useState<Array<{id: number, name: string}>>([]);
@@ -507,7 +507,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
             name: flowName,
             nodes,
             edges,
-            trigger_keywords: triggerKeywords.split(',').map(k => k.trim()).filter(k => k !== ""),
+            trigger_keywords: triggerKeywords,
             is_active: true
         };
 
@@ -542,7 +542,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
       name: flowName,
       nodes,
       edges,
-      trigger_keywords: triggerKeywords.split(',').map(k => k.trim()).filter(k => k !== ""),
+      trigger_keywords: triggerKeywords,
       exported_at: new Date().toISOString(),
       version: "1.0"
     };
@@ -571,7 +571,7 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
           setNodes(json.nodes);
           setEdges(json.edges);
           if (json.name) setFlowName(json.name + " (Importado)");
-          if (json.trigger_keywords) setTriggerKeywords(json.trigger_keywords.join(', '));
+          if (json.trigger_keywords) setTriggerKeywords(Array.isArray(json.trigger_keywords) ? json.trigger_keywords : []);
           alert('Flujo importado correctamente');
         } else {
           alert('El archivo JSON no tiene un formato de flujo válido');
@@ -669,14 +669,36 @@ export default function FlowEditor({ initialData, onBack }: FlowEditorProps) {
                     />
                 </div>
                 <div className="flex flex-col gap-1">
-                    <label className="text-[10px] text-white/40 uppercase font-bold px-1">Palabras Clave (sep. por coma)</label>
-                    <input 
-                        type="text" 
-                        placeholder="hola, info, precio"
-                        value={triggerKeywords}
-                        onChange={(e) => setTriggerKeywords(e.target.value)}
-                        className="bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50 w-64"
-                    />
+                    <label className="text-[10px] text-white/40 uppercase font-bold px-1">Frases / Palabras Clave</label>
+                    <div className="bg-black/50 border border-white/10 rounded-xl px-2 py-1.5 w-64 min-h-[38px] flex flex-wrap gap-1.5 items-center">
+                        {triggerKeywords.map((keyword, index) => (
+                            <span key={index} className="flex items-center gap-1 bg-primary/20 text-primary text-[10px] px-1.5 py-0.5 rounded border border-primary/20">
+                                {keyword}
+                                <button 
+                                    onClick={() => setTriggerKeywords(prev => prev.filter((_, i) => i !== index))}
+                                    className="hover:text-white transition-colors"
+                                >
+                                    <X className="h-2.5 w-2.5" />
+                                </button>
+                            </span>
+                        ))}
+                        <input 
+                            type="text" 
+                            placeholder={triggerKeywords.length === 0 ? 'Ej: "info precios"' : ''}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    const val = e.currentTarget.value.trim();
+                                    if (val) {
+                                        setTriggerKeywords(prev => [...prev, val]);
+                                        e.currentTarget.value = '';
+                                    }
+                                } else if (e.key === 'Backspace' && e.currentTarget.value === '' && triggerKeywords.length > 0) {
+                                    setTriggerKeywords(prev => prev.slice(0, -1));
+                                }
+                            }}
+                            className="bg-transparent border-none text-sm text-white focus:outline-none flex-1 min-w-[60px] placeholder:text-white/20 h-full"
+                        />
+                    </div>
                 </div>
             </div>
 
