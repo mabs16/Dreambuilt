@@ -298,7 +298,7 @@ export default function VirtualTourSection({ config }: VirtualTourSectionProps) 
           <motion.div 
             variants={mediaVariants}
             ref={containerRef}
-            className={`relative w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 order-2 lg:order-2 bg-gray-900 group ${isLandscape ? 'aspect-video' : 'h-[500px] lg:h-[700px]'}`}
+            className={`relative w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 order-2 lg:order-2 bg-gray-900 group ${isLandscape ? 'h-[450px] md:h-auto md:aspect-video' : 'h-[500px] lg:h-[700px]'}`}
           >
             {/* Navigation Arrows */}
             {videos.length > 1 && !config.tour_embed && (
@@ -352,7 +352,7 @@ export default function VirtualTourSection({ config }: VirtualTourSectionProps) 
                             className="p-3 rounded-full bg-black/40 hover:bg-black/80 text-white border border-white/10 backdrop-blur-sm flex items-center gap-2 pointer-events-auto"
                         >
                             <Maximize className="w-5 h-5" />
-                            <span className="text-sm font-medium">Maximizar</span>
+                            <span className="text-sm font-medium hidden md:inline">Maximizar</span>
                         </button>
                     </div>
                 </div>
