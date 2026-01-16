@@ -17,10 +17,31 @@ L.Icon.Default.mergeOptions({
 interface MapPickerProps {
   lat: number;
   lng: number;
+  viewLat?: number;
+  viewLng?: number;
   onChange?: (lat: number, lng: number) => void;
+  onZoomChange?: (zoom: number) => void;
+  onViewChange?: (lat: number, lng: number) => void;
   theme?: 'light' | 'dark';
   zoom?: number;
   cooperativeGestures?: boolean;
+}
+
+function MapEventsHandler({ onZoomChange, onViewChange }: { onZoomChange?: (zoom: number) => void, onViewChange?: (lat: number, lng: number) => void }) {
+  const map = useMapEvents({
+    zoomend: () => {
+      if (onZoomChange) {
+        onZoomChange(map.getZoom());
+      }
+    },
+    moveend: () => {
+      if (onViewChange) {
+        const center = map.getCenter();
+        onViewChange(center.lat, center.lng);
+      }
+    }
+  });
+  return null;
 }
 
 function CooperativeGesturesHandler() {
@@ -57,32 +78,34 @@ function CooperativeGesturesHandler() {
   return null;
 }
 
-function LocationMarker({ position, onChange, zoom }: { position: [number, number]; onChange?: (lat: number, lng: number) => void; zoom?: number }) {
-  const map = useMapEvents({
+function LocationMarker({ position, onChange }: { position: [number, number]; onChange?: (lat: number, lng: number) => void }) {
+  useMapEvents({
     click(e) {
       if (onChange) {
         onChange(e.latlng.lat, e.latlng.lng);
-        map.flyTo(e.latlng, map.getZoom());
+        // Opcional: Centrar al hacer click. El usuario puede ajustar después.
+        // map.flyTo(e.latlng, map.getZoom()); 
       }
     },
   });
-
-  useEffect(() => {
-    map.flyTo(position, zoom || map.getZoom());
-  }, [position, map, zoom]);
 
   return position === null ? null : (
     <Marker position={position}></Marker>
   );
 }
 
-export default function MapPicker({ lat, lng, onChange, theme = 'light', zoom = 13, cooperativeGestures = false }: MapPickerProps) {
-  // Default to Mexico City if 0,0 provided or invalid
-  const center: [number, number] = lat && lng ? [lat, lng] : [19.4326, -99.1332];
+export default function MapPicker({ lat, lng, viewLat, viewLng, onChange, onZoomChange, onViewChange, theme = 'light', zoom = 13, cooperativeGestures = false }: MapPickerProps) {
+  // Coordenadas del marcador
+  const markerPosition: [number, number] = lat && lng ? [lat, lng] : [19.4326, -99.1332];
+  
+  // Centro inicial del mapa: Priorizar viewLat/viewLng, sino usar marcador
+  const center: [number, number] = viewLat && viewLng ? [viewLat, viewLng] : markerPosition;
 
   const tileLayerUrl = theme === 'dark' 
-    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    ? "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
     : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+
+  const tileLayerClass = theme === 'dark' ? 'map-tiles-blue-water' : '';
 
   const attribution = theme === 'dark'
     ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -100,8 +123,10 @@ export default function MapPicker({ lat, lng, onChange, theme = 'light', zoom = 
         <TileLayer
           attribution={attribution}
           url={tileLayerUrl}
+          className={tileLayerClass}
         />
-        <LocationMarker position={center} onChange={onChange} zoom={zoom} />
+        <LocationMarker position={markerPosition} onChange={onChange} />
+        <MapEventsHandler onZoomChange={onZoomChange} onViewChange={onViewChange} />
         {cooperativeGestures && <CooperativeGesturesHandler />}
       </MapContainer>
     </div>

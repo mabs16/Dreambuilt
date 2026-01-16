@@ -1,8 +1,6 @@
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import { PropertiesService } from '@/services/properties.service';
-import { MapPin, ArrowRight } from 'lucide-react';
-import ClientMap from './components/ClientMap';
 import LandingNavbar from './components/LandingNavbar';
 import FloorPlansSection from './components/FloorPlansSection';
 import VirtualTourSection from './components/VirtualTourSection';
@@ -12,7 +10,9 @@ import ContactSection from './components/ContactSection';
 import SectionSeparator from './components/SectionSeparator';
 import FooterSection from './components/FooterSection';
 import HeroVideo from './components/HeroVideo';
+import HeroContent from './components/HeroContent';
 import AboutProjectSection from './components/AboutProjectSection';
+import LocationSection from './components/LocationSection';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -98,50 +98,11 @@ export default async function PropertyLandingPage({ params }: PageProps) {
         )}
         
         {/* Hero Content */}
-        <div className="relative z-10 container mx-auto px-6 md:px-12 pb-24 md:pb-32">
-          <div className="max-w-6xl animate-in fade-in slide-in-from-bottom-8 duration-1000">
-            
-            {/* Overlay Logo */}
-            {property.hero_config.overlay_logo && (
-              <div className="mb-8 relative w-80 h-40 md:w-[45rem] md:h-96">
-                <Image
-                  src={property.hero_config.overlay_logo}
-                  alt="Project Logo"
-                  fill
-                  className="object-contain object-left"
-                  style={{ filter: 'drop-shadow(1S0 5px 5px rgba(0, 0, 0, 0.9))' }}
-                  priority
-                />
-              </div>
-            )}
+        <HeroContent 
+          config={property.hero_config} 
+          defaultSubtitle={property.description} 
+        />
 
-            {/* Overlay Title (Optional) */}
-            {property.hero_config.title && (
-              <h1 className="text-5xl md:text-8xl font-cormorant font-light text-white leading-[0.9] tracking-[-0.02em] mb-6 uppercase">
-                {property.hero_config.title}
-              </h1>
-            )}
-
-            <p className="text-lg md:text-2xl text-white/80 font-cormorant tracking-[0.3em] uppercase mb-12 ml-2 font-medium">
-              {property.hero_config.subtitle || property.description.split('.')[0]}
-            </p>
-            
-            {(property.hero_config.decorative_title_1 || property.hero_config.decorative_title_2) && (
-              <div className="flex items-baseline space-x-6 ml-2">
-                {property.hero_config.decorative_title_1 && (
-                  <span className="text-amber-500/90 text-4xl md:text-7xl font-monsieur leading-none">
-                    {property.hero_config.decorative_title_1}
-                  </span>
-                )}
-                {property.hero_config.decorative_title_2 && (
-                  <span className="text-white text-3xl md:text-5xl font-cormorant font-light tracking-wide opacity-90">
-                    {property.hero_config.decorative_title_2}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
 
 
       </section>
@@ -157,50 +118,7 @@ export default async function PropertyLandingPage({ params }: PageProps) {
       <SectionSeparator />
 
       {/* Location Section */}
-      <section id="location" className="py-20 bg-black relative overflow-hidden min-h-screen flex items-center">
-         <div className="container mx-auto px-4 relative z-10 w-full">
-            {/* Header */}
-            <div className="mb-12">
-                {property.location_config?.decorative_title && (
-                    <span className="text-amber-500 font-monsieur text-2xl md:text-3xl block mb-2 tracking-wider">
-                        {property.location_config.decorative_title}
-                    </span>
-                )}
-                
-                <div className="flex flex-col md:flex-row justify-between items-start gap-8">
-                    <h2 className="text-4xl md:text-6xl font-cormorant font-light text-white uppercase leading-none">
-                        {property.location_config?.title || "Project Location"}
-                    </h2>
-                    
-                    {property.location_config?.description && (
-                        <p className="text-gray-400 max-w-md text-sm md:text-base leading-relaxed font-light text-right md:text-left">
-                            {property.location_config.description}
-                        </p>
-                    )}
-                </div>
-            </div>
-
-            {/* Map Container */}
-            <div className="relative max-w-4xl mx-auto w-full h-[450px] md:h-[525px] rounded-3xl overflow-hidden border border-white/10 shadow-2xl group">
-                 <ClientMap 
-                    lat={property.location_config.lat} 
-                    lng={property.location_config.lng} 
-                    theme="dark"
-                    zoom={property.location_config.zoom || 13}
-                />
-            </div>
-
-            {/* Address Below Map */}
-            <div className="max-w-4xl mx-auto mt-8 px-4 md:px-0">
-                 <div className="flex items-center space-x-4 text-white/90">
-                    <div className="p-3 bg-amber-500/10 rounded-full border border-amber-500/20">
-                        <MapPin className="w-6 h-6 text-amber-500" />
-                    </div>
-                    <p className="text-xl font-light tracking-wide text-gray-300">{property.location_config.address || 'Ubicación privilegiada'}</p>
-                 </div>
-            </div>
-         </div>
-      </section>
+      <LocationSection config={property.location_config} />
 
       {/* Floor Plans Section */}
       {property.typologies && property.typologies.length > 0 && <SectionSeparator />}

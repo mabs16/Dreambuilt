@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import Hls from 'hls.js';
+import { motion } from 'framer-motion';
 
 interface HeroVideoProps {
   url: string;
@@ -76,23 +77,33 @@ export default function HeroVideo({ url, className }: HeroVideoProps) {
      const finalUrl = `${embedUrl}${separator}autoplay=true&loop=true&muted=true&preload=true&responsive=false&playsinline=true&controls=0`;
 
      return (
-        <iframe 
+        <motion.iframe 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
             src={finalUrl}
             className={className}
             allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
             style={{ border: 'none', pointerEvents: 'none' }}
+            loading="eager"
+            // @ts-expect-error - fetchPriority is a valid attribute but not yet in React types
+            fetchPriority="high"
         />
      );
   }
 
   return (
-    <video
+    <motion.video
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 1.5, ease: "easeOut" }}
       ref={videoRef}
       className={className}
       muted
       loop
       playsInline
       autoPlay
+      preload="auto"
       style={{ objectFit: 'cover' }}
     />
   );

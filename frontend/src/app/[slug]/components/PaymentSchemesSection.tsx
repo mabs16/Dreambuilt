@@ -45,6 +45,8 @@ export default function PaymentSchemesSection({ config }: PaymentSchemesSectionP
 
   if (!config.enabled) return null;
 
+  const ease = [0.215, 0.61, 0.355, 1] as const;
+
   return (
     <section className="relative w-full bg-black py-20 md:py-32 px-4 overflow-hidden">
       {/* Background Texture Effect - Optional subtle grain or texture could be added here */}
@@ -59,6 +61,7 @@ export default function PaymentSchemesSection({ config }: PaymentSchemesSectionP
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
+              transition={{ duration: 0.6, ease }}
               className="text-amber-500 font-monsieur text-4xl md:text-5xl tracking-widest block mb-4"
             >
               {config.decorative_title}
@@ -68,7 +71,7 @@ export default function PaymentSchemesSection({ config }: PaymentSchemesSectionP
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.2, duration: 0.6, ease }}
             className="text-4xl md:text-6xl font-cormorant font-light text-white uppercase tracking-wide mb-6"
           >
             {config.title || 'Esquemas de Pago'}
@@ -78,7 +81,7 @@ export default function PaymentSchemesSection({ config }: PaymentSchemesSectionP
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
-                transition={{ delay: 0.3 }}
+                transition={{ delay: 0.3, duration: 0.6, ease }}
                 className="text-gray-400 italic font-light text-sm md:text-base"
              >
                 {config.subtitle}
@@ -88,10 +91,10 @@ export default function PaymentSchemesSection({ config }: PaymentSchemesSectionP
 
         {/* Table Container */}
         <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, scale: 0.95, y: 30 }}
+            whileInView={{ opacity: 1, scale: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.4 }}
+            transition={{ delay: 0.4, duration: 0.8, ease }}
             className="bg-zinc-900/30 border border-white/20 rounded-2xl p-2 md:p-8 backdrop-blur-sm shadow-2xl overflow-hidden"
         >
             <div className="relative">

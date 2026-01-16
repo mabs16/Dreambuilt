@@ -10,11 +10,13 @@ const MapPicker = dynamic(() => import('../../(dashboard)/properties/components/
 interface ClientMapProps {
   lat: number;
   lng: number;
+  viewLat?: number;
+  viewLng?: number;
   theme?: 'light' | 'dark';
   zoom?: number;
   cooperativeGestures?: boolean;
 }
 
-export default function ClientMap({ lat, lng, theme = 'light', zoom, cooperativeGestures = true }: ClientMapProps) {
-  return <MapPicker lat={lat} lng={lng} theme={theme} zoom={zoom} cooperativeGestures={cooperativeGestures} />;
+export default function ClientMap({ lat, lng, viewLat, viewLng, theme = 'light', zoom, cooperativeGestures = true }: ClientMapProps) {
+  return <MapPicker lat={lat} lng={lng} viewLat={viewLat} viewLng={viewLng} theme={theme} zoom={zoom} cooperativeGestures={cooperativeGestures} />;
 }

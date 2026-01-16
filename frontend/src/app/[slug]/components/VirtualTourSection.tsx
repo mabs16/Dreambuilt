@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Maximize, Play, Pause } from 'lucide-react';
 import Hls from 'hls.js';
 
@@ -34,9 +35,40 @@ export default function VirtualTourSection({ config }: VirtualTourSectionProps) 
 
   const videos = config.videos || [];
   const currentVideo = videos.length > 0 ? videos[currentIndex] : null;
-  const isLandscape = currentVideo?.orientation === 'landscape';
+  // Default to landscape unless explicitly portrait
+  const isLandscape = currentVideo?.orientation !== 'portrait';
   const isBunny = currentVideo?.url.includes('iframe.mediadelivery.net');
   const hasContent = config.tour_embed || (config.videos && config.videos.length > 0);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6, ease: [0.215, 0.61, 0.355, 1] as const }
+    }
+  };
+
+  const mediaVariants = {
+    hidden: { opacity: 0, scale: 0.95, y: 40 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: { duration: 0.8, ease: [0.215, 0.61, 0.355, 1] as const }
+    }
+  };
 
   // Obtener URL limpia para el iframe de Bunny
   const getBunnyUrl = (url: string, forceAutoplay: boolean) => {
@@ -230,33 +262,41 @@ export default function VirtualTourSection({ config }: VirtualTourSectionProps) 
 
   return (
     <section className="py-20 bg-black text-white relative overflow-hidden">
-      <div className="container mx-auto px-4">
+      <motion.div 
+        className="container mx-auto px-4 relative z-10"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={containerVariants}
+      >
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           
           {/* Left Column: Content */}
           <div className="space-y-8 order-1 lg:order-1">
-            <div>
+            <motion.div variants={itemVariants}>
                 {config.decorative_title && (
-                    <span className="text-amber-500 font-monsieur text-5xl md:text-7xl block mb-4">
+                    <span className="text-amber-500 font-monsieur text-2xl md:text-3xl tracking-widest block mb-4">
                         {config.decorative_title}
                     </span>
                 )}
-                {config.title && (
-                    <h2 className="text-4xl md:text-6xl font-cormorant font-light text-white leading-tight uppercase">
-                        {config.title}
-                    </h2>
-                )}
-            </div>
+                
+                <h2 className="text-4xl md:text-6xl font-cormorant font-light text-white uppercase leading-none mb-6">
+                    {config.title || "Tour Virtual"}
+                </h2>
+            </motion.div>
+            
+            <motion.div variants={itemVariants} className="w-20 h-0.5 bg-amber-500/50 mb-8" />
             
             {config.description && (
-                <p className="text-lg text-gray-300 leading-relaxed font-light whitespace-pre-wrap mb-8">
+                <motion.p variants={itemVariants} className="text-lg text-gray-300 leading-relaxed font-light whitespace-pre-wrap mb-8">
                     {config.description}
-                </p>
+                </motion.p>
             )}
           </div>
 
           {/* Right Column: Media (Video/Tour) */}
-          <div 
+          <motion.div 
+            variants={mediaVariants}
             ref={containerRef}
             className={`relative w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 order-2 lg:order-2 bg-gray-900 group ${isLandscape ? 'aspect-video' : 'h-[500px] lg:h-[700px]'}`}
           >
@@ -358,10 +398,10 @@ export default function VirtualTourSection({ config }: VirtualTourSectionProps) 
                     Sin contenido multimedia
                 </div>
             )}
-          </div>
+          </motion.div>
 
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

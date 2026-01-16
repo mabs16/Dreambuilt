@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Menu, Phone, Facebook, Instagram, Twitter, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface LandingNavbarProps {
   title: string;
@@ -47,13 +48,64 @@ export default function LandingNavbar({ title, phone, showTitle = true, callToAc
     
     const element = document.querySelector(href);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+      }, 300); // Esperar a que cierre el menú
     }
   };
 
+  const menuVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { 
+        duration: 0.3,
+        when: "beforeChildren",
+        staggerChildren: 0.1
+      }
+    },
+    exit: { 
+      opacity: 0,
+      transition: { 
+        duration: 0.2,
+        when: "afterChildren",
+        staggerChildren: 0.05,
+        staggerDirection: -1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.4, ease: "easeOut" as const }
+    },
+    exit: { 
+      opacity: 0, 
+      y: -20,
+      transition: { duration: 0.2, ease: "easeIn" as const }
+    }
+  };
+
+  const links = [
+    { label: 'Inicio', href: '#inicio' },
+    { label: 'Sobre el Proyecto', href: '#sobre-el-proyecto' },
+    { label: 'Ubicación', href: '#location' },
+    { label: 'Tipologías', href: '#tipologias' },
+    { label: 'Tour Virtual', href: '#tour-virtual' },
+    { label: 'Amenidades', href: '#amenidades' },
+    { label: 'Esquemas de Pago', href: '#esquemas-de-pago' },
+    { label: 'Contacto', href: '#contacto' },
+  ];
+
   return (
     <>
-      <nav 
+      <motion.nav 
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as const }}
         className={`fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 py-4 md:px-12 transition-all duration-300 ${
           isScrolled ? 'bg-black/90 backdrop-blur-md py-3' : 'bg-transparent py-6'
         }`}
@@ -121,83 +173,83 @@ export default function LandingNavbar({ title, phone, showTitle = true, callToAc
             <span className="text-xs uppercase tracking-widest font-medium">Menu</span>
           </button>
         </div>
-      </nav>
+      </motion.nav>
 
       {/* Mobile Menu Overlay */}
-      {isMenuOpen && (
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[60] flex flex-col items-center justify-center transition-all duration-300">
-            <button 
-                onClick={() => setIsMenuOpen(false)}
-                className="absolute top-6 right-6 p-2 text-white/60 hover:text-white transition-colors"
-            >
-                <X className="w-8 h-8" />
-            </button>
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div 
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={menuVariants}
+            className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[60] flex flex-col items-center justify-center transition-all duration-300"
+          >
+              <motion.button 
+                  variants={itemVariants}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="absolute top-6 right-6 p-2 text-white/60 hover:text-white transition-colors"
+              >
+                  <X className="w-8 h-8" />
+              </motion.button>
 
-            <div className="flex flex-col items-center gap-8 animate-in fade-in zoom-in duration-300">
-                <div className="relative w-48 h-16 mb-8">
-                    <Image 
-                        src="https://dreambuilt.b-cdn.net/Logo-Dreambuilt%20web.png" 
-                        alt="Dreambuilt" 
-                        fill 
-                        className="object-contain" 
-                    />
-                </div>
+              <motion.div variants={itemVariants} className="relative w-48 h-16 mb-8 shrink-0">
+                  <Image 
+                      src="https://dreambuilt.b-cdn.net/Logo-Dreambuilt%20web.png" 
+                      alt="Dreambuilt" 
+                      fill 
+                      className="object-contain" 
+                  />
+              </motion.div>
 
-                {/* Navigation Links */}
-                <nav className="flex flex-col items-center gap-6 mb-8">
-                    {[
-                        { label: 'Inicio', href: '#inicio' },
-                        { label: 'Sobre el Proyecto', href: '#sobre-el-proyecto' },
-                        { label: 'Ubicación', href: '#location' },
-                        { label: 'Tipologías', href: '#tipologias' },
-                        { label: 'Tour Virtual', href: '#tour-virtual' },
-                        { label: 'Amenidades', href: '#amenidades' },
-                        { label: 'Esquemas de Pago', href: '#esquemas-de-pago' },
-                        { label: 'Contacto', href: '#contacto' },
-                    ].map((link) => (
-                        <a 
-                            key={link.label}
-                            href={link.href}
-                            onClick={(e) => handleNavClick(e, link.href)}
-                            className="text-2xl md:text-3xl font-cormorant text-white hover:text-amber-500 transition-colors uppercase tracking-widest"
-                        >
-                            {link.label}
-                        </a>
-                    ))}
-                </nav>
+              {/* Navigation Links */}
+              <nav className="flex flex-col items-center gap-6 mb-8">
+                  {links.map((link) => (
+                      <motion.a 
+                          key={link.label}
+                          href={link.href}
+                          onClick={(e) => handleNavClick(e, link.href)}
+                          variants={itemVariants}
+                          className="text-2xl md:text-3xl font-cormorant text-white hover:text-amber-500 transition-colors uppercase tracking-widest"
+                      >
+                          {link.label}
+                      </motion.a>
+                  ))}
+              </nav>
 
-                {/* Mobile Phone Button */}
-                {phone && (
-                    <a 
-                        href={`tel:${phone}`}
-                        className="flex items-center gap-3 text-lg font-cormorant text-white hover:text-emerald-400 transition-colors border border-white/20 px-8 py-4 rounded-full"
-                    >
-                        <Phone className="w-5 h-5" />
-                        <span className="tracking-widest uppercase">{callToActionText}: {phone}</span>
-                    </a>
-                )}
+              {/* Mobile Phone Button */}
+              {phone && (
+                  <motion.a 
+                      variants={itemVariants}
+                      href={`tel:${phone}`}
+                      className="flex items-center gap-3 text-lg font-cormorant text-white hover:text-emerald-400 transition-colors border border-white/20 px-8 py-4 rounded-full"
+                  >
+                      <Phone className="w-5 h-5" />
+                      <span className="tracking-widest uppercase">{callToActionText}: {phone}</span>
+                  </motion.a>
+              )}
 
-                {/* Mobile Social Links */}
-                <div className="flex items-center gap-6 mt-4">
-                    {socialLinks?.facebook && (
-                        <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="p-4 rounded-full border border-white/20 hover:bg-white/10 transition-colors">
-                            <Facebook className="w-6 h-6 text-white" />
-                        </a>
-                    )}
-                    {socialLinks?.instagram && (
-                        <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="p-4 rounded-full border border-white/20 hover:bg-white/10 transition-colors">
-                            <Instagram className="w-6 h-6 text-white" />
-                        </a>
-                    )}
-                    {socialLinks?.twitter && (
-                        <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="p-4 rounded-full border border-white/20 hover:bg-white/10 transition-colors">
-                            <Twitter className="w-6 h-6 text-white" />
-                        </a>
-                    )}
-                </div>
-            </div>
-        </div>
-      )}
+              {/* Mobile Social Links */}
+              <motion.div variants={itemVariants} className="flex items-center gap-6 mt-4">
+                  {socialLinks?.facebook && (
+                      <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="p-4 rounded-full border border-white/20 hover:bg-white/10 transition-colors">
+                          <Facebook className="w-6 h-6 text-white" />
+                      </a>
+                  )}
+                  {socialLinks?.instagram && (
+                      <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="p-4 rounded-full border border-white/20 hover:bg-white/10 transition-colors">
+                          <Instagram className="w-6 h-6 text-white" />
+                      </a>
+                  )}
+                  {socialLinks?.twitter && (
+                      <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="p-4 rounded-full border border-white/20 hover:bg-white/10 transition-colors">
+                          <Twitter className="w-6 h-6 text-white" />
+                      </a>
+                  )}
+              </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

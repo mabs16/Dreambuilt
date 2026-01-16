@@ -79,6 +79,11 @@ body {
   background: var(--border);
 }
 
+/* Blue Water Map Style - Inverts Voyager tiles to create dark map with blue water */
+.map-tiles-blue-water {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
 @layer base {
   * {
     scrollbar-width: none !important;

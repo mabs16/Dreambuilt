@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface Typology {
@@ -43,13 +44,53 @@ export default function FloorPlansSection({ typologies, config }: FloorPlansSect
   
   const selectedTypology = typologies.find(t => t.id === selectedId) || typologies[0];
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6, ease: [0.215, 0.61, 0.355, 1] as const }
+    }
+  };
+
+  const contentVariants = {
+    initial: { opacity: 0, x: 20 },
+    animate: { 
+      opacity: 1, 
+      x: 0, 
+      transition: { duration: 0.4, ease: "easeOut" as const } 
+    },
+    exit: { 
+      opacity: 0, 
+      x: -20, 
+      transition: { duration: 0.3, ease: "easeIn" as const } 
+    }
+  };
+
   if (!typologies || typologies.length === 0) return null;
 
   return (
     <section className="py-24 bg-black text-white overflow-hidden">
-      <div className="container mx-auto px-4">
+      <motion.div 
+        className="container mx-auto px-4"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={containerVariants}
+      >
         {/* Header */}
-        <div className="text-right mb-16">
+        <motion.div variants={itemVariants} className="text-right mb-16">
           {config?.decorative_title && (
             <span className="text-amber-500 font-monsieur text-2xl tracking-widest block mb-2">
               {config.decorative_title}
@@ -63,11 +104,11 @@ export default function FloorPlansSection({ typologies, config }: FloorPlansSect
                {config.description}
              </p>
           )}
-        </div>
+        </motion.div>
 
         <div className="flex flex-col lg:flex-row gap-12 items-center lg:items-start">
           {/* Sidebar / Navigation */}
-          <div className="w-full lg:w-1/4 relative">
+          <motion.div variants={itemVariants} className="w-full lg:w-1/4 relative">
             {/* Mobile Scroll Indicators */}
             <div className={`absolute left-0 top-0 bottom-4 w-12 bg-gradient-to-r from-black via-black/80 to-transparent z-10 pointer-events-none lg:hidden flex items-center justify-start pl-2 transition-opacity duration-300 ${showLeftArrow ? 'opacity-100' : 'opacity-0'}`}>
                  <ChevronLeft className="w-6 h-6 text-amber-500/70 animate-pulse" />
@@ -101,37 +142,48 @@ export default function FloorPlansSection({ typologies, config }: FloorPlansSect
               </button>
               ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* Main Content / Image */}
           <div className="w-full lg:w-3/4">
-             <div className="relative aspect-[16/9] w-full bg-gray-900 rounded-3xl overflow-hidden border border-white/10 shadow-2xl mb-8">
-                {selectedTypology?.image_url ? (
-                  <Image
-                      src={selectedTypology.image_url}
-                      alt={selectedTypology.name}
-                      fill
-                      className="object-cover"
-                      priority
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-500 font-light">
-                    Imagen no disponible
-                  </div>
-                )}
-             </div>
+             <AnimatePresence mode="wait">
+               <motion.div
+                 key={selectedId}
+                 variants={contentVariants}
+                 initial="initial"
+                 animate="animate"
+                 exit="exit"
+                 className="w-full"
+               >
+                 <div className="relative aspect-[16/9] w-full bg-gray-900 rounded-3xl overflow-hidden border border-white/10 shadow-2xl mb-8">
+                    {selectedTypology?.image_url ? (
+                      <Image
+                          src={selectedTypology.image_url}
+                          alt={selectedTypology.name}
+                          fill
+                          className="object-cover"
+                          priority
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-500 font-light">
+                        Imagen no disponible
+                      </div>
+                    )}
+                 </div>
 
-             {/* Description Below Image */}
-             {selectedTypology?.description && (
-                <div className="px-4 md:px-0">
-                   <p className="text-gray-400 font-light text-lg leading-relaxed">
-                     {selectedTypology.description}
-                   </p>
-                </div>
-             )}
+                 {/* Description Below Image */}
+                 {selectedTypology?.description && (
+                    <div className="px-4 md:px-0">
+                       <p className="text-gray-400 font-light text-lg leading-relaxed">
+                         {selectedTypology.description}
+                       </p>
+                    </div>
+                 )}
+               </motion.div>
+             </AnimatePresence>
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

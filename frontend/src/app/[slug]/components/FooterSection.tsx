@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 import { Facebook, Instagram, Twitter, Linkedin, Youtube, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface FooterSectionProps {
@@ -75,10 +76,9 @@ export default function FooterSection({ config }: FooterSectionProps) {
   if (!config.enabled) return null;
 
   const currentYear = new Date().getFullYear();
-  // Use config.links if provided (and not empty), otherwise fallback to MENU_LINKS
-  // Actually, user asked to match menu sections specifically. 
-  // Let's prioritize config.links if they exist, but if it's the default empty array, use MENU_LINKS.
   const navigationLinks = (config.links && config.links.length > 0) ? config.links : MENU_LINKS;
+
+  const ease = [0.215, 0.61, 0.355, 1] as const;
 
   return (
     <footer className="bg-black text-white pt-10 md:pt-20 pb-8 border-t border-white/10">
@@ -86,7 +86,13 @@ export default function FooterSection({ config }: FooterSectionProps) {
         <div className="grid grid-cols-1 md:grid-cols-1 gap-8 md:gap-12 text-center">
           
           {/* Logo & Description */}
-          <div className="flex flex-col items-center max-w-2xl mx-auto">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease }}
+            className="flex flex-col items-center max-w-2xl mx-auto"
+          >
             <div className="relative w-48 h-16 mb-4 md:mb-6">
                 <Image 
                     src={config.logo_url || "https://dreambuilt.b-cdn.net/Logo-Dreambuilt%20web.png"} 
@@ -100,11 +106,17 @@ export default function FooterSection({ config }: FooterSectionProps) {
                 {config.description}
               </p>
             )}
-          </div>
+          </motion.div>
 
           {/* Navigation Links */}
           {navigationLinks.length > 0 && (
-            <div className="relative mb-8 md:mb-12 border-y border-white/10 py-6 md:py-8 group">
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2, duration: 0.8, ease }}
+              className="relative mb-8 md:mb-12 border-y border-white/10 py-6 md:py-8 group"
+            >
               {/* Mobile Left Arrow */}
               <button
                 onClick={() => scroll('left')}
@@ -142,11 +154,17 @@ export default function FooterSection({ config }: FooterSectionProps) {
                   </Link>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* Social Media */}
-          <div className="mb-8 md:mb-12">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.4, duration: 0.8, ease }}
+            className="mb-8 md:mb-12"
+          >
             <h4 className="text-white text-lg font-cormorant mb-4 md:mb-6">Síguenos en Redes Sociales</h4>
             <div className="flex justify-center space-x-6">
               {config.social_links?.facebook && (
@@ -175,7 +193,7 @@ export default function FooterSection({ config }: FooterSectionProps) {
                 </a>
               )}
             </div>
-          </div>
+          </motion.div>
 
         </div>
 

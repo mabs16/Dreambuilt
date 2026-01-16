@@ -21,15 +21,18 @@ interface ContactSectionProps {
 export default function ContactSection({ config, propertyName }: ContactSectionProps) {
   if (!config) return null;
 
+  const ease = [0.215, 0.61, 0.355, 1] as const;
+
   return (
     <section className="relative w-full bg-black py-20 md:py-32 px-4 overflow-hidden">
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-5 pointer-events-none"></div>
       
       <div className="container mx-auto max-w-4xl relative z-10 text-center">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          transition={{ duration: 0.8, ease }}
           className="mb-12"
         >
           <span className="text-amber-500 font-monsieur text-4xl md:text-5xl tracking-widest block mb-4">
@@ -44,10 +47,10 @@ export default function ContactSection({ config, propertyName }: ContactSectionP
           {config.phone && (
             <motion.a
               href={`tel:${config.phone}`}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
+              transition={{ delay: 0.1, duration: 0.6, ease }}
               className="group flex flex-col items-center p-10 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-amber-500/30 hover:bg-white/10 hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-500 relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -74,10 +77,10 @@ export default function ContactSection({ config, propertyName }: ContactSectionP
               })()}`}
               target="_blank"
               rel="noopener noreferrer"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
+              transition={{ delay: 0.2, duration: 0.6, ease }}
               className="group flex flex-col items-center p-10 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-emerald-500/30 hover:bg-white/10 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500 relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -92,10 +95,10 @@ export default function ContactSection({ config, propertyName }: ContactSectionP
           {config.email && (
             <motion.a
               href={`mailto:${config.email}`}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
+              transition={{ delay: 0.3, duration: 0.6, ease }}
               className="group flex flex-col items-center p-6 rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-blue-500/30 hover:bg-white/10 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />

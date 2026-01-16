@@ -32,6 +32,8 @@ export interface Property {
   location_config: {
     lat: number;
     lng: number;
+    view_lat?: number;
+    view_lng?: number;
     zoom?: number;
     address: string;
     mapType?: 'google' | 'leaflet';

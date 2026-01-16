@@ -745,12 +745,17 @@ export default function PropertyWizard({ initialData, isEditing = false }: Prope
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-4">Ubicación en Mapa</label>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Ubicación en Mapa</label>
+                    <p className="text-xs text-gray-500 mb-2">Haz clic para colocar el marcador. Arrastra el mapa y ajusta el zoom para definir la vista exacta que verán los usuarios.</p>
                     <div className="h-[300px] w-full bg-white/5 border border-white/10 rounded-lg overflow-hidden">
                         <MapPicker
                             lat={formData.location_config?.lat || 19.4326}
                             lng={formData.location_config?.lng || -99.1332}
+                            viewLat={formData.location_config?.view_lat}
+                            viewLng={formData.location_config?.view_lng}
                             onChange={(lat, lng) => updateFormData({ location_config: { ...formData.location_config!, lat, lng } })}
+                            onZoomChange={(zoom) => updateFormData({ location_config: { ...formData.location_config!, zoom } })}
+                            onViewChange={(lat, lng) => updateFormData({ location_config: { ...formData.location_config!, view_lat: lat, view_lng: lng } })}
                             theme="dark"
                             zoom={formData.location_config?.zoom || 13}
                         />
